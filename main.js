@@ -18,7 +18,7 @@ const arc = require('./app/arc');
 const boost = require('./app/boost');
 const live = require('./app/live');
 const bmimport = require('./app/bmimport');
-const bmFiles = new Map();                         // other browsers' bookmark files found by a scan (the interface only gets keys)
+const bmFiles = new Map();                         // other browsers' data found by a scan (the interface only gets keys)
 const arcOK = new Set();                          // Arc sidebar files the user picked themselves (besides the usual place)
 const os = require('os');
 const pages = require('./app/pages');
@@ -274,6 +274,12 @@ function histNow() {
   if (!HIST) { try { HIST = JSON.parse(store.read('history.json') || '[]'); } catch { HIST = []; } if (!Array.isArray(HIST)) HIST = []; }
   return HIST;
 }
+/* history from another browser joins yours: each page once (keeping the newest visit), newest first */
+function histMerge(have, add) {
+  const by = new Map(); for (const h of have) if (h && h.url) by.set(h.url, h);
+  for (const h of add) { if (!h || typeof h.url !== 'string' || !/^https?:/i.test(h.url)) continue; const o = by.get(h.url); if (!o) by.set(h.url, { url: h.url, title: String(h.title || '').slice(0, 300), t: +h.t || 0 }); else if ((+h.t || 0) > (o.t || 0)) by.set(h.url, { ...o, t: +h.t, title: o.title || h.title }); }
+  return [...by.values()].sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 3000);
+}
 function histApply(op) {
   const H = histNow();
   if (op.t === 'add' && op.e && op.e.url) { HIST = [op.e, ...H.filter(h => h.url !== op.e.url)].slice(0, 3000); }
@@ -281,6 +287,7 @@ function histApply(op) {
   else if (op.t === 'del') HIST = H.filter(h => h.url !== op.url);
   else if (op.t === 'clear') HIST = [];
   else if (op.t === 'set' && Array.isArray(op.list)) HIST = op.list.slice(0, 3000);
+  else if (op.t === 'merge' && Array.isArray(op.list)) HIST = histMerge(H, op.list);
 }
 ON('hist:op', (_, op) => {
   if (!op || typeof op !== 'object') return;
@@ -576,7 +583,7 @@ HANDLE('keys:list', () => ({ actions: keys.ACTIONS, custom: P.keys || {} }));
 ON('setup:msg', (_, m) => toUI('setup:msg', m));
 ON('setup:reply', (_, m) => toOverlay('setup:event', m));     // the shell answering something the setup sheet asked for
 const isDefault = () => { try { return app.isDefaultProtocolClient('https') && app.isDefaultProtocolClient('http'); } catch { return false; } };
-HANDLE('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms(), ghToken: live.tokenHas() }));
+HANDLE('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms(), ghToken: live.tokenHas(), appsTest: !app.isPackaged && process.env.WASHI_APPS_TEST ? process.env.WASHI_APPS_TEST : null }));
 HANDLE('setup:act', async (_, a) => {
   if (a.type === 'defaultBrowser') {
     if (!app.isPackaged) return { ok: false, isDefault: false, why: 'dev' };
@@ -607,6 +614,19 @@ HANDLE('setup:act', async (_, a) => {
     if (n) showFx({ type: 'toast', text: `Hid ${n} thing${n > 1 ? 's' : ''} on ${host}`, action: { label: 'Undo', cmd: 'boost:undo' } });
     return { n };
   }
+  /* are you signed in to these apps? (a cookie that's only there when you are, in the right space's cookie jar) */
+  if (a.type === 'apps:status') {
+    const out = {};
+    for (const x of Array.isArray(a.apps) ? a.apps.slice(0, 40) : []) {
+      const ck = x && x.cookie; if (!ck || typeof ck.url !== 'string' || !/^https?:\/\/[^/]+/.test(ck.url) || typeof ck.name !== 'string') continue;
+      try {
+        const list = await web.pageSession(x.space || null).cookies.get({ url: ck.url, name: ck.name });
+        out[x.id] = list.some(c => c.value && (ck.value === undefined || c.value === ck.value) && (!c.expirationDate || c.expirationDate * 1000 > Date.now()));
+      } catch { out[x.id] = false; }
+    }
+    return out;
+  }
+  if (a.type === 'github:today') return live.githubToday();
   if (a.type === 'live:fetch') return live.fetchLive(a.kind === 'github' ? 'github' : 'feed', a.src);
   if (a.type === 'github:token') return live.tokenSet(a.value);
   if (a.type === 'arc:scan') return arc.scan(arcOK.has(a.path) ? a.path : undefined);
@@ -616,12 +636,16 @@ HANDLE('setup:act', async (_, a) => {
     if (r.canceled || !r.filePaths[0]) return null;
     arcOK.add(r.filePaths[0]); return arc.scan(r.filePaths[0]);
   }
-  if (a.type === 'bm:scan') { const list = bmimport.scan(); bmFiles.clear(); for (const x of list) bmFiles.set(x.key, x.file); return list.map(({ file, ...x }) => x); }
-  if (a.type === 'bm:read') { const f = bmFiles.get(a.key); if (!f) return { ok: false, error: 'Couldn\'t find those bookmarks any more.' }; try { return { ok: true, ...bmimport.readFile(f) }; } catch (e) { return { ok: false, error: e.message }; } }
+  if (a.type === 'bm:scan') { const list = bmimport.scan(); bmFiles.clear(); for (const x of list) bmFiles.set(x.key, x.src); return list.map(({ src, ...x }) => x); }
+  if (a.type === 'bm:read') { const f = bmFiles.get(a.key); if (!f) return { ok: false, error: 'Couldn\'t find that browser any more.' }; try { return { ok: true, ...bmimport.read(f) }; } catch (e) { return { ok: false, error: e.message }; } }
   if (a.type === 'bm:pick') {
-    const r = await dialog.showOpenDialog(C.win, { title: 'Choose a bookmarks file', message: 'Pick a bookmarks file exported from Safari, Firefox or another browser (.html)', properties: ['openFile'], filters: [{ name: 'Bookmarks', extensions: ['html', 'htm', 'json'] }] });
+    const safari = a.kind === 'safari';
+    const r = !app.isPackaged && process.env.WASHI_TEST_PICK ? { canceled: false, filePaths: [process.env.WASHI_TEST_PICK] }      // tests can't click a file dialog
+      : await dialog.showOpenDialog(C.win, safari ? { title: 'Choose Safari\'s export', message: 'In Safari: File › Export Browsing Data to File…, then pick the .zip it saved', defaultPath: app.getPath('downloads'), properties: ['openFile'], filters: [{ name: 'Safari export', extensions: ['zip'] }] }
+        : { title: 'Choose a bookmarks file', message: 'Pick Safari\'s export (.zip) or a bookmarks file from another browser (.html)', defaultPath: app.getPath('downloads'), properties: ['openFile'], filters: [{ name: 'Bookmarks', extensions: ['zip', 'html', 'htm', 'json'] }] });
     if (r.canceled || !r.filePaths[0]) return null;
-    try { return { ok: true, name: path.basename(r.filePaths[0]).replace(/\.[^.]+$/, '').slice(0, 30), ...bmimport.readFile(r.filePaths[0]) }; } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
+    const f = r.filePaths[0], name = /\.zip$/i.test(f) ? 'Safari' : path.basename(f).replace(/\.[^.]+$/, '').slice(0, 30);
+    try { return { ok: true, name, ...bmimport.readFile(f) }; } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
   }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
@@ -766,7 +790,7 @@ function buildMenu() {
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { role: 'quit' }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
-    { label: 'View', submenu: [...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
+    { label: 'View', submenu: [item('today'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },

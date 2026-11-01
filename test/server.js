@@ -26,6 +26,25 @@ let updMode = 'good';
 const srv = http.createServer((q, r) => {
   if (q.url.startsWith('/live/set?')) { const u = new URL(q.url, 'http://x'); if (u.searchParams.has('prs')) LIVE.prs = u.searchParams.get('prs').split(',').filter(Boolean).map(Number); if (u.searchParams.has('items')) LIVE.items = u.searchParams.get('items').split(',').filter(Boolean); return r.end('ok'); }
   if (q.url === '/live/auth') return r.end(LIVE.auth);
+  /* pretend apps for test/today.js: /app/<name> is "signed out" until /app/<name>?login=1 sets its cookie */
+  if (q.url.startsWith('/app/')) {
+    const u = new URL(q.url, 'http://x'), name = u.pathname.split('/')[2] || 'x', ck = (q.headers.cookie || '').includes('test_' + name + '=');
+    if (u.searchParams.get('login') === '1') r.setHeader('set-cookie', 'test_' + name + '=yes; Path=/; Max-Age=86400');
+    const inn = ck || u.searchParams.get('login') === '1';
+    if (name === 'tasks' && !inn && !u.pathname.includes('/login')) { r.statusCode = 302; r.setHeader('location', '/app/tasks/login'); return r.end(); }
+    r.setHeader('content-type', 'text/html');
+    return r.end(page(`${name}${inn ? ' inbox' : ' sign in'}`, inn ? '#e6f6e9' : '#fff3e0', `<p id="state">${inn ? 'signed in' : 'please sign in'}</p><a id="go" href="/app/${name}${name === 'tasks' ? '/home' : ''}?login=1">Sign in</a>`));
+  }
+  /* GitHub search for the Today page: /gh/search/issues?q=… */
+  if (q.url.startsWith('/gh/search/issues')) {
+    LIVE.auth = q.headers.authorization || '';
+    if (LIVE.ghDown) { r.statusCode = 503; return r.end('{"message":"down"}'); }
+    const query = decodeURIComponent(new URL(q.url, 'http://x').searchParams.get('q') || ''), rev = /review-requested:@me/.test(query);
+    const items = rev ? [{ number: 41, title: 'Add dark mode toggle', draft: false }, { number: 42, title: 'Fix <script> escaping', draft: false }] : [{ number: 7, title: 'My work in progress', draft: true }];
+    r.setHeader('content-type', 'application/json');
+    return r.end(JSON.stringify({ total_count: items.length, items: items.map(i => ({ ...i, html_url: 'http://localhost:8765/p2.html?pr=' + i.number, repository_url: 'https://api.github.com/repos/acme/widgets', updated_at: new Date().toISOString() })) }));
+  }
+  if (q.url.startsWith('/gh/down?')) { LIVE.ghDown = q.url.endsWith('=1'); return r.end('ok'); }
   if (q.url.startsWith('/gh/repos/')) {
     LIVE.auth = q.headers.authorization || '';
     if (!q.url.startsWith('/gh/repos/acme/widgets/pulls')) { r.statusCode = 404; return r.end('{"message":"Not Found"}'); }

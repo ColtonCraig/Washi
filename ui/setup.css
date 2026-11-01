@@ -289,3 +289,23 @@
 .ghk .okay{margin:0}
 .ghk .sbtns .txt{flex:1;min-width:0}
 .ghk .err{color:#d23b2a}
+
+/* Your apps: pick the ones you use */
+.appgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;max-width:620px}
+.apptile{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px 10px;border-radius:12px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .12);transition:box-shadow .15s,transform .15s var(--ease),background .15s}
+.apptile:hover:not(:disabled){box-shadow:0 0 0 1px rgb(var(--inkc) / .22),var(--cut-sm);transform:translateY(-1px)}
+.apptile:active:not(:disabled){transform:scale(.97)}
+.apptile.on{box-shadow:0 0 0 2px var(--tape);background:color-mix(in srgb,var(--tape) 6%,var(--white))}
+.apptile:disabled{opacity:.55}
+.apptile .aicon .fav{width:32px;height:32px;font-size:15px;box-shadow:none}
+.apptile .aicon .fav img{width:28px;height:28px}
+.apptile b{max-width:100%;font:600 13px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atag{max-width:100%;padding:1px 7px;border-radius:6px;background:rgb(var(--inkc) / .06);color:var(--ink2);font:600 10.5px/1.5 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atag.can{cursor:pointer;background:color-mix(in srgb,var(--tape) 14%,transparent);color:color-mix(in srgb,var(--tape) 75%,var(--ink))}
+.atag.can:hover{background:color-mix(in srgb,var(--tape) 22%,transparent)}
+.apptile .ack{position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgb(var(--inkc) / .25);transition:background .15s,box-shadow .15s}
+.apptile.on .ack{background:var(--tape);box-shadow:none}
+.apptile.on .ack::after{content:"";position:absolute;left:5px;top:5px;width:7px;height:4px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg)}
+.apptile.have .ack{display:none}
+.apppick + .tgls{margin-top:12px;max-width:620px}
+.appsgrid .bmi{max-width:none}

@@ -12,7 +12,7 @@ const { start, sleep, ok, done, skipSetup, AUDIT, shot } = require('./lib');
   // something already in Washi's Play space, to check it isn't doubled
   await ui.evaluate(() => { const s = S.spaces.find(x => x.id === 'play'); const id = 'tdup'; S.tabs[id] = { url: 'http://localhost:8765/p1.html?dup', title: 'dup', seen: Date.now() }; s.tabs.push(id); render(); });
   await ui.evaluate(() => openSetup('settings', 'import')); await sleep(1800);
-  const rows = await ov.$$eval('.arow', r => r.map(x => [x.querySelector('b').textContent, x.querySelector('small').textContent, x.querySelector('.tag').textContent, x.classList.contains('on')]));
+  const rows = await ov.$$eval('.arc .arow', r => r.map(x => [x.querySelector('b').textContent, x.querySelector('small').textContent, x.querySelector('.tag').textContent, x.classList.contains('on')]));
   ok(rows.length === 3, 'Settings → Import lists the 3 Arc spaces: ' + JSON.stringify(rows));
   ok(rows[0][2] === 'adds to Work' && rows[1][2] === 'new space' && rows[2][2] === 'adds to Play', 'it says which spaces merge and which are new');
   ok(rows[0][1].startsWith('7 tabs · 4 folders') && /\+1 unpinned/.test(rows[0][1]), 'counts per space are right (Arc-only easels and arc:// pages are left out): ' + rows[0][1]);
@@ -56,7 +56,7 @@ const { start, sleep, ok, done, skipSetup, AUDIT, shot } = require('./lib');
   // second run: nothing doubles up
   const nTabs = await ui.evaluate(() => Object.keys(S.tabs).length);
   await ui.evaluate(() => openSetup('settings', 'import')); await sleep(1600);
-  const rows2 = await ov.$$eval('.arow .tag', r => r.map(x => x.textContent));
+  const rows2 = await ov.$$eval('.arc .arow .tag', r => r.map(x => x.textContent));
   ok(rows2.join() === 'adds to Work,adds to Personal,adds to Play', 'second time, all three merge: ' + rows2);
   await ov.click('button:has-text("Bring in 3 spaces")'); await ov.waitForSelector('.arc .okay', { timeout: 6000 });
   ok(await ov.$eval('.arc .okay', e => e.textContent) === '✓ Everything from Arc was already here.' && await ui.evaluate(n => Object.keys(S.tabs).length === n, nTabs), 'running it again adds nothing');

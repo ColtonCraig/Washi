@@ -1,0 +1,17 @@
+# Things that behave differently on a real Mac: the importer (Apple's ditto for Safari zips, Electron's built-in SQLite).
+name: Mac checks
+on:
+  push:
+    branches: [main]
+    paths: ['app/bmimport.js', 'test/mac-import.js', 'test/fixtures/make-browsers.js', '.github/workflows/macchecks.yml']
+  workflow_dispatch:
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: sw_vers
+      - run: npm ci
+      - run: ELECTRON_RUN_AS_NODE=1 npx electron test/mac-import.js

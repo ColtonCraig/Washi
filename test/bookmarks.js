@@ -208,16 +208,16 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   // 8. import from other browsers
   await ui.evaluate(() => openSetup('settings', 'bookmarks')); await sleep(1500);
   const found = await ov.evaluate(() => [...document.querySelectorAll('.bmrow')].map(r => r.querySelector('b').textContent + '/' + r.querySelector('small').textContent));
-  ok(found.length === 3 && found[0] === 'Chrome/Colton · 4 bookmarks' && found[1] === 'Chrome/Work · 1 bookmark' && found[2] === 'Brave/Default · 1 bookmark', 'Settings › Bookmarks finds Chrome (both profiles, by name) and Brave, not the empty one: ' + found);
+  ok(found.length === 4 && found[0].startsWith('Safari/') && found[1] === 'Chrome/Colton · 4 bookmarks' && found[2] === 'Chrome/Work · 1 bookmark' && found[3] === 'Brave/Default · 1 bookmark', 'Settings › Bookmarks offers Safari\'s export and finds Chrome (both profiles, by name) and Brave, not the empty one: ' + found);
   await audit(ov, 'Settings › Bookmarks');
   shot('bm-settings');
-  await ov.evaluate(() => document.querySelector('.bmrow .btn').click());
+  await ov.evaluate(() => document.querySelectorAll('.bmrow .btn')[1].click());
   await ov.waitForSelector('.bmi .okay', { timeout: 6000 });
   let msg = await ov.$eval('.bmi .okay', e => e.textContent);
   ok(/Brought in 4 bookmarks in 3 folders from Chrome/.test(msg), 'importing says what came over: ' + msg);
   const tree = await ui.evaluate(() => S.bookmarks.map(n => n.type === 'folder' ? n.name + '[' + n.kids.map(k => k.title || k.name + '[' + (k.kids || []).map(j => j.title || j.name).join() + ']').join() + ']' : n.title));
   ok(tree.includes('Chrome One') && tree.some(x => x.startsWith('Dev[Chrome Dev,Deeper[Deep]')) && tree.includes('More from Chrome (Colton)[Other One]') && !JSON.stringify(tree).includes('Script'), 'Chrome\'s bar joins yours (nested folders too), the rest goes in “More from Chrome”, scripts are left out: ' + JSON.stringify(tree));
-  await ov.evaluate(() => document.querySelector('.bmrow .btn').click());
+  await ov.evaluate(() => document.querySelectorAll('.bmrow .btn')[1].click());
   await ov.waitForFunction(() => /already here/.test((document.querySelector('.bmi .okay') || {}).textContent || ''), null, { timeout: 6000 });
   ok(await ui.evaluate(() => [...bmWalk()].length) === await ui.evaluate(() => [...bmWalk()].length) && /already here/.test(await ov.$eval('.bmi .okay', e => e.textContent)), 'importing again adds nothing twice');
   const count1 = await ui.evaluate(() => [...bmWalk()].length);

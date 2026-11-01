@@ -48,8 +48,8 @@ async function github(src) {
   const repo = repoOf(src); if (!repo) throw new Error('Type it like owner/repo, for example electron/electron.');
   const tok = tokenGet();
   const r = await get(`${API()}/repos/${repo}/pulls?state=open&per_page=${MAX_ITEMS}&sort=created&direction=desc`, { Accept: 'application/vnd.github+json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) });
-  if (r.status === 404) throw new Error(tok ? `Can't see ${repo}. Check the name, and that your token can read it.` : `Can't see ${repo}. If it's private, add a GitHub token in Settings › Tabs.`);
-  if (r.status === 401 || r.status === 403) throw new Error(/rate limit/i.test(r.text) ? 'GitHub says to slow down. Washi will try again later.' : 'GitHub refused the token. Check it in Settings › Tabs.');
+  if (r.status === 404) throw new Error(tok ? `Can't see ${repo}. Check the name, and that your token can read it.` : `Can't see ${repo}. If it's private, add a GitHub token in Settings › Apps.`);
+  if (r.status === 401 || r.status === 403) throw new Error(/rate limit/i.test(r.text) ? 'GitHub says to slow down. Washi will try again later.' : 'GitHub refused the token. Check it in Settings › Apps.');
   if (r.status !== 200) throw new Error(`GitHub answered ${r.status}.`);
   let list; try { list = JSON.parse(r.text); } catch { throw new Error('GitHub sent something unexpected.'); }
   if (!Array.isArray(list)) throw new Error('GitHub sent something unexpected.');
@@ -90,4 +90,20 @@ async function fetchLive(kind, src) {
   try { const r = kind === 'github' ? await github(src) : await feed(src); return { ok: true, ...r, src: r.src || (kind === 'github' ? repoOf(src) : src) }; }
   catch (e) { return { ok: false, error: e.message || 'Couldn\'t load it.' }; }
 }
-module.exports = { fetchLive, parseFeed, repoOf, tokenSet, tokenHas: () => !!tokenGet() };
+/* for the Today page: pull requests waiting on your review, and your own open ones */
+async function githubToday() {
+  const tok = tokenGet(); if (!tok) return { ok: false, needToken: true };
+  const q = async query => {
+    const r = await get(`${API()}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=8`, { Accept: 'application/vnd.github+json', Authorization: `Bearer ${tok}` });
+    if (r.status === 401) throw new Error('GitHub refused the token. Check it in Settings › Apps.');
+    if (r.status === 403) throw new Error(/rate limit/i.test(r.text) ? 'GitHub says to slow down. Washi will try again later.' : 'GitHub refused the token. Check it in Settings › Apps.');
+    if (r.status !== 200) throw new Error(`GitHub answered ${r.status}.`);
+    let j; try { j = JSON.parse(r.text); } catch { throw new Error('GitHub sent something unexpected.'); }
+    return { total: +j.total_count || 0, items: (Array.isArray(j.items) ? j.items : []).filter(i => i && okURL(i.html_url)).map(i => ({ url: i.html_url, title: clip(i.title, 140), number: i.number, repo: clip((i.repository_url || '').split('/').slice(-2).join('/'), 80), draft: !!i.draft, at: Date.parse(i.updated_at) || 0 })) };
+  };
+  try {
+    const [reviews, mine] = await Promise.all([q('is:open is:pr archived:false review-requested:@me'), q('is:open is:pr archived:false author:@me')]);
+    return { ok: true, reviews, mine, at: Date.now() };
+  } catch (e) { return { ok: false, error: e.message || 'Couldn\'t reach GitHub.' }; }
+}
+module.exports = { fetchLive, parseFeed, repoOf, tokenSet, githubToday, tokenHas: () => !!tokenGet() };

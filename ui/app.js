@@ -53,6 +53,13 @@ function histLocal(op) {
   else if (op.t === 'upd') { const h = S.history.find(x => x.url === op.url); if (h) { if (op.title !== undefined) h.title = op.title; if (op.fav !== undefined) h.fav = op.fav; } }
   else if (op.t === 'del') S.history = S.history.filter(h => h.url !== op.url);
   else if (op.t === 'clear') S.history = [];
+  else if (op.t === 'merge') S.history = histMerge(S.history, op.list || []);
+}
+/* history from another browser joins yours: each page once (keeping the newest visit), newest first. Same as the main process. */
+function histMerge(have, add) {
+  const by = new Map(); for (const h of have) if (h && h.url) by.set(h.url, h);
+  for (const h of add) { if (!h || typeof h.url !== 'string' || !/^https?:/i.test(h.url)) continue; const o = by.get(h.url); if (!o) by.set(h.url, { url: h.url, title: String(h.title || '').slice(0, 300), t: +h.t || 0 }); else if ((+h.t || 0) > (o.t || 0)) by.set(h.url, { ...o, t: +h.t, title: o.title || h.title }); }
+  return [...by.values()].sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 3000);
 }
 B.onHistOp(op => { if (S && op) histLocal(op); });
 /* another window changed something everyone shares */
@@ -187,7 +194,7 @@ function updateChrome() {
   $('#emptyTitle').textContent = `Nothing taped up in ${sp().name}`;
   document.title = t ? label(t) + ' · Washi' : 'Washi';
 }
-const render = () => { updateChrome(); pushState(); };
+const render = () => { updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => applyTheme(S.prefs, palFor(sp()));
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
 const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, keys: p.keys || {} }); refreshKeys(); };
@@ -502,7 +509,7 @@ function openCmd(mode) {
     A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
-    A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
+    A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('today', 'Show Today'), A('apps', 'Add apps to sign in to', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
   ];
   B.overlayOpen({ mode: mode === 'this' && !cur ? 'new' : mode, ...look(), value: mode === 'this' && cur ? cur.url : '', tabs, actions,
     history: S.history.slice(0, 400).map(h => ({ url: h.url, title: h.title })), archive: S.archive.slice(0, 100).map(a => ({ url: a.url, title: a.title })), bookmarks: bmFlat().slice(0, 3000), suggest: suggestTpl(S.prefs) });
@@ -513,7 +520,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -527,8 +534,8 @@ async function openSheet(kind, extra) {
 }
 /* ---------- welcome setup, settings and the quick-start guide (drawn in the overlay) ---------- */
 async function openSetup(page, section) {
-  let info = {}; try { info = await B.setupInfo(); } catch {}
-  B.overlayOpen({ mode: 'setup', page, section, keys: R.keys, prefs: S.prefs, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated })), cur: S.cur, dock: S.dock, info, ...look(), tabs: [], actions: [], history: [] });
+  let info = {}; try { info = await B.setupInfo(); R.info = info; } catch {}
+  B.overlayOpen({ mode: 'setup', page, section, apps: appsPresent(), keys: R.keys, prefs: S.prefs, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated })), cur: S.cur, dock: S.dock, info, ...look(), tabs: [], actions: [], history: [] });
 }
 B.onSetupMsg(m => {
   if (!S) return;
@@ -551,6 +558,8 @@ B.onSetupMsg(m => {
   else if (m.type === 'arcImport') importArc(m).then(r => B.setupReply({ type: 'arcDone', ...r }));
   else if (m.type === 'peekAdopt') adoptPeek();
   else if (m.type === 'bm') bmMsg(m);
+  else if (m.type === 'apps') addApps(m.picks || []);
+  else if (m.type === 'openUrl' && /^https:\/\//.test(m.url || '')) { B.overlayCancel(); openTab(m.url); }
   else if (m.type === 'bmImport') B.setupReply({ type: 'bmDone', ...bmImport(m.data, m.name) });
 });
 function sheetAct(m) {
@@ -633,7 +642,8 @@ B.onOverlayResult(r => {
   if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); return; }
   if (r.kind === 'setup') {
     const first = !S.prefs.done; S.prefs.done = true; save();
-    if (first && !spaceTabs(sp()).length && !S.pins.length) setTimeout(() => openCmd('new'), 350);     // first run: go straight to typing an address
+    B.setupInfo().then(i => { R.info = i; render(); }).catch(() => {});            // a GitHub token may have been added
+    if (first) showToday();                                                           // first run: the Today page, with your apps to sign in to
     return;
   }
   R.bmSheet = false;
@@ -744,7 +754,7 @@ B.onCmd(n => {
   if (n.startsWith('switch:pick:')) return switchEnd(+n.slice(12));
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
-  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar'].includes(n)) return runAction(n);
+  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today'].includes(n)) return runAction(n);
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
@@ -766,7 +776,7 @@ B.onTab(({ id, ...p }) => {
   const t = S.tabs[id]; if (!t) return;
   if (p.closeMe) return closeTab(id, { noFx: true });
   if (p.url !== undefined) {
-    t.url = p.url;
+    t.url = p.url; if (t.app) t.appSeen = true;
     if (/^https?:/.test(p.url) && !p.notice && (!S.history[0] || S.history[0].url !== p.url)) {          // every page you land on is history, including the first one in a tab
       hist({ t: 'add', e: { url: p.url, title: t.title, fav: smallFav(t.fav), t: Date.now() } });
     }
@@ -950,6 +960,9 @@ function bmNewFolderQuiet(parentId) {                     // from the sheet: the
    Running it twice adds nothing twice: bookmarks you already have are skipped, same-named folders are filled in. */
 function bmImport(data, name) {
   if (!data || !Array.isArray(data.bar) || !Array.isArray(data.other)) return { ok: false, error: 'Couldn\'t read those bookmarks.' };
+  const hl = Array.isArray(data.history) ? data.history.filter(h => h && typeof h.url === 'string' && /^https?:\/\//i.test(h.url)).slice(0, 3000) : [];
+  const knownPages = new Set(S.history.map(h => h.url)), newPages = new Set(hl.map(h => h.url).filter(u => !knownPages.has(u))).size;
+  if (hl.length) hist({ t: 'merge', list: hl.map(h => ({ url: h.url, title: String(h.title || '').slice(0, 300), t: +h.t || 0 })) });
   name = String(name || 'another browser').slice(0, 30);
   const have = new Set([...bmWalk()].filter(x => x[0].type === 'bm').map(x => x[0].url)), n = { bm: 0, f: 0 };
   const merge = (nodes, into, depth) => {
@@ -970,10 +983,46 @@ function bmImport(data, name) {
   merge(data.bar, S.bookmarks, 0);
   if (data.other.length) merge([{ type: 'folder', name: data.bar.length ? `More from ${name}` : `From ${name}`, kids: data.other }], S.bookmarks, 0);
   bmChanged();
-  if (!n.bm) return { ok: true, n: 0, text: `Every bookmark from ${name} was already here.` };
-  return { ok: true, n: n.bm, text: `Brought in ${n.bm} bookmark${n.bm > 1 ? 's' : ''}${n.f ? ` in ${n.f} folder${n.f > 1 ? 's' : ''}` : ''} from ${name}.` };
+  if (!n.bm && !newPages) return { ok: true, n: 0, pages: 0, text: `Everything from ${name} was already here.` };
+  const parts = [n.bm && `${n.bm} bookmark${n.bm > 1 ? 's' : ''}${n.f ? ` in ${n.f} folder${n.f > 1 ? 's' : ''}` : ''}`, newPages && `${newPages.toLocaleString()} page${newPages > 1 ? 's' : ''} of history`].filter(Boolean);
+  return { ok: true, n: n.bm, pages: newPages, text: `Brought in ${parts.join(' and ')} from ${name}.` };
 }
 bStar.addEventListener('click', bmStar);
+
+/* ---------- your apps (picked in setup or Settings › Apps) ----------
+   Each becomes a pinned tab, or (for a space that keeps its own logins) a tab in that space's "Apps" folder, so it
+   signs in with that space's cookies. The Today page lists the ones you haven't signed in to yet. */
+const appCat = () => BL.appsFor(R.info);
+const appTabsOf = id => Object.keys(S.tabs).filter(k => S.tabs[k].app === id && (S.pins.includes(k) || S.spaces.some(x => spaceTabs(x).includes(k))));
+const appsPresent = () => appCat().map(a => a.id).filter(id => appTabsOf(id).length);
+function addApps(picks) {
+  const cat = appCat(), now = Date.now(); let n = 0;
+  S.prefs.apps = { ...(S.prefs.apps || {}) };
+  for (const p of picks) {
+    const a = cat.find(x => x.id === p.id); if (!a || appTabsOf(a.id).length) continue;
+    const home = p.space ? S.spaces.find(x => x.id === p.space && x.isolated) : null;
+    const id = uid('t'); S.tabs[id] = { url: a.url, title: a.n, seen: now - 1000 + n, app: a.id, fav: BL.appIcon(a) };
+    if (!home && S.pins.length < 12) S.pins.push(id);
+    else {
+      const s = home || sp();
+      let f = s.folders.find(x => x.name === 'Apps');
+      if (!f) { f = { id: uid('f'), name: 'Apps', open: true, tabs: [] }; s.folders.push(f); s.tabs.unshift('f:' + f.id); }
+      f.tabs.push(id);
+    }
+    S.prefs.apps[a.id] = { space: home ? home.id : '', at: now };
+    n++;
+  }
+  if (!n) return;
+  S.prefs.appsHide = false;
+  render(); save(); syncMain();
+  B.fx({ type: 'toast', text: `Added ${n} app${n > 1 ? 's' : ''}. Sign in to each one from Today.`, short: true });
+}
+/* the Today page: shown whenever no page is open in this space (and after setup) */
+function showToday() {
+  if (!S) return;
+  R.split = false; R.b = null; R.a = null; R.focus = 'a';
+  placePanes(); commit(false); render();
+}
 
 /* ---------- top bar ---------- */
 bSide.addEventListener('click', toggleSide);
@@ -1035,6 +1084,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
 /* ---------- boot ---------- */
 (async () => {
   let raw = {}; try { raw = (await B.stateLoad()) || {}; } catch {}
+  try { R.info = (await B.setupInfo()) || {}; } catch { R.info = {}; }
   window.WID = raw.wid || 'w1';
   const J = x => { try { return x ? JSON.parse(x) : null; } catch { return null; } };
   const sh = J(raw.shared), mine = J(raw.win) || {}, legacy = J(raw.legacy);

@@ -1,5 +1,6 @@
 # Washi backlog (running tally)
 Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), matches the paper design and animations, and works with every other feature.
+Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26) on GitHub's Mac machines, not older behaviour from memory.
 
 ## What other browsers have, and where Washi stands (research, Oct 2026)
 | Feature people love | Who has it | Washi |
@@ -42,6 +43,12 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   secure DNS; remembered site permissions; popup blocker; peek; find; history/archive/downloads sheets; sleeping tabs;
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
+
+## Done and tested (0.13)
+- Your apps: a setup step (and Settings › Apps) to pick Gmail, Calendar, Drive, YouTube, Notion, GitHub, Slack, Linear, Figma, Outlook, ChatGPT, Claude. They're pinned, or go in an "Apps" folder of a space that keeps its own logins (setup offers "Keep Work's logins separate"). Sign-in is checked by each app's signed-in cookie (in the right space's cookie jar) or, for apps without one, by whether the page left the sign-in page
+- Today: the page shown when nothing's open in a space (after setup, new windows, ⇧⌘H, "Show Today"): greeting, search, sign-in checklist (hides itself when done), pinned apps, jump back in / recently visited, bookmarks, GitHub pull requests waiting on your review and your own (with a token; Settings › Apps). One column on narrow panes; light and dark
+- Bring your stuff over: Safari's export .zip (bookmarks + history from every profile), Chrome-type browsers' history as well as bookmarks, Firefox bookmarks and history. History merges without duplicates. In setup and Settings › Bookmarks. Checked on a real macOS 26 machine too (Apple's ditto, Electron's SQLite)
+- Not done on purpose: real Google/Notion API connections (they'd need developer apps registered with each company, and Google re-approval every 7 days); passwords (Washi doesn't store passwords yet)
 
 ## Done (0.12.2–0.12.3)
 - The installer window (the .dmg) is a taped-up paper sheet: "Hi! Let's tape Washi in.", a dashed arrow from Washi to Applications, and a sticky note explaining Open Anyway for the first launch. Finder itself lays the window out at build time (hand-written window settings stopped showing backgrounds on macOS 26); checked with a real Finder screenshot on every change
@@ -102,7 +109,7 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 ## Next (in this order)
 - [ ] Confirm on Colton's Mac: Google sign-in (Gmail, Drive, Calendar), Microsoft 365 / Okta / Slack sign-in work end to end
 - [ ] Passwords for work: the biggest everyday gap. Option A: Washi's own password saver using the macOS Keychain. Option B: the Chromium fork (real extensions like 1Password). Decide with Colton
-- [ ] Import passwords and history from other browsers (with the password work)
+- [ ] Import passwords from other browsers (with the password work)
 - [ ] Reorder pinned tabs by dragging
 - [ ] Reader mode
 - [ ] Apple Developer ID signing + notarizing (removes the one-time Open Anyway step; needed before sharing Washi)

@@ -151,5 +151,32 @@
   }
   const zoneAt = (L, x, y) => zones(L).find(z => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) || null;
 
-  window.BL = { PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
+  /* ---------- apps you can sign in to during setup (or in Settings › Apps) ----------
+     cookie: a cookie that's only there when you're signed in (checked in the main process); login: pages that mean
+     "not signed in yet", for apps without a reliable cookie. Icons come from Google's favicon service, with the usual
+     letter tile if they can't load. */
+  const APPS = [
+    { id: 'gmail', n: 'Gmail', url: 'https://mail.google.com/', c: '#ea4335', cookie: { url: 'https://accounts.google.com', name: 'SID' } },
+    { id: 'gcal', n: 'Calendar', url: 'https://calendar.google.com/', c: '#4285f4', cookie: { url: 'https://accounts.google.com', name: 'SID' } },
+    { id: 'gdrive', n: 'Drive', url: 'https://drive.google.com/', c: '#1fa463', cookie: { url: 'https://accounts.google.com', name: 'SID' } },
+    { id: 'youtube', n: 'YouTube', url: 'https://www.youtube.com/', c: '#ff0033', cookie: { url: 'https://accounts.google.com', name: 'SID' } },
+    { id: 'notion', n: 'Notion', url: 'https://www.notion.so/', c: '#37352f', work: true, cookie: { url: 'https://www.notion.so', name: 'token_v2' } },
+    { id: 'github', n: 'GitHub', url: 'https://github.com/', c: '#24292f', work: true, cookie: { url: 'https://github.com', name: 'logged_in', value: 'yes' } },
+    { id: 'slack', n: 'Slack', url: 'https://app.slack.com/client', c: '#611f69', work: true, cookie: { url: 'https://app.slack.com', name: 'd' } },
+    { id: 'linear', n: 'Linear', url: 'https://linear.app/', c: '#5e6ad2', work: true, login: /^https:\/\/linear\.app\/(login|signup)|^https:\/\/linear\.app\/?$/ },
+    { id: 'figma', n: 'Figma', url: 'https://www.figma.com/files', c: '#a259ff', work: true, login: /figma\.com\/(login|signup)|^https:\/\/www\.figma\.com\/?$/ },
+    { id: 'outlook', n: 'Outlook', url: 'https://outlook.office.com/mail/', c: '#0f6cbd', work: true, login: /login\.(microsoftonline|live)\.com|outlook\.(live|office)\.com\/(owa\/)?\?|microsoft\.com\/[a-z-]+\/microsoft-365\/outlook/ },
+    { id: 'chatgpt', n: 'ChatGPT', url: 'https://chatgpt.com/', c: '#10a37f', cookie: { url: 'https://chatgpt.com', name: '__Secure-next-auth.session-token' } },
+    { id: 'claude', n: 'Claude', url: 'https://claude.ai/', c: '#d97757', cookie: { url: 'https://claude.ai', name: 'sessionKey' } }
+  ];
+  /* the developer version can be pointed at the test server instead (Settings never shows this) */
+  const TEST_APPS = base => [
+    { id: 'gmail', n: 'Mail', url: base + '/app/mail', c: '#ea4335', cookie: { url: base, name: 'test_mail' } },
+    { id: 'notion', n: 'Notes', url: base + '/app/notes', c: '#37352f', work: true, cookie: { url: base, name: 'test_notes' } },
+    { id: 'github', n: 'Code', url: base + '/app/code', c: '#24292f', work: true, cookie: { url: base, name: 'test_code' } },
+    { id: 'linear', n: 'Tasks', url: base + '/app/tasks', c: '#5e6ad2', work: true, login: /\/app\/tasks\/login/ }
+  ];
+  const appsFor = info => info && info.appsTest ? TEST_APPS(info.appsTest) : APPS;
+  const appIcon = a => a.icon || (/^https:/.test(a.url) ? 'https://www.google.com/s2/favicons?sz=64&domain=' + new URL(a.url).hostname : null);
+  window.BL = { appsFor, appIcon, PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
 })();

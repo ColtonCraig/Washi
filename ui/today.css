@@ -1,0 +1,72 @@
+/* Today: the page shown when nothing is open in a space */
+#pa .empty{display:none}
+.today{container-type:inline-size;position:absolute;inset:0;overflow:auto;border-radius:10px;background:var(--white);scrollbar-width:thin;-webkit-app-region:no-drag}
+.today[hidden]{display:none}
+.tin{max-width:860px;margin:0 auto;padding:46px 40px 40px}
+.thead{position:relative;margin-bottom:18px}
+.ttape{position:absolute;left:-6px;top:-18px;width:78px;height:18px;transform:rotate(-4deg);opacity:.9;background:repeating-linear-gradient(-45deg,var(--tape) 0 7px,color-mix(in srgb,var(--tape) 55%,#fff) 7px 14px)}
+.thead h1{margin:0;font:700 46px/1.05 var(--font-hand);color:var(--ink)}
+.thead p{margin:6px 0 0;color:var(--ink2);font:500 14px var(--font-ui)}
+.tsearch{width:100%;height:50px;display:flex;align-items:center;gap:12px;padding:0 18px;border-radius:13px;background:var(--paper);color:var(--ink3);font:500 16px var(--font-ui);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 2px 6px rgb(var(--sh) / .06);transition:box-shadow .15s,transform .15s var(--ease)}
+.tsearch:hover{box-shadow:0 0 0 1px rgb(var(--inkc) / .18),0 4px 12px rgb(var(--sh) / .1)}
+.tsearch:active{transform:scale(.995)}
+.tsearch span{flex:1}
+.tsearch kbd,.tnote kbd{padding:2px 7px;border-radius:6px;background:rgb(var(--inkc) / .07);color:var(--ink2);font:600 12px var(--font-ui)}
+.tcard{position:relative;margin-top:16px;padding:16px 16px 12px;border-radius:13px;background:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .07)}
+.tcard h2{margin:0 0 8px;font:700 13px var(--font-ui);letter-spacing:.02em;color:var(--ink2)}
+.tcard h3{display:flex;align-items:center;gap:6px;margin:10px 0 2px;font:700 12.5px var(--font-ui);color:var(--ink)}
+.tcard h3 span{padding:1px 7px;border-radius:99px;background:var(--tape);color:#fff;font-size:11px}
+.tch{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tch h2{margin:0;flex:1}
+.tprog{color:var(--ink3);font:600 12px var(--font-ui)}
+.tlink{color:var(--ink2);font:600 12px var(--font-ui);text-decoration:underline;text-decoration-color:rgb(var(--inkc) / .3);text-underline-offset:3px}
+.tlink:hover{color:var(--ink)}
+.tbtn{height:32px;margin-top:8px;padding:0 14px;border-radius:9px;background:var(--tape);color:#fff;font:600 13px var(--font-ui);transition:transform .12s var(--ease),filter .12s}
+.tbtn:hover{filter:brightness(1.05)}.tbtn:active{transform:scale(.97)}
+.tnote{margin:4px 0 6px;color:var(--ink2);font:500 13px/1.45 var(--font-ui)}
+.tnote.err{color:#c23a2a}
+.tgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:0 16px}
+.tgrid.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+@container (max-width:680px){.tgrid.two{grid-template-columns:minmax(0,1fr)}.tin{padding:34px 24px 28px}}
+.tcol{min-width:0}
+/* sign in to your apps */
+.tsign{background:color-mix(in srgb,var(--tape) 7%,var(--paper));box-shadow:0 0 0 1px color-mix(in srgb,var(--tape) 25%,transparent)}
+.tapps{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
+.tapp{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border-radius:10px;background:var(--white);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .08);transition:box-shadow .15s,transform .12s var(--ease)}
+.tapp:hover{box-shadow:0 0 0 1px rgb(var(--inkc) / .16),0 3px 8px rgb(var(--sh) / .08)}
+.tapp:active{transform:scale(.97)}
+.tapp b{flex:1;min-width:0;font:600 13px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tapp em{flex:none;font:600 11.5px var(--font-ui);font-style:normal;color:var(--tape)}
+.tapp.ok em{color:#1f9d57}
+.tapp.ok{opacity:.7}
+.tapp .fav,.tpin .fav,.trow .fav,.tbm .fav{flex:none}
+/* pinned */
+.tpins{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.tpin{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:12px 6px 9px;border-radius:11px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .07);transition:transform .15s var(--ease),box-shadow .15s}
+.tpin:hover{transform:translateY(-2px) rotate(-.6deg);box-shadow:0 0 0 1px rgb(var(--inkc) / .12),0 6px 14px rgb(var(--sh) / .12)}
+.tpin .fav{width:28px;height:28px;font-size:13px}
+.tpin .fav img{width:24px;height:24px}
+.tpin span{max-width:100%;font:600 12px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* rows */
+.trow{width:100%;display:flex;align-items:center;gap:10px;min-height:40px;padding:5px 8px;border-radius:9px;text-align:left;transition:background .12s}
+.trow:hover{background:rgb(var(--inkc) / .05)}
+.trow .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.trow b{font:600 13.5px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow small{font:500 11.5px var(--font-ui);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpr{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:color-mix(in srgb,#1f9d57 16%,transparent);color:#1f9d57}
+.tpr.draft{background:rgb(var(--inkc) / .07);color:var(--ink3)}
+/* bookmarks */
+.tbms{display:flex;flex-wrap:wrap;gap:6px}
+.tbm{max-width:200px;height:30px;display:flex;align-items:center;gap:7px;padding:0 10px 0 7px;border-radius:8px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .07);font:500 12.5px var(--font-ui);color:var(--ink);transition:transform .12s var(--ease),box-shadow .12s}
+.tbm span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbm:hover{box-shadow:0 0 0 1px rgb(var(--inkc) / .14)}
+.tbm:active{transform:scale(.96)}
+.tbm.fold{background:color-mix(in srgb,var(--fc,#f2d58f) 30%,var(--white));font-weight:600}
+.tbm .emo{font-size:13px}
+.tbm.fold .i{width:14px;height:14px;color:color-mix(in srgb,var(--fc,#c2610c) 85%,#000)}
+/* coming in: cards settle one after another */
+.tin.enter .thead,.tin.enter .tsearch,.tin.enter .tcard{animation:tin .42s var(--spring,cubic-bezier(.34,1.3,.64,1)) both}
+.tin.enter .tsearch{animation-delay:.04s}
+.tin.enter .tcard{animation-delay:calc(.08s + var(--i,0) * .045s)}
+@keyframes tin{from{opacity:0;transform:translateY(10px) rotate(-.4deg)}}
+.motion-off .tin.enter *{animation:none!important}

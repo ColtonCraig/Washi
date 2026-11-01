@@ -59,7 +59,7 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-live-'));
   ok(/Can't see acme\/gone/.test((await F()).find(x => x.id === f.id).error) && await sb.$eval(`.fold[data-fid="${f.id}"]`, e => e.classList.contains('err')), 'when a source stops working, the folder shows a warning (and keeps its tabs)');
   await ui.evaluate(fid => { sp().folders.find(x => x.id === fid).live.src = 'acme/widgets'; }, f.id);
   // 7. a GitHub token (Settings › Tabs) is sent, and kept encrypted
-  await ui.evaluate(() => openSetup('settings', 'tabs')); await sleep(1300);
+  await ui.evaluate(() => openSetup('settings', 'apps')); await sleep(1300);
   await ov.fill('.ghk input', 'github_pat_TESTTOKEN1234567890abcdef'); await ov.click('.ghk button:has-text("Save")'); await sleep(500);
   const gk = await ov.evaluate(() => document.querySelector('.ghk').textContent);
   ok(/token is saved/.test(gk), 'saving a token says so: ' + gk);

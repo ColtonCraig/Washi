@@ -5,12 +5,12 @@ window.SETUP = (() => {
   const B = window.washi, BL = window.BL;
   const { esc, PAL, KEYS, palFor, palOf, applyTheme, PRESETS, ENGINES, isDark, prefsOf } = BL;
   const root = document.getElementById('setup');
-  let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null;
+  let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null, HAVE = [], appsCommit = null;
 
   const hooks = { perms: null, update: null, arc: null, bm: null };
   B.onSetupEvent(e => { if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); if (e && e.type === 'bmDone' && hooks.bm) hooks.bm(e); });
   B.onPerms(l => hooks.perms && hooks.perms(l)); B.onUpdate(u => hooks.update && hooks.update(u));
-  const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['guide', 'Quick start'], ['done', 'Done']];
+  const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['apps', 'Your apps'], ['guide', 'Quick start'], ['done', 'Done']];
   const curSp = () => SPACES.find(x => x.id === CUR) || SPACES[0];
   const retheme = () => applyTheme(P, palFor(curSp()));
   const send = m => B.setupMsg(m);
@@ -180,7 +180,6 @@ window.SETUP = (() => {
       field('Sleeping tabs', seg([{ v: 0, label: 'Never' }, { v: 15, label: 'After 15 min' }, { v: 60, label: 'After 1 hour' }, { v: 240, label: 'After 4 hours' }], () => +P.sleep, v => setPref({ sleep: v }), 'grid'),
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
       field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
-      secLive(),
       field('Little scraps', toggle('Open links from other apps in a little scrap', 'A small window you can glance at and close, or keep with ⌘O. Needs Washi as your default browser.', () => P.scrapLinks, v => setPref({ scrapLinks: v })),
         'Open one any time with ⌥⌘N.')];
   }
@@ -292,7 +291,7 @@ window.SETUP = (() => {
       if (msg) out.append(h('small', { class: bad ? 'err' : 'hint' }, msg));
     };
     draw();
-    return field('Live folders', out, 'Live folders fill themselves from GitHub pull requests or any RSS/Atom feed (make one from the folder button in the sidebar). Public repos need nothing; for private ones, add a token that can read pull requests.');
+    return field('GitHub', out, h('span', {}, 'Lets the Today page show pull requests waiting on you, and live folders read private repositories. ', h('button', { class: 'link', onclick: () => send({ type: 'openUrl', url: 'https://github.com/settings/personal-access-tokens/new' }) }, 'Make a token on GitHub'), ' (read-only access to pull requests is enough), then paste it here.'));
   }
 
   /* ---------- bring your Arc setup over ---------- */
@@ -359,35 +358,82 @@ window.SETUP = (() => {
   function secBookmarks() {
     const bar = field('Bookmarks bar', seg([{ v: 'always', label: 'Always', sub: 'A slim row above your pages' }, { v: 'hover', label: 'On hover', sub: 'Point at the top bar to see it' }, { v: 'hidden', label: 'Hidden', sub: 'Find them with ⌘T or ⌥⌘B' }],
       () => P.bookmarkBar || 'hover', v => setPref({ bookmarkBar: v, ...(v !== 'always' ? { barLast: v } : { barLast: P.bookmarkBar || 'hover' }) }), 'wide'), 'Click ☆ next to the address (or press ⇧⌘D) to bookmark a page. Right-click the bar for folders, emoji and colors.');
+    return [bar, importBox(false)];
+  }
+
+  /* ---------- your apps: pick the ones you use; they're pinned (or go in a space that keeps its own logins) ---------- */
+  const workSpace = () => SPACES.find(x => x.id === 'work') || SPACES.find(x => /work/i.test(x.name));
+  function appPicker(o = {}) {
+    const cat = BL.appsFor(INFO), picks = new Map(), wrap = h('div', { class: 'apppick' });
+    const homes = () => [{ v: '', label: 'Pinned' }, ...SPACES.filter(x => x.isolated).map(x => ({ v: x.id, label: x.name + ' logins' }))];
+    const dflt = a => { const w = workSpace(); return a.work && w && w.isolated ? w.id : ''; };
+    const grid = h('div', { class: 'appgrid', role: 'group', 'aria-label': 'Apps' });
+    function draw() {
+      grid.innerHTML = '';
+      for (const a of cat) {
+        const have = HAVE.includes(a.id), on = picks.has(a.id), dest = homes().find(x => x.v === picks.get(a.id)) || homes()[0];
+        const icon = h('span', { class: 'aicon', html: BL.favHTML({ title: a.n, url: a.url, fav: BL.appIcon(a) }) });
+        const tag = on ? h('span', { class: 'atag' + (homes().length > 1 ? ' can' : ''), role: homes().length > 1 ? 'button' : null, tabindex: homes().length > 1 ? '0' : null, title: homes().length > 1 ? 'Where it goes: tap to change' : null,
+          onclick: e => { e.stopPropagation(); const hs = homes(); if (hs.length < 2) return; const i = hs.findIndex(x => x.v === picks.get(a.id)); picks.set(a.id, hs[(i + 1) % hs.length].v); draw(); } }, dest.label) : null;
+        grid.append(h('button', { class: 'apptile' + (on ? ' on' : '') + (have ? ' have' : ''), 'data-app': a.id, 'aria-pressed': String(on), disabled: have, title: have ? 'Already in Washi' : a.n,
+          onclick: () => { if (on) picks.delete(a.id); else picks.set(a.id, dflt(a)); draw(); } }, icon, h('b', {}, a.n), have ? h('span', { class: 'atag' }, 'Added') : tag, h('i', { class: 'ack', 'aria-hidden': 'true' })));
+      }
+      if (o.button) { o.button.disabled = !picks.size; o.button.textContent = picks.size ? `Add ${picks.size} app${picks.size > 1 ? 's' : ''}` : 'Pick some apps'; }
+    }
+    const commit = () => {
+      if (!picks.size) return 0;
+      const list = [...picks].map(([id, space]) => ({ id, space }));
+      send({ type: 'apps', picks: list }); HAVE = [...HAVE, ...list.map(x => x.id)]; picks.clear(); draw(); return list.length;
+    };
+    wrap.append(grid); draw();
+    return { el: wrap, commit, redraw: draw, count: () => picks.size };
+  }
+  function workToggle(onChange) {
+    const w = workSpace(); if (!w) return null;
+    return h('div', { class: 'tgls' }, toggle(`Keep ${w.name}'s logins separate`, `Like a work profile: apps in ${w.name} get their own sign-ins`, () => !!w.isolated, v => { w.isolated = v; send({ type: 'isolate', id: w.id, on: v }); refresh(); onChange && onChange(); }));
+  }
+  function secApps() {
+    const btn = h('button', { class: 'btn primary small' });
+    const pk = appPicker({ button: btn });
+    const done = h('small', { class: 'okay', hidden: true });
+    btn.onclick = () => { const n = pk.commit(); if (n) { done.hidden = false; done.textContent = `✓ Added ${n} app${n > 1 ? 's' : ''}. Sign in to each one from the Today page.`; } };
+    return [field('Your apps', h('div', {}, pk.el, workToggle(pk.redraw), h('div', { class: 'sbtns' }, btn, done)), 'Pinned apps sit at the top of the sidebar in every space. An app can go in a space that keeps its own logins instead, so work and personal accounts stay apart.'), secLive()];
+  }
+
+  /* ---------- bring bookmarks and history over from Safari, Chrome-type browsers and Firefox ---------- */
+  const fmtN = n => Number(n).toLocaleString();
+  function importBox(brief) {
     const box = h('div', { class: 'bmi' });
     let found = null, busy = '', msg = null;
     const run = async (key, label) => {
       if (busy) return; busy = key; msg = null; draw();
-      const r = key === 'file' ? await B.setupAct({ type: 'bm:pick' }) : await B.setupAct({ type: 'bm:read', key });
+      const r = key === 'safari' || key === 'file' ? await B.setupAct({ type: 'bm:pick', kind: key }) : await B.setupAct({ type: 'bm:read', key });
       if (!r) { busy = ''; draw(); return; }
-      if (!r.ok) { busy = ''; msg = { ok: false, text: r.error || 'Couldn\'t read those bookmarks.' }; draw(); return; }
-      send({ type: 'bmImport', data: { bar: r.bar, other: r.other }, name: key === 'file' ? r.name : label });
+      if (!r.ok) { busy = ''; msg = { ok: false, text: r.error || 'Couldn\'t read that.' }; draw(); return; }
+      send({ type: 'bmImport', data: { bar: r.bar, other: r.other, history: r.history || [] }, name: key === 'safari' || key === 'file' ? r.name : label });
     };
     hooks.bm = r => { busy = ''; msg = { ok: !!r.ok, text: r.text || r.error }; draw(); };
+    const what = b => [b.count && `${fmtN(b.count)} bookmark${b.count === 1 ? '' : 's'}`, b.history && `${fmtN(Math.min(b.history, 3000))} page${b.history === 1 ? '' : 's'} of history`].filter(Boolean).join(' · ');
     function draw() {
       box.innerHTML = '';
       if (msg) box.append(h('p', { class: msg.ok ? 'okay' : 'err' }, (msg.ok ? '✓ ' : '') + msg.text));
+      const list = h('div', { class: 'arcl' });
+      list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, 'Safari'), h('small', {}, 'In Safari: File › Export Browsing Data to File… (bookmarks and history), then choose the .zip')),
+        h('button', { class: 'btn small', disabled: !!busy, onclick: () => run('safari', 'Safari') }, busy === 'safari' ? 'Bringing it in…' : 'Choose export…')));
+      if (found) for (const b of found) {
+        const lbl = b.browser + (found.filter(x => x.browser === b.browser).length > 1 ? ` (${b.profile})` : '');
+        list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, b.browser), h('small', {}, `${b.profile} · ${what(b)}`)),
+          h('button', { class: 'btn small', disabled: !!busy, onclick: () => run(b.key, lbl) }, busy === b.key ? 'Bringing it in…' : 'Import')));
+      }
+      box.append(list);
       if (!found) box.append(h('p', { class: 'hint' }, 'Looking for other browsers on this Mac…'));
-      else if (found.length) {
-        const list = h('div', { class: 'arcl' });
-        for (const b of found) {
-          const lbl = b.browser + (found.filter(x => x.browser === b.browser).length > 1 ? ` (${b.profile})` : '');
-          list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, b.browser), h('small', {}, `${b.profile} · ${b.count} bookmark${b.count === 1 ? '' : 's'}`)),
-            h('button', { class: 'btn small', disabled: !!busy, onclick: () => run(b.key, lbl) }, busy === b.key ? 'Bringing them in…' : 'Import')));
-        }
-        box.append(list);
-      } else box.append(h('p', { class: 'hint' }, 'No Chrome, Brave, Edge, Arc, Dia, Helium, Vivaldi or Opera bookmarks found on this Mac.'));
-      box.append(h('div', { class: 'sbtns' }, h('button', { class: 'btn small plain', disabled: !!busy, onclick: () => run('file', '') }, busy === 'file' ? 'Bringing them in…' : 'Choose a bookmarks file…')),
-        h('p', { class: 'hint' }, 'From Safari: File › Export › Bookmarks. From Firefox: Bookmarks › Manage Bookmarks › Import and Backup › Export Bookmarks to HTML. Then choose that file here.'));
+      else if (!found.length && !brief) box.append(h('p', { class: 'hint' }, 'No Chrome, Brave, Edge, Arc, Dia, Helium, Vivaldi, Opera or Firefox found on this Mac.'));
+      if (!brief) box.append(h('div', { class: 'sbtns' }, h('button', { class: 'btn small plain', disabled: !!busy, onclick: () => run('file', '') }, busy === 'file' ? 'Bringing them in…' : 'Choose a bookmarks file…')),
+        h('p', { class: 'hint' }, 'Any browser\'s bookmarks export (.html) works too. Passwords aren\'t brought over: Washi doesn\'t store passwords yet.'));
     }
     B.setupAct({ type: 'bm:scan' }).then(r => { found = Array.isArray(r) ? r : []; draw(); }).catch(() => { found = []; draw(); });
     draw();
-    return [bar, field('Bring bookmarks over', box, 'Reads them straight from the other browser on this Mac. Their bookmarks bar joins yours and the rest go in a folder. Nothing is doubled up if you do it twice.')];
+    return field(brief ? 'Bring your stuff over' : 'Bring bookmarks and history over', box, brief ? null : 'Reads them straight from the other browser on this Mac. Their bookmarks bar joins yours, the rest go in a folder, and history joins yours. Nothing is doubled up if you do it twice.');
   }
 
   function secSpeed() {
@@ -514,6 +560,12 @@ window.SETUP = (() => {
       h('div', { class: 'prev' }, mini('pv'), h('p', { class: 'cap' }, '↑ live preview')));
     if (id === 'basics') return h('div', { class: 'pg' }, h('h2', { class: 'ttl' }, 'The basics'), h('p', { class: 'lead' }, 'The usual browser settings. Sensible defaults are already picked.'),
       secImport(true), h('div', { class: 'grid2' }, h('div', {}, ...secSearch(), secStartup(), secTabs(true)), h('div', {}, secSidebar(), secBlocking(true), secDownloads(), secDefault())));
+    if (id === 'apps') {
+      const pk = appPicker();
+      appsCommit = () => { pk.commit(); };
+      return h('div', { class: 'pg' }, h('h2', { class: 'ttl' }, 'Your apps'), h('p', { class: 'lead' }, 'Pick the apps you use every day. They get pinned, and you sign in to each one once, from the Today page.'),
+        h('div', { class: 'grid2 appsgrid' }, h('div', {}, field('Sign in to your apps', h('div', {}, pk.el, workToggle(pk.redraw)))), h('div', {}, importBox(true))));
+    }
     if (id === 'guide') return h('div', { class: 'pg gpage' }, h('div', { class: 'ghead' }, h('h2', { class: 'ttl' }, 'Quick-start guide'), h('p', { class: 'lead' }, 'Here\'s what everything is. Point at a note to light up its spot.')), guide());
     if (id === 'done') {
       setTimeout(confetti, 250);
@@ -525,6 +577,7 @@ window.SETUP = (() => {
     }
   }
   function go(n, dir) {
+    if (appsCommit) { appsCommit(); appsCommit = null; }               // leaving "Your apps": add what was picked
     n = Math.max(0, Math.min(STEPS.length - 1, n)); dir = dir || (n >= step ? 1 : -1); step = n;
     const old = body.firstElementChild, pg = pageFor(STEPS[n][0]);
     body.append(pg);
@@ -559,6 +612,7 @@ window.SETUP = (() => {
       ['tabs', 'Tabs', () => secTabs()],
       ['browser', 'Browser', () => [secSidebar(), secDownloads(), secDefault()]],
       ['privacy', 'Privacy & security', () => [secBlocking(), ...secSecurity(), secPerms(), secData()]],
+      ['apps', 'Apps', () => secApps()],
       ['bookmarks', 'Bookmarks', () => secBookmarks()],
       ['keys', 'Shortcuts', () => secKeys()],
       ['import', 'Import', () => secImport()],
@@ -588,7 +642,7 @@ window.SETUP = (() => {
 
   /* ---------- open / close ---------- */
   function open(d, inPlace) {
-    if (!inPlace) { P = prefsOf(d.prefs); SPACES = (d.spaces || []).map(x => ({ ...x })); CUR = d.cur; DOCK = d.dock !== false; INFO = d.info || {}; KEYMAP = d.keys || {}; }
+    if (!inPlace) { P = prefsOf(d.prefs); SPACES = (d.spaces || []).map(x => ({ ...x })); CUR = d.cur; DOCK = d.dock !== false; INFO = d.info || {}; KEYMAP = d.keys || {}; HAVE = d.apps || []; }
     PAGE = d.page || 'onboard';
     root.innerHTML = ''; retheme();
     if (PAGE === 'settings') buildSettings(d.section); else if (PAGE === 'guide') buildGuide(); else buildOnboard();
@@ -597,6 +651,7 @@ window.SETUP = (() => {
   }
   function finish() {
     if (!isOpen) return; isOpen = false;
+    if (appsCommit) { appsCommit(); appsCommit = null; }
     const s = sheet;
     const done = () => { root.classList.remove('on'); root.innerHTML = ''; syncs = []; B.overlayResult({ kind: 'setup', page: PAGE }); };
     if (calm() || !s) done();
