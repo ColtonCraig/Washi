@@ -38,11 +38,8 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 ## Done and tested (v9)
 - Washi updates itself: signed latest.json + SHA-256 + bundle checks, background download, Restart or install-on-quit, rollback if the swap fails. Tested end to end (forged, edited and corrupted updates are refused)
 - Release workflow: GitHub's Mac machines build Apple silicon + Intel, make .dmg (first install) and .zip (updates), publish to washi-releases
-- Mac-shaped logo options D–H that fill Apple's icon shape (no more odd-looking icon in the Dock); H (refined tape star) applied
-
-## Waiting on Colton
-- [ ] GitHub: private `washi` + public `washi-releases` repos, connect GitHub to Claude, one token (see docs/UPDATES.md)
-- [ ] Pick the logo (D, E, F or H)
+- Mac-shaped logo options D–H that fill Apple's icon shape; Colton picked H (refined tape star)
+- Live: code in ColtonCraig/Washi (private), downloads + updates in ColtonCraig/Washi-releases; 0.9.0 published and verified (signature + SHA-256 checked from the public download link)
 
 ## Done and tested (v8)
 - Google sign-in fixed: on Google's account pages Washi now says honestly what it is (header and page JavaScript match), which is what Google needs to let a Chromium-based app sign in. Tested across typed addresses, links and redirects
