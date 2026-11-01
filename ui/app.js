@@ -5,7 +5,7 @@ BL.setup();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const RMQ = matchMedia('(prefers-reduced-motion: reduce)').matches, calm = () => RMQ || BL.motion.off;
 const uid = p => p + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
-const TOP = 52, M = 12, SB_W = 248, GAP = 12;
+const TOP = 44, M = 8, SB_W = 232, GAP = 8, MIN_PANE = 300, BMH = 32;
 
 /* ---------- state ---------- */
 let S;                                    // persisted
@@ -29,19 +29,53 @@ function sanitize(s) {
   s.pairs = (s.pairs || []).filter(p => Array.isArray(p) && p.length === 2 && p[0] !== p[1] && s.tabs[p[0]] && s.tabs[p[1]] && !s.pins.includes(p[0]) && !s.pins.includes(p[1])
     && s.spaces.some(sp => { const all = spaceTabs(sp); return all.includes(p[0]) && all.includes(p[1]); }));
   const seen = new Set(); s.pairs = s.pairs.filter(p => { if (seen.has(p[0]) || seen.has(p[1])) return false; seen.add(p[0]); seen.add(p[1]); return true; });
+  s.ratios = Object.fromEntries(Object.entries(s.ratios || {}).filter(([k, v]) => s.pairs.some(p => p.join('|') === k) && v > 0 && v < 1));
   if (!s.spaces.some(x => x.id === s.cur)) s.cur = s.spaces[0].id;
   return s;
 }
 let saveT;
 const save = () => { if (saveT) return; saveT = setTimeout(() => { saveT = 0; doSave(); }, 900); };
-/* History lives in its own file and is only written when it changes, so a long history never slows down ordinary clicks. */
-let HV = 1, HVsaved = 0;
-const histChanged = () => { HV++; save(); };
+/* What's saved is split in two: this window's own tabs, pins and folders (each window has its own), and what every
+   window shares (settings, the list of spaces, archive, recently closed, bookmarks). History is kept by the main
+   process and changed in small steps, so a long history never slows down a click. */
 const smallFav = f => (f && f.length > 2500 ? null : f || null);
+const META = x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated });
 const doSave = () => {
-  if (HV !== HVsaved) { HVsaved = HV; B.histSave(JSON.stringify(S.history.slice(0, 3000))); }
-  B.stateSave(JSON.stringify({ tabs: S.tabs, pins: S.pins, spaces: S.spaces, pairs: S.pairs, prefs: S.prefs, cur: S.cur, closed: S.closed.slice(0, 25), archive: S.archive.slice(0, 300), dock: S.dock }));
+  const mine = { tabs: S.tabs, pins: S.pins, pairs: S.pairs, ratios: S.ratios || {}, cur: S.cur, dock: S.dock, spaces: Object.fromEntries(S.spaces.map(x => [x.id, { tabs: x.tabs, folders: x.folders, act: x.act || null }])) };
+  const shared = { prefs: S.prefs, spaces: S.spaces.map(META), closed: S.closed.slice(0, 25), archive: S.archive.slice(0, 300), bookmarks: S.bookmarks || [] };
+  B.stateSave(JSON.stringify(mine), JSON.stringify(shared));
 };
+function hist(op) {                                    // change history here, and tell the main process (which tells other windows)
+  histLocal(op); B.histOp(op);
+}
+function histLocal(op) {
+  if (op.t === 'add') { S.history = [op.e, ...S.history.filter(h => h.url !== op.e.url)].slice(0, 3000); }
+  else if (op.t === 'upd') { const h = S.history.find(x => x.url === op.url); if (h) { if (op.title !== undefined) h.title = op.title; if (op.fav !== undefined) h.fav = op.fav; } }
+  else if (op.t === 'del') S.history = S.history.filter(h => h.url !== op.url);
+  else if (op.t === 'clear') S.history = [];
+}
+B.onHistOp(op => { if (S && op) histLocal(op); });
+/* another window changed something everyone shares */
+B.onShared(ch => {
+  if (!S || !ch) return;
+  if (ch.prefs) { const was = barMode(); S.prefs = prefsOf(ch.prefs); theme(); syncMain(); if (barMode() !== was) { barKey = ''; placePanes(); commit(false, false, true); } }
+  if (ch.closed) S.closed = ch.closed;
+  if (ch.archive) S.archive = ch.archive;
+  if (ch.bookmarks) { S.bookmarks = ch.bookmarks; if (window.BOOKMARKS) BOOKMARKS.refresh(); }
+  if (ch.spaces) {
+    const metas = ch.spaces.filter(m => m && m.id), ids = new Set(metas.map(m => m.id));
+    for (const s of S.spaces.filter(x => !ids.has(x.id))) for (const t of spaceTabs(s)) { dissolve(t); B.tabClose(t); delete S.tabs[t]; delete R.live[t]; }
+    S.spaces = metas.map(m => {
+      const s = S.spaces.find(x => x.id === m.id);
+      if (!s) return { ...m, tabs: [], folders: [], act: null };
+      if (!!s.isolated !== !!m.isolated) for (const t of spaceTabs(s)) { B.tabClose(t); R.live[t] = false; }   // the login jar changed: pages reopen in the new one
+      return Object.assign(s, { name: m.name, h: m.h, custom: m.custom || null, isolated: !!m.isolated });
+    });
+    if (!S.spaces.some(x => x.id === S.cur)) { S.cur = S.spaces[0].id; switchSpace(S.cur, { boot: true }); }
+    theme();
+  }
+  render();
+});
 addEventListener('beforeunload', () => { if (saveT) { clearTimeout(saveT); doSave(); } });
 const sp = () => S.spaces.find(s => s.id === S.cur);
 /* ---------- folders (they can hold tabs and other folders, up to 3 deep) ---------- */
@@ -85,15 +119,15 @@ const spaceInfo = s => s && s.isolated ? { id: s.id, isolated: true } : null;
 const keyHint = id => fmtKey(R.keys[id] || '');
 
 /* ---------- dom refs + layout ---------- */
-const stage = $('#stage'), pa = $('#pa'), pb = $('#pb');
-const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost');
+const stage = $('#stage'), pa = $('#pa'), pb = $('#pb'), gutter = $('#gutter');
+const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bmbar = $('#bmbar');
 
 /* Layout is plain math, shared by the card frames here and the page views in the main process. */
 function layout() {
   const W = innerWidth, H = innerHeight;
-  const x = S.dock ? SB_W + 10 : M + 4, y = TOP, w = W - x - M - 4, h = H - y - M - 2;
+  const x = S.dock ? SB_W + 4 : M + 4, y = TOP + (barAlways() ? BMH : 0), w = W - x - M, h = H - y - M;
   const L = { stage: { x, y, w, h }, split: R.split };
-  if (R.split) { const pw = (w - GAP - 4) / 2; L.a = { x, y, w: pw, h }; L.b = { x: x + pw + GAP + 4, y, w: pw, h }; }
+  if (R.split) { const room = w - GAP, r = Math.min(Math.max(R.ratio || .5, MIN_PANE / room), 1 - MIN_PANE / room), pa = Math.round(room * r); L.a = { x, y, w: pa, h }; L.b = { x: x + pa + GAP, y, w: room - pa, h }; L.gap = { x: x + pa, y, w: GAP, h }; }
   else { L.a = { x, y, w, h }; L.b = { x: x + w, y, w: 0, h }; }
   return L;
 }
@@ -102,7 +136,9 @@ function placePanes() {
   const L = layout();
   for (const [el, r] of [[pa, L.a], [pb, L.b]]) { el.style.left = r.x + 'px'; el.style.top = r.y + 'px'; el.style.width = r.w + 'px'; el.style.height = r.h + 'px'; }
   pb.classList.toggle('off', !R.split);
+  gutter.hidden = !R.split; if (L.gap) { gutter.style.left = L.gap.x + 'px'; gutter.style.top = L.gap.y + 'px'; gutter.style.width = L.gap.w + 'px'; gutter.style.height = L.gap.h + 'px'; }
   stage.classList.toggle('split', R.split);
+  placeBar(L);
   B.layoutInfo(L);
   return L;
 }
@@ -130,6 +166,8 @@ function updateChrome() {
     urlEl.classList.toggle('warn', n === 'danger' || n === 'insecure' || (!secure && /^http:/.test(t.url)));
   }
   const web = !!(t && /^https?:/.test(t.url) && !R.notice[id]);
+  const bk = !!(web && bmByUrl(t.url)); bStar.disabled = !web; if (bStar.classList.contains('on') !== bk) { bStar.classList.toggle('on', bk); if (bk && !calm()) bStar.firstElementChild.animate([{ transform: 'scale(.6) rotate(-30deg)' }, { transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.34,1.5,.64,1)' }); }
+  bStar.title = bk ? 'Edit this bookmark (⇧⌘D)' : 'Bookmark this page (⇧⌘D)';
   bBoost.disabled = !web; bBoost.classList.toggle('on', web && !!R.boosted[id]); bBoost.title = R.boosted[id] ? 'This site is boosted' : 'Boost this site: colors, font, hide things';
   const blocked = id ? R.blocked[id] || 0 : 0;
   bShield.querySelector('b').textContent = blocked > 99 ? '99+' : blocked || '';
@@ -178,11 +216,12 @@ addEventListener('resize', () => {
 
 /* ---------- tabs ---------- */
 /* What the page area shows for a tab: its split pair (both halves), or just the tab. Never the same tab in both panes. */
+const pairKey = P => P[0] + '|' + P[1];
 function showTab(id) {
   const P = pairOf(id), s = spaceOf(id);
-  if (P) { R.split = true; R.a = P[0]; R.b = P[1]; R.focus = id === P[1] ? 'b' : 'a'; }
+  if (P) { R.split = true; R.a = P[0]; R.b = P[1]; R.focus = id === P[1] ? 'b' : 'a'; R.ratio = (S.ratios || {})[pairKey(P)] || .5; }
   else if (R.split && (id === R.a || id === R.b)) R.focus = id === R.b ? 'b' : 'a';
-  else { R.split = false; R.b = null; R.a = id; R.focus = 'a'; }
+  else { R.split = false; R.b = null; R.a = id; R.focus = 'a'; R.ratio = .5; }
   if (s) s.act = id;
   for (const x of [R.a, R.b]) if (x && S.tabs[x]) { S.tabs[x].seen = Date.now(); if (S.tabs[x].unread) S.tabs[x].unread = false; }
 }
@@ -198,7 +237,8 @@ function openTab(url, o = {}) {
   const s = sp(), id = uid('t');
   S.tabs[id] = { url, title: hostOf(url), seen: Date.now() };
   const into = R.intoFolder && s.folders.find(f => f.id === R.intoFolder); R.intoFolder = null;
-  if (into) { into.tabs.unshift(id); into.open = true; } else s.tabs.unshift(id);
+  const end = S.prefs.newTabPos === 'bottom';
+  if (into) { into.tabs[end ? 'push' : 'unshift'](id); into.open = true; } else s.tabs[end ? 'push' : 'unshift'](id);
   B.sbFx({ type: 'new', id });
   if (o.bg) { render(); save(); } else selectTab(id);
 }
@@ -407,6 +447,25 @@ function applyLayout(m) {
   render(); save();
 }
 
+/* ---------- resize a split by dragging the gap between the two pages ---------- */
+gutter.addEventListener('pointerdown', e => {
+  if (e.button || !R.split) return;
+  e.preventDefault(); gutter.setPointerCapture(e.pointerId); gutter.classList.add('drag'); document.body.classList.add('resizing'); stage.classList.add('instant');
+  const L = layout(), room = L.stage.w - GAP, x0 = L.stage.x; let raf = 0, last = e.clientX;
+  const move = ev => { last = ev.clientX; if (raf) return; raf = requestAnimationFrame(() => { raf = 0; R.ratio = (last - x0 - GAP / 2) / room; placePanes(); commit(false, false, true); }); };
+  const up = () => {
+    gutter.removeEventListener('pointermove', move); gutter.removeEventListener('pointerup', up); gutter.removeEventListener('pointercancel', up);
+    gutter.classList.remove('drag'); document.body.classList.remove('resizing'); stage.classList.remove('instant');
+    const Lx = layout(); R.ratio = Lx.a.w / (Lx.stage.w - GAP);                       // keep what the limits allowed
+    const P = pairOf(R.a); if (P) { S.ratios = S.ratios || {}; S.ratios[pairKey(P)] = +R.ratio.toFixed(4); } save();
+  };
+  gutter.addEventListener('pointermove', move); gutter.addEventListener('pointerup', up); gutter.addEventListener('pointercancel', up);
+});
+gutter.addEventListener('dblclick', () => {
+  if (!R.split) return; R.ratio = .5; const P = pairOf(R.a); if (P && S.ratios) delete S.ratios[pairKey(P)];
+  stage.classList.remove('instant'); placePanes(); commit(false, true, true); save();
+});
+
 /* ---------- drop a tab onto the page area ---------- */
 function handleDrop(m) {
   if (m.cancel || !S.tabs[m.id]) return;
@@ -443,10 +502,10 @@ function openCmd(mode) {
     A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
-    A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
+    A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
   ];
   B.overlayOpen({ mode: mode === 'this' && !cur ? 'new' : mode, ...look(), value: mode === 'this' && cur ? cur.url : '', tabs, actions,
-    history: S.history.slice(0, 400).map(h => ({ url: h.url, title: h.title })), archive: S.archive.slice(0, 100).map(a => ({ url: a.url, title: a.title })), suggest: suggestTpl(S.prefs) });
+    history: S.history.slice(0, 400).map(h => ({ url: h.url, title: h.title })), archive: S.archive.slice(0, 100).map(a => ({ url: a.url, title: a.title })), bookmarks: bmFlat().slice(0, 3000), suggest: suggestTpl(S.prefs) });
 }
 function runAction(id) {
   const f = focusedId();
@@ -454,7 +513,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -462,6 +521,7 @@ function copyurl() { const f = focusedId(); if (!f) return; B.copy(S.tabs[f].url
 function openFind() { if (!focusedId()) return; B.panel('find', null, {}); }
 /* history, archived tabs and downloads: paper sheets in the overlay */
 async function openSheet(kind, extra) {
+  if (kind === 'bookmarks') { R.bmSheet = true; return B.overlayOpen({ mode: 'sheet', kind, items: S.bookmarks, folders: bmFolders(), favs: bmFavs(true), ...look(), ...(extra || {}) }); }
   const items = kind === 'history' ? S.history.slice(0, 3000) : kind === 'archive' ? S.archive : await B.dlList();
   B.overlayOpen({ mode: 'sheet', kind, items, ...look(), ...(extra || {}) });
 }
@@ -475,13 +535,14 @@ B.onSetupMsg(m => {
   if (m.type === 'prefs') {
     for (const k in m.patch) { if (k === 'light' || k === 'dark') S.prefs[k] = { ...S.prefs[k], ...m.patch[k] }; else S.prefs[k] = m.patch[k]; }
     theme(); syncMain(); render(); save();
+    if ('bookmarkBar' in m.patch || 'mode' in m.patch || 'light' in m.patch || 'dark' in m.patch) { barKey = ''; placePanes(); commit(false, false, true); }
   } else if (m.type === 'space') {
     const x = S.spaces.find(z => z.id === m.id); if (!x) return;
     if (m.h !== undefined && PAL[m.h]) { x.h = m.h; x.custom = null; }
     if (m.custom) { x.custom = { ...(x.custom || {}), ...m.custom }; for (const k in x.custom) if (!x.custom[k]) delete x.custom[k]; if (!Object.keys(x.custom).length) x.custom = null; }
     if (x.id === S.cur) theme(); render(); save();
   } else if (m.type === 'dock') { if (S.dock !== !!m.dock) toggleSide(); }
-  else if (m.type === 'cleared') { S.history = []; S.closed = []; histChanged(); }
+  else if (m.type === 'cleared') { hist({ t: 'clear' }); S.closed = []; save(); }
   else if (m.type === 'isolate') {
     const x = S.spaces.find(z => z.id === m.id); if (!x || !!x.isolated === !!m.on) return;
     x.isolated = !!m.on; for (const t of spaceTabs(x)) { B.tabClose(t); R.live[t] = false; }      // pages reopen with the space's own logins
@@ -489,11 +550,13 @@ B.onSetupMsg(m => {
   } else if (m.type === 'sheet') sheetAct(m);
   else if (m.type === 'arcImport') importArc(m).then(r => B.setupReply({ type: 'arcDone', ...r }));
   else if (m.type === 'peekAdopt') adoptPeek();
+  else if (m.type === 'bm') bmMsg(m);
+  else if (m.type === 'bmImport') B.setupReply({ type: 'bmDone', ...bmImport(m.data, m.name) });
 });
 function sheetAct(m) {
   if (m.act === 'open' && m.url) openTab(m.url);
-  else if (m.act === 'forget' && m.url) { S.history = S.history.filter(h => h.url !== m.url); histChanged(); }
-  else if (m.act === 'forgetAll') { S.history = []; histChanged(); }
+  else if (m.act === 'forget' && m.url) hist({ t: 'del', url: m.url });
+  else if (m.act === 'forgetAll') hist({ t: 'clear' });
   else if (m.act === 'restore') { const i = S.archive.findIndex(a => a.at === m.at && a.url === m.url); if (i > -1) { const [a] = S.archive.splice(i, 1); if (a.space && a.space !== S.cur && S.spaces.some(x => x.id === a.space)) switchSpace(a.space, { quiet: true }); openTab(a.url); save(); } }
   else if (m.act === 'unarchive') { const i = S.archive.findIndex(a => a.at === m.at && a.url === m.url); if (i > -1) S.archive.splice(i, 1); save(); }
   else if (m.act === 'clearArchive') { S.archive = []; save(); }
@@ -573,12 +636,13 @@ B.onOverlayResult(r => {
     if (first && !spaceTabs(sp()).length && !S.pins.length) setTimeout(() => openCmd('new'), 350);     // first run: go straight to typing an address
     return;
   }
+  R.bmSheet = false;
   if (r.kind === 'url') { const u = toURL(r.value); if (r.mode === 'this' && focusedId()) navigate(u); else openTab(u); }
   else if (r.kind === 'tab') selectTab(r.id);
   else if (r.kind === 'action') runAction(r.id);
   else if (r.kind === 'prompt') { const cb = R.promptCb; R.promptCb = null; cb && cb(r.value); }
 });
-B.onOverlayCancel(() => { R.promptCb = null; R.intoFolder = null; });
+B.onOverlayCancel(() => { R.promptCb = null; R.intoFolder = null; R.bmSheet = false; });
 
 /* ---------- native menus, requested from the sidebar ---------- */
 function tabMenu(id) {
@@ -611,6 +675,7 @@ function menuClick(id) {
     else if (k === 'refresh') refreshLive(true, fid);
     else if (k === 'read') { for (const id of flat(sp(), f.tabs)) if (S.tabs[id]) S.tabs[id].unread = false; render(); save(); }
     else if (k === 'unlive') { delete f.live; for (const id of flat(sp(), f.tabs)) if (S.tabs[id]) { delete S.tabs[id].live; delete S.tabs[id].unread; } render(); save(); } }
+  else if (id.startsWith('bm:')) bmMenuClick(id.slice(3));
   else if (id === 'nf:plain') newFolder(null); else if (id === 'nf:github') newLiveFolder('github'); else if (id === 'nf:feed') newLiveFolder('feed');
   else if (id === 'dup') openTab(S.tabs[t].url);
   else if (id === 'copy') B.copy(S.tabs[t].url);
@@ -679,7 +744,8 @@ B.onCmd(n => {
   if (n.startsWith('switch:pick:')) return switchEnd(+n.slice(12));
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
-  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder'].includes(n)) return runAction(n); if (n === 'setupagain') return openSetup('onboard');
+  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar'].includes(n)) return runAction(n);
+  if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
   else if (n === 'split') toggleSplit(); else if (n === 'sidebar') toggleSide(); else if (n === 'newspace') addSpace();
@@ -702,15 +768,212 @@ B.onTab(({ id, ...p }) => {
   if (p.url !== undefined) {
     t.url = p.url;
     if (/^https?:/.test(p.url) && !p.notice && (!S.history[0] || S.history[0].url !== p.url)) {          // every page you land on is history, including the first one in a tab
-      S.history = S.history.filter(h => h.url !== p.url); S.history.unshift({ url: p.url, title: t.title, fav: smallFav(t.fav), t: Date.now() }); if (S.history.length > 3000) S.history.length = 3000; HV++;
+      hist({ t: 'add', e: { url: p.url, title: t.title, fav: smallFav(t.fav), t: Date.now() } });
     }
   }
-  if (p.title !== undefined) { t.title = p.title; const h = S.history.find(x => x.url === t.url); if (h && h.title !== p.title) { h.title = p.title; HV++; } }
-  if (p.fav !== undefined) { t.fav = p.fav; const h = S.history.find(x => x.url === t.url), f = smallFav(p.fav); if (h && h.fav !== f) { h.fav = f; HV++; } }
+  if (p.title !== undefined) { t.title = p.title; const h = S.history.find(x => x.url === t.url); if (h && h.title !== p.title) hist({ t: 'upd', url: t.url, title: p.title }); }
+  if (p.fav !== undefined) { t.fav = p.fav; const h = S.history.find(x => x.url === t.url), f = smallFav(p.fav); if (h && h.fav !== f) hist({ t: 'upd', url: t.url, fav: f }); }
   if (p.notice !== undefined) R.notice[id] = p.notice;
   for (const k of ['loading', 'audible', 'muted', 'blocked', 'boosted', 'canBack', 'canFwd']) if (p[k] !== undefined) R[k][id] = p[k];
   render(); save();
 });
+
+/* ---------- bookmarks: shared by every window. The bar is always shown, shown on hover, or hidden (Settings). ---------- */
+const BM_MAX_DEPTH = 8;
+function* bmWalk(list = S.bookmarks, parent = null) { for (const n of list) { yield [n, list, parent]; if (n.type === 'folder') yield* bmWalk(n.kids, n); } }
+const bmFind = id => { for (const x of bmWalk()) if (x[0].id === id) return { node: x[0], list: x[1], parent: x[2] }; return null; };
+const bmByUrl = url => { if (!url || !S.bookmarks.length) return null; for (const [n] of bmWalk()) if (n.type === 'bm' && n.url === url) return n; return null; };
+function bmFolders() { const out = [], walk = (l, depth, path) => { for (const n of l) if (n.type === 'folder') { out.push({ id: n.id, name: n.name, path: path ? path + ' › ' + n.name : n.name, depth }); walk(n.kids, depth + 1, path ? path + ' › ' + n.name : n.name); } }; walk(S.bookmarks, 0, ''); return out; }
+function bmFlat() { const out = [], walk = (l, path) => { for (const n of l) { if (n.type === 'folder') walk(n.kids, path ? path + ' › ' + n.name : n.name); else out.push({ url: n.url, title: n.title || hostOf(n.url), path: path || 'Bookmarks bar' }); } }; walk(S.bookmarks, ''); return out; }
+const bmCount = f => f.kids.reduce((a, k) => a + (k.type === 'folder' ? bmCount(k) : 1), 0);
+const bmDepth = n => n.type === 'folder' ? 1 + Math.max(0, ...n.kids.map(bmDepth)) : 0;
+const levelOf = n => { let d = 0; for (let p = bmFind(n.id)?.parent; p && d < 20; p = bmFind(p.id)?.parent) d++; return d; };
+/* favicons: the bookmark's own, or the one history has for that page or site */
+function bmFavs(all) {
+  const byUrl = new Map(), byHost = new Map();
+  for (const h of S.history) if (h.fav) { if (!byUrl.has(h.url)) byUrl.set(h.url, h.fav); const k = hostOf(h.url); if (!byHost.has(k)) byHost.set(k, h.fav); }
+  for (const t of Object.values(S.tabs)) if (t.fav && t.fav.length < 2500) { if (!byUrl.has(t.url)) byUrl.set(t.url, t.fav); const k = hostOf(t.url); if (!byHost.has(k)) byHost.set(k, t.fav); }
+  const out = {}, list = all ? [...bmWalk()].map(x => x[0]) : S.bookmarks;
+  for (const n of list) if (n.type === 'bm' && !n.fav) { const f = byUrl.get(n.url) || byHost.get(hostOf(n.url)); if (f) out[n.url] = f; }
+  return out;
+}
+const barMode = () => S.prefs.bookmarkBar || 'hover';
+const barAlways = () => !!S && barMode() === 'always';
+const light = () => S.bookmarks.map(n => n.type === 'folder' ? { id: n.id, type: 'folder', name: n.name, icon: n.icon || null, color: n.color || null, n: bmCount(n) } : n);
+let barKey = '', barW = 0;
+function placeBar(L) {
+  const on = barAlways(); document.body.classList.toggle('bm-always', on);
+  if (!on) { barKey = ''; bmbar.innerHTML = ''; return; }
+  const s = L.stage; bmbar.style.left = s.x + 'px'; bmbar.style.top = TOP + 'px'; bmbar.style.width = s.w + 'px'; bmbar.style.height = BMH + 'px';
+  const key = JSON.stringify(S.bookmarks.map(n => [n.id, n.title || n.name, n.icon, n.color, n.url, n.type === 'folder' ? bmCount(n) : 0, !!n.fav])) + S.prefs.mode;
+  if (key !== barKey) { barKey = key; BMK.draw(bmbar, light(), bmFavs(), bmAct); barW = s.w; }
+  else if (barW !== s.w) { barW = s.w; BMK.fit(bmbar); }
+}
+function bmChanged() {
+  barKey = ''; placePanes(); updateChrome(); save();
+  if (R.bmSheet) B.setupReply({ type: 'bmTree', items: S.bookmarks, folders: bmFolders(), favs: bmFavs(true) });
+}
+window.BOOKMARKS = { refresh: () => { barKey = ''; placePanes(); updateChrome(); if (R.bmSheet) B.setupReply({ type: 'bmTree', items: S.bookmarks, folders: bmFolders(), favs: bmFavs(true) }); } };
+/* hover mode: resting on the top bar for a moment shows the bar over the top of the page */
+const topbar = $('.topbar'); let hoverT = 0;
+topbar.addEventListener('pointerenter', () => { if (!S || barMode() !== 'hover' || !S.bookmarks.length) return; clearTimeout(hoverT); hoverT = setTimeout(() => B.bmHover({ items: light(), favs: bmFavs(), ...look() }), 260); });
+topbar.addEventListener('pointerleave', () => clearTimeout(hoverT));
+topbar.addEventListener('pointerdown', () => clearTimeout(hoverT));
+B.onBmAct(m => { if (S) bmAct(m); });
+
+function bmOpen(n, bg) {
+  if (!n || n.type !== 'bm') return;
+  const here = [...S.pins, ...spaceTabs(sp())].find(id => S.tabs[id] && S.tabs[id].url === n.url);
+  if (here && !bg) return selectTab(here);
+  openTab(n.url, { bg });
+}
+function bmFolderMenu(f) {
+  const items = f.kids.slice(0, 400).map(k => k.type === 'folder' ? { label: (k.icon ? k.icon + '  ' : '') + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id });
+  const n = f.kids.filter(k => k.type === 'bm').length;
+  if (!items.length) return [{ label: 'Empty', id: 'bm:none', enabled: false }];
+  if (n > 1) items.push({ type: 'separator' }, { label: `Open All ${n} in New Tabs`, id: 'bm:all:' + f.id });
+  return items;
+}
+function bmAct(m) {
+  const x = m.id && bmFind(m.id), n = x && x.node, at = { x: m.x, y: m.y };
+  if (m.act === 'open') return bmOpen(n, m.bg);
+  if (m.act === 'folder' && n) return B.popupMenu(bmFolderMenu(n), at);
+  if (m.act === 'more') { const hid = S.bookmarks.filter(k => (m.ids || []).includes(k.id)); return B.popupMenu(hid.map(k => k.type === 'folder' ? { label: (k.icon ? k.icon + '  ' : '') + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id }), at); }
+  if (m.act === 'move') return bmMove(m.id, m.target, m.into, m.before);
+  if (m.act === 'ctx') {
+    R.bmCtx = n ? n.id : null;
+    const mode = barMode(), show = [{ type: 'separator' }, { label: 'Show Bookmarks Bar', submenu: [['always', 'Always'], ['hover', 'When I Point at the Top'], ['hidden', 'Never']].map(([v, l]) => ({ label: l, id: 'bm:mode:' + v, checked: mode === v })) }, { label: 'Manage Bookmarks…', id: 'bm:manage' }];
+    if (!n) return B.popupMenu([{ label: 'Bookmark This Page', id: 'bm:add', enabled: canStar() }, { label: 'New Folder…', id: 'bm:newf' }, ...show], at);
+    if (n.type === 'folder') return B.popupMenu([{ label: `Open All (${bmCount(n)})`, id: 'bm:all:' + n.id, enabled: bmCount(n) > 0 }, { type: 'separator' }, { label: 'Edit…', id: 'bm:edit:' + n.id }, { label: 'New Folder Inside…', id: 'bm:newf:' + n.id, enabled: levelOf(n) < BM_MAX_DEPTH - 1 }, { type: 'separator' }, { label: 'Delete Folder', id: 'bm:del:' + n.id }, ...show], at);
+    return B.popupMenu([{ label: 'Open', id: 'bm:o:' + n.id }, { label: 'Open in New Tab', id: 'bm:bg:' + n.id }, { label: 'Copy Address', id: 'bm:copy:' + n.id }, { type: 'separator' }, { label: 'Edit…', id: 'bm:edit:' + n.id }, { label: 'Delete', id: 'bm:del:' + n.id }, ...show], at);
+  }
+}
+function bmMenuClick(k) {
+  const id = k.replace(/^[a-z]+:/, ''), x = bmFind(id), n = x && x.node;
+  if (k.startsWith('o:')) bmOpen(n);
+  else if (k.startsWith('bg:')) bmOpen(n, true);
+  else if (k.startsWith('all:') && n) { const list = n.kids.filter(c => c.type === 'bm'); list.forEach((c, i) => openTab(c.url, { bg: i > 0 })); }
+  else if (k.startsWith('copy:') && n) { B.copy(n.url); B.fx({ type: 'toast', text: 'Copied the address', short: true }); }
+  else if (k.startsWith('edit:') && n) bmEdit(n);
+  else if (k.startsWith('del:') && n) bmDelete(n.id);
+  else if (k === 'add') bmStar();
+  else if (k === 'newf' || k.startsWith('newf:')) bmNewFolder(k.startsWith('newf:') ? id : null);
+  else if (k.startsWith('mode:')) bmSetMode(k.slice(5));
+  else if (k === 'manage') openSheet('bookmarks');
+}
+function bmSetMode(v) {
+  if (!['always', 'hover', 'hidden'].includes(v) || barMode() === v) return;
+  if (v === 'always') S.prefs.barLast = barMode();          // ⇧⌘B goes back to this
+  S.prefs.bookmarkBar = v; placePanes(); commit(false, false, true); save(); syncMain();
+}
+function bmToggleBar() {
+  const v = barAlways() ? (S.prefs.barLast === 'hidden' ? 'hidden' : 'hover') : 'always'; bmSetMode(v); if (v !== 'always') S.prefs.barLast = v;
+  B.fx({ type: 'toast', text: v === 'always' ? 'Bookmarks bar is always shown' : v === 'hover' ? 'Bookmarks bar shows when you point at the top' : 'Bookmarks bar is hidden', short: true });
+}
+const canStar = () => { const id = focusedId(), t = id && S.tabs[id]; return !!(t && /^https?:/.test(t.url) && !R.notice[id]); };
+/* ☆ or ⇧⌘D: bookmark the page (at the end of the bar) and open the editor, or edit it if it's already there */
+function bmStar() {
+  const id = focusedId(), t = id && S.tabs[id]; if (!canStar()) return;
+  let n = bmByUrl(t.url), fresh = false;
+  if (!n) { n = { id: uid('b'), type: 'bm', url: t.url, title: label(t).slice(0, 200), fav: smallFav(t.fav) }; S.bookmarks.push(n); fresh = true; bmChanged(); }
+  bmEdit(n, { fresh, star: true });
+}
+function bmEdit(n, o = {}) {
+  const x = bmFind(n.id); if (!x) return;
+  const isF = n.type === 'folder', r = bStar.getBoundingClientRect(), h = isF ? 348 : 244;
+  const near = o.star || !barAlways() ? { x: Math.round(Math.max(8, Math.min(innerWidth - 380, r.right - 350))), y: Math.round(r.bottom + 2) } : { x: Math.round((innerWidth - 372) / 2), y: TOP + BMH };
+  B.panel('bmedit', { x: near.x, y: near.y, w: 372, h }, { node: isF ? { id: n.id, type: 'folder', name: n.name, icon: n.icon || null, color: n.color || null } : n, exclude: isF ? [...bmWalk([n])].filter(y => y[0].type === 'folder').map(y => y[0].id) : [], folders: bmFolders(), parent: x.parent ? x.parent.id : '', fresh: !!o.fresh, ...look() });
+}
+function bmNewFolder(parentId) {
+  const p = parentId && bmFind(parentId), list = p ? p.node.kids : S.bookmarks;
+  const f = { id: uid('b'), type: 'folder', name: 'New folder', icon: null, color: null, kids: [] };
+  list.push(f); bmChanged(); bmEdit(f, { fresh: true });
+}
+/* moving: before or after another item (in its folder), or into a folder. A folder can't go inside itself. */
+function bmMove(id, target, into, before) {
+  const a = bmFind(id), b = bmFind(target); if (!a || !b || id === target) return;
+  for (let p = b.node; p; p = bmFind(p.id)?.parent) if (p.id === id) return;              // target is inside what's moving
+  if (into && b.node.type === 'folder') {
+    if (a.node.type === 'folder' && levelOf(b.node) + 1 + bmDepth(a.node) > BM_MAX_DEPTH) return;
+    a.list.splice(a.list.indexOf(a.node), 1); b.node.kids.push(a.node);
+  } else {
+    if (a.node.type === 'folder' && (b.parent ? levelOf(b.parent) + 1 : 0) + bmDepth(a.node) > BM_MAX_DEPTH) return;
+    a.list.splice(a.list.indexOf(a.node), 1);
+    const i = b.list.indexOf(b.node); b.list.splice(before ? i : i + 1, 0, a.node);
+  }
+  bmChanged();
+}
+let bmLast = null;
+function bmDelete(id) {
+  const x = bmFind(id); if (!x) return;
+  const i = x.list.indexOf(x.node); x.list.splice(i, 1);
+  bmLast = { node: x.node, parent: x.parent ? x.parent.id : null, i };
+  bmChanged();
+  const what = x.node.type === 'folder' ? `Deleted “${x.node.name}”` + (bmCount(x.node) ? ` and ${bmCount(x.node)} inside` : '') : 'Removed the bookmark';
+  B.fx({ type: 'toast', text: what, action: { label: 'Undo', cmd: 'bm:undo' } });
+}
+function bmUndo() {
+  if (!bmLast) return; const { node, parent, i } = bmLast; bmLast = null;
+  const p = parent && bmFind(parent), list = p ? p.node.kids : S.bookmarks;
+  list.splice(Math.min(i, list.length), 0, node); bmChanged();
+}
+/* from the edit form, the sheet and the bar strip in the overlay */
+function bmMsg(m) {
+  const x = m.id && bmFind(m.id), n = x && x.node;
+  if (m.act === 'save' && n) {
+    const p = m.patch || {};
+    if (n.type === 'folder') { n.name = String(p.name || 'Folder').slice(0, 40); n.icon = p.icon ? String(p.icon).slice(0, 16) : null; n.color = BMK.okColor(p.color) ? p.color : null; }
+    else { if (/^https?:\/\/\S+$/i.test(p.url || '') && p.url.length < 8192) { if (p.url !== n.url) n.fav = null; n.url = p.url; } n.title = String(p.title || '').slice(0, 200) || hostOf(n.url); }
+    const now = x.parent ? x.parent.id : '';
+    if ((p.parent || '') !== now) {
+      const to = p.parent ? bmFind(p.parent) : null;
+      let ok = !p.parent || (to && to.node.type === 'folder');
+      if (ok && to) for (let q = to.node; q; q = bmFind(q.id)?.parent) if (q.id === n.id) ok = false;
+      if (ok && n.type === 'folder' && to && levelOf(to.node) + 1 + bmDepth(n) > BM_MAX_DEPTH) ok = false;
+      if (ok) { x.list.splice(x.list.indexOf(n), 1); (to ? to.node.kids : S.bookmarks).push(n); }
+    }
+    bmChanged();
+  }
+  else if (m.act === 'del' && n) bmDelete(n.id);
+  else if (m.act === 'discard' && n && n.type === 'folder' && !n.kids.length) { x.list.splice(x.list.indexOf(n), 1); bmChanged(); }   // "New folder" you cancelled
+  else if (m.act === 'open' && n) bmOpen(n, m.bg);
+  else if (m.act === 'move') bmMove(m.id, m.target, m.into, m.before);
+  else if (m.act === 'newf') bmNewFolderQuiet(m.parent || null);
+  else if (m.act === 'import') openSetup('settings', 'bookmarks');
+}
+function bmNewFolderQuiet(parentId) {                     // from the sheet: the new folder is edited right there
+  const p = parentId && bmFind(parentId), list = p ? p.node.kids : S.bookmarks;
+  const f = { id: uid('b'), type: 'folder', name: 'New folder', icon: null, color: null, kids: [] };
+  list.push(f); bmChanged(); B.setupReply({ type: 'bmFresh', id: f.id });
+}
+/* bring in bookmarks from another browser. Their bookmarks bar joins yours; everything else goes in a folder.
+   Running it twice adds nothing twice: bookmarks you already have are skipped, same-named folders are filled in. */
+function bmImport(data, name) {
+  if (!data || !Array.isArray(data.bar) || !Array.isArray(data.other)) return { ok: false, error: 'Couldn\'t read those bookmarks.' };
+  name = String(name || 'another browser').slice(0, 30);
+  const have = new Set([...bmWalk()].filter(x => x[0].type === 'bm').map(x => x[0].url)), n = { bm: 0, f: 0 };
+  const merge = (nodes, into, depth) => {
+    for (const nd of nodes) {
+      if (!nd || typeof nd !== 'object') continue;
+      if (nd.type === 'bm') { if (!/^https?:\/\/\S+$/i.test(nd.url || '') || have.has(nd.url)) continue; have.add(nd.url); into.push({ id: uid('b'), type: 'bm', url: String(nd.url).slice(0, 8192), title: String(nd.title || '').slice(0, 200) || hostOf(nd.url) }); n.bm++; }
+      else if (nd.type === 'folder' && Array.isArray(nd.kids)) {
+        if (depth >= BM_MAX_DEPTH) { merge(nd.kids, into, depth); continue; }         // deeper than Washi keeps: its bookmarks join the folder above
+        const nm = String(nd.name || 'Folder').slice(0, 40);
+        const same = into.find(k => k.type === 'folder' && k.name.toLowerCase() === nm.toLowerCase());
+        if (same) { merge(nd.kids, same.kids, depth + 1); continue; }
+        const f = { id: uid('b'), type: 'folder', name: nm, icon: null, color: null, kids: [] };
+        merge(nd.kids, f.kids, depth + 1);
+        if (f.kids.length) { into.push(f); n.f++; }
+      }
+    }
+  };
+  merge(data.bar, S.bookmarks, 0);
+  if (data.other.length) merge([{ type: 'folder', name: data.bar.length ? `More from ${name}` : `From ${name}`, kids: data.other }], S.bookmarks, 0);
+  bmChanged();
+  if (!n.bm) return { ok: true, n: 0, text: `Every bookmark from ${name} was already here.` };
+  return { ok: true, n: n.bm, text: `Brought in ${n.bm} bookmark${n.bm > 1 ? 's' : ''}${n.f ? ` in ${n.f} folder${n.f > 1 ? 's' : ''}` : ''} from ${name}.` };
+}
+bStar.addEventListener('click', bmStar);
 
 /* ---------- top bar ---------- */
 bSide.addEventListener('click', toggleSide);
@@ -771,13 +1034,22 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
 
 /* ---------- boot ---------- */
 (async () => {
-  let raw = null; try { raw = await B.stateLoad(); } catch {}
-  let hist = null;
-  const [rs, rh] = Array.isArray(raw) ? raw : [raw, null];
-  try { S = sanitize(rs ? JSON.parse(rs) : fresh()); } catch { S = fresh(); }
-  try { const h = rh ? JSON.parse(rh) : null; if (Array.isArray(h)) hist = h; } catch {}
-  if (hist) S.history = hist; else HV++;                 // older profiles kept history inside state.json: move it out on the next save
-  S.history = (S.history || []).map(h => (h.fav && h.fav.length > 2500 ? { ...h, fav: null } : h));
+  let raw = {}; try { raw = (await B.stateLoad()) || {}; } catch {}
+  window.WID = raw.wid || 'w1';
+  const J = x => { try { return x ? JSON.parse(x) : null; } catch { return null; } };
+  const sh = J(raw.shared), mine = J(raw.win) || {}, legacy = J(raw.legacy);
+  let start;
+  if (sh && Array.isArray(sh.spaces) && sh.spaces.length) {
+    start = { tabs: mine.tabs || {}, pins: mine.pins || [], pairs: mine.pairs || [], ratios: mine.ratios || {}, cur: mine.cur || sh.spaces[0].id, dock: mine.dock, prefs: sh.prefs, closed: sh.closed || [], archive: sh.archive || [], bookmarks: sh.bookmarks || [],
+      spaces: sh.spaces.map(m => ({ ...m, ...((mine.spaces || {})[m.id] || { tabs: [], folders: [], act: null }) })) };
+  } else start = legacy || fresh();                     // first launch, or an older profile (one window, everything in state.json)
+  try { S = sanitize(start); } catch { S = fresh(); }
+  S.bookmarks = Array.isArray(S.bookmarks) ? S.bookmarks : [];
+  const H = J(raw.hist);
+  S.history = Array.isArray(H) && H.length ? H : (legacy && Array.isArray(legacy.history) ? legacy.history : []);
+  S.history = S.history.map(h => (h.fav && h.fav.length > 2500 ? { ...h, fav: null } : h));
+  if (!(Array.isArray(H) && H.length) && S.history.length) B.histOp({ t: 'set', list: S.history });
+  if (!sh) save();                                      // write the new split files right away
   theme(); syncMain();
   await B.sbMode({ docked: S.dock });
   stage.classList.add('instant'); placePanes();

@@ -7,8 +7,8 @@ window.SETUP = (() => {
   const root = document.getElementById('setup');
   let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null;
 
-  const hooks = { perms: null, update: null, arc: null };
-  B.onSetupEvent(e => { if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); });
+  const hooks = { perms: null, update: null, arc: null, bm: null };
+  B.onSetupEvent(e => { if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); if (e && e.type === 'bmDone' && hooks.bm) hooks.bm(e); });
   B.onPerms(l => hooks.perms && hooks.perms(l)); B.onUpdate(u => hooks.update && hooks.update(u));
   const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['guide', 'Quick start'], ['done', 'Done']];
   const curSp = () => SPACES.find(x => x.id === CUR) || SPACES[0];
@@ -174,8 +174,9 @@ window.SETUP = (() => {
   function secTabs(brief) {
     const arch = field('Tidy up old tabs', seg(ARCHIVE_OPTS, () => +P.archive, v => setPref({ archive: v }), 'grid'),
       'Tabs you haven\'t opened in a while move to the Archive (⌥⌘A), so your sidebar stays clean. Pinned tabs and folders are never touched.');
+    const pos = field('New scraps go', seg([{ v: 'top', label: 'At the top', sub: 'Newest first, like Arc' }, { v: 'bottom', label: 'At the bottom', sub: 'In the order you opened them' }], () => P.newTabPos, v => setPref({ newTabPos: v }), 'wide'));
     if (brief) return arch;
-    return [arch,
+    return [pos, arch,
       field('Sleeping tabs', seg([{ v: 0, label: 'Never' }, { v: 15, label: 'After 15 min' }, { v: 60, label: 'After 1 hour' }, { v: 240, label: 'After 4 hours' }], () => +P.sleep, v => setPref({ sleep: v }), 'grid'),
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
       field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
@@ -239,7 +240,7 @@ window.SETUP = (() => {
       const note = rec.note; save(n); stop(); if (note) flash(note);
     }
     const flash = t => { const p = box.querySelector('.knote'); if (p) { p.textContent = t; p.classList.add('on'); setTimeout(() => p.classList.remove('on'), 5000); } };
-    const GROUPS = [['app', 'Washi'], ['file', 'Tabs and spaces'], ['edit', 'Editing'], ['view', 'View'], ['history', 'History'], ['spaces', 'Moving around']];
+    const GROUPS = [['app', 'Washi'], ['file', 'Tabs and spaces'], ['edit', 'Editing'], ['view', 'View'], ['history', 'History'], ['bookmarks', 'Bookmarks'], ['spaces', 'Moving around']];
     function draw() {
       box.innerHTML = '';
       box.append(h('p', { class: 'knote' }));
@@ -352,6 +353,41 @@ window.SETUP = (() => {
     B.setupAct({ type: 'arc:scan' }).then(r => { scan = r; preselect(); draw(); });
     draw();
     return fld;
+  }
+
+  /* ---------- bookmarks: how the bar shows, and bringing them in from other browsers ---------- */
+  function secBookmarks() {
+    const bar = field('Bookmarks bar', seg([{ v: 'always', label: 'Always', sub: 'A slim row above your pages' }, { v: 'hover', label: 'On hover', sub: 'Point at the top bar to see it' }, { v: 'hidden', label: 'Hidden', sub: 'Find them with ⌘T or ⌥⌘B' }],
+      () => P.bookmarkBar || 'hover', v => setPref({ bookmarkBar: v, ...(v !== 'always' ? { barLast: v } : { barLast: P.bookmarkBar || 'hover' }) }), 'wide'), 'Click ☆ next to the address (or press ⇧⌘D) to bookmark a page. Right-click the bar for folders, emoji and colors.');
+    const box = h('div', { class: 'bmi' });
+    let found = null, busy = '', msg = null;
+    const run = async (key, label) => {
+      if (busy) return; busy = key; msg = null; draw();
+      const r = key === 'file' ? await B.setupAct({ type: 'bm:pick' }) : await B.setupAct({ type: 'bm:read', key });
+      if (!r) { busy = ''; draw(); return; }
+      if (!r.ok) { busy = ''; msg = { ok: false, text: r.error || 'Couldn\'t read those bookmarks.' }; draw(); return; }
+      send({ type: 'bmImport', data: { bar: r.bar, other: r.other }, name: key === 'file' ? r.name : label });
+    };
+    hooks.bm = r => { busy = ''; msg = { ok: !!r.ok, text: r.text || r.error }; draw(); };
+    function draw() {
+      box.innerHTML = '';
+      if (msg) box.append(h('p', { class: msg.ok ? 'okay' : 'err' }, (msg.ok ? '✓ ' : '') + msg.text));
+      if (!found) box.append(h('p', { class: 'hint' }, 'Looking for other browsers on this Mac…'));
+      else if (found.length) {
+        const list = h('div', { class: 'arcl' });
+        for (const b of found) {
+          const lbl = b.browser + (found.filter(x => x.browser === b.browser).length > 1 ? ` (${b.profile})` : '');
+          list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, b.browser), h('small', {}, `${b.profile} · ${b.count} bookmark${b.count === 1 ? '' : 's'}`)),
+            h('button', { class: 'btn small', disabled: !!busy, onclick: () => run(b.key, lbl) }, busy === b.key ? 'Bringing them in…' : 'Import')));
+        }
+        box.append(list);
+      } else box.append(h('p', { class: 'hint' }, 'No Chrome, Brave, Edge, Arc, Dia, Helium, Vivaldi or Opera bookmarks found on this Mac.'));
+      box.append(h('div', { class: 'sbtns' }, h('button', { class: 'btn small plain', disabled: !!busy, onclick: () => run('file', '') }, busy === 'file' ? 'Bringing them in…' : 'Choose a bookmarks file…')),
+        h('p', { class: 'hint' }, 'From Safari: File › Export › Bookmarks. From Firefox: Bookmarks › Manage Bookmarks › Import and Backup › Export Bookmarks to HTML. Then choose that file here.'));
+    }
+    B.setupAct({ type: 'bm:scan' }).then(r => { found = Array.isArray(r) ? r : []; draw(); }).catch(() => { found = []; draw(); });
+    draw();
+    return [bar, field('Bring bookmarks over', box, 'Reads them straight from the other browser on this Mac. Their bookmarks bar joins yours and the rest go in a folder. Nothing is doubled up if you do it twice.')];
   }
 
   function secSpeed() {
@@ -523,6 +559,7 @@ window.SETUP = (() => {
       ['tabs', 'Tabs', () => secTabs()],
       ['browser', 'Browser', () => [secSidebar(), secDownloads(), secDefault()]],
       ['privacy', 'Privacy & security', () => [secBlocking(), ...secSecurity(), secPerms(), secData()]],
+      ['bookmarks', 'Bookmarks', () => secBookmarks()],
       ['keys', 'Shortcuts', () => secKeys()],
       ['import', 'Import', () => secImport()],
       ['help', 'Help', () => [

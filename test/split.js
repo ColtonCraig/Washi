@@ -11,7 +11,7 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   await skipSetup(bb);
   const st = () => ui.evaluate(() => ({ split: R.split, a: R.a, b: R.b, focus: R.focus, pairs: S.pairs, root: sp().tabs, folders: sp().folders.map(f => ({ id: f.id, tabs: f.tabs, open: f.open })) }));
   const rectOf = sel => sb.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
-  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 52 + r.y + r.h * fy];
+  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 44 + r.y + r.h * fy];
   const dragSb = async (sel, tx, ty, hold = .3) => { const [x, y] = scr(await rectOf(sel)); ptr(`drag ${x} ${y} ${tx} ${ty} ${hold}`); ptr('up'); await sleep(900); };
   // three tabs: p1 green, p2 blue, p3 pink
   await ui.evaluate(() => { openTab('http://localhost:8765/p3.html', { bg: true }); openTab('http://localhost:8765/p2.html', { bg: true }); openTab('http://localhost:8765/p1.html'); });
@@ -108,7 +108,7 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   for (let round = 0; round < 3; round++) {
     ptr('move 700 500'); await sleep(400);
     await sb.evaluate(() => { window.__f = []; const go = t => { __f.push(t); if (__f.length < 40) requestAnimationFrame(go); }; requestAnimationFrame(go); });
-    ptr('move 72 500'); const tOpen = await until(true);
+    ptr('move 66 500'); const tOpen = await until(true);
     ok(tOpen >= 0 && tOpen < 150, `round ${round + 1}: sidebar pops out right away (${tOpen}ms incl. test overhead)`);
     await sleep(320); if (round === 0) shot('g4');
     const gap = await sb.evaluate(() => Math.max(...__f.slice(1).map((t, i) => t - __f[i])));

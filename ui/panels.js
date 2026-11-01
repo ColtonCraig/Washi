@@ -67,12 +67,23 @@ window.PANELS = (() => {
     }
     draw();
   }
+  /* ---------- edit a bookmark or a bookmark folder ---------- */
+  function bmedit() {
+    const d = data, n = d.node, isF = n.type === 'folder';
+    panel.innerHTML = `<div class="pop bmpop" role="dialog" aria-label="${isF ? 'Edit folder' : 'Edit bookmark'}"><div class="ph">${ic(isF ? 'folder' : 'star', 18)}<b>${isF ? (d.fresh ? 'New folder' : 'Edit folder') : d.fresh ? 'Bookmarked' : 'Edit bookmark'}</b></div>${BMK.form(d)}</div>`;
+    const done = () => { kind = null; B.overlayCancel(); };
+    BMK.wireForm(panel, d, {
+      save: patch => { B.setupMsg({ type: 'bm', act: 'save', id: n.id, patch }); done(); },
+      del: () => { B.setupMsg({ type: 'bm', act: 'del', id: n.id }); done(); },
+      cancel: () => { if (d.fresh && isF) B.setupMsg({ type: 'bm', act: 'discard', id: n.id }); done(); }
+    });
+  }
   addEventListener('blur', () => { if (kind === 'shield' || kind === 'boost') { kind = null; panel.classList.remove('on'); B.overlayCancel(); } });
 
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
-    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost();
+    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit();
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

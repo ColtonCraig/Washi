@@ -2,10 +2,10 @@
    the handwritten space name and the space tabs. Docked it is transparent over the desk; floating it is one sheet of paper. */
 html,body{background:transparent}
 :root{--snap:cubic-bezier(.2,.8,.2,1)}
-.sheet{position:absolute;left:0;top:0;bottom:0;width:248px;display:flex;flex-direction:column;gap:10px;padding:10px 12px 12px 14px}
+.sheet{position:absolute;left:0;top:0;bottom:0;width:232px;display:flex;flex-direction:column;gap:8px;padding:4px 8px 8px 10px}
 
 /* floating: a single sheet of paper with a strip of tape, sliding in from the edge */
-body.float .sheet{top:8px;bottom:12px;left:8px;width:244px;padding:16px 12px 12px 12px;border-radius:14px;background:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),0 14px 40px rgb(var(--sh) / .2);transform:translateX(-112%) rotate(-1deg);transform-origin:0 50%;transition:transform .17s cubic-bezier(.55,0,.85,.4);will-change:transform;backface-visibility:hidden}
+body.float .sheet{top:6px;bottom:8px;left:6px;width:226px;padding:14px 10px 10px 10px;border-radius:14px;background:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),0 14px 40px rgb(var(--sh) / .2);transform:translateX(-112%) rotate(-1deg);transform-origin:0 50%;transition:transform .17s cubic-bezier(.55,0,.85,.4);will-change:transform;backface-visibility:hidden}
 body.float .sheet::before{content:"";position:absolute;inset:0;border-radius:inherit;background-image:var(--grain);opacity:.6;pointer-events:none}
 body.float .sheet::after{content:"";position:absolute;left:50%;top:-6px;width:46px;height:13px;margin-left:-23px;transform:rotate(-2deg);opacity:.85;background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);box-shadow:0 1px 0 rgb(var(--sh) / .14)}
 body.float.open .sheet{transform:none;transition:transform .26s cubic-bezier(.2,.9,.3,1.04)}

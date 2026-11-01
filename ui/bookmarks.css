@@ -1,0 +1,83 @@
+/* bookmark chips: small and quiet; folders are paper tabs that can carry an emoji and a color */
+.bm{flex:none;max-width:168px;height:26px;display:flex;align-items:center;gap:6px;padding:0 9px 0 6px;border-radius:7px;color:var(--ink);font:500 12.5px var(--font-ui);white-space:nowrap;transition:background .12s,transform .12s var(--ease)}
+.bm .t{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.bm .fav{width:16px;height:16px;font-size:9px}
+.bm .fav img{width:12px;height:12px}
+.bm:hover{background:rgb(var(--inkc) / .07)}
+.bm:active{transform:scale(.96)}
+.bm[hidden]{display:none}
+.bm.fold{background:color-mix(in srgb,var(--fc,#f2d58f) 30%,transparent);font-weight:600}
+.bm.fold:hover{background:color-mix(in srgb,var(--fc,#f2d58f) 45%,transparent)}
+.bm.fold .i{width:15px;height:15px;color:color-mix(in srgb,var(--fc,#c2610c) 85%,#000)}
+.bm .emo{width:16px;text-align:center;font-size:13px;line-height:1}
+.bm.more{padding:0 6px;color:var(--ink2)}
+.bm.drag{z-index:2;background:var(--white);box-shadow:0 6px 18px rgb(var(--sh) / .2);transition:none}
+.bm.into{box-shadow:0 0 0 2px var(--tape)}
+.bmhint{padding:0 8px;color:var(--ink3);font:500 12px var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm.before{box-shadow:-2px 0 0 var(--tape)}
+.bm.after{box-shadow:2px 0 0 var(--tape)}
+.dragging .bm:not(.drag){transition:background .12s,box-shadow .12s}
+
+/* the always-shown bar in the window */
+.bmbar{padding:0 2px 3px}
+
+/* the bar on hover: a paper strip that drops in over the top of the page */
+.bmstrip{position:fixed;left:0;right:0;top:0;height:40px;display:none;pointer-events:none}
+.bmstrip.on{display:block}
+.bmin{position:absolute;left:2px;right:2px;top:2px;height:32px;display:flex;align-items:center;gap:2px;padding:0 4px;overflow:hidden;border-radius:10px;background-color:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 3px 6px rgb(var(--sh) / .14);pointer-events:auto;animation:bmdrop .16s var(--ease) both}
+@keyframes bmdrop{from{opacity:0;transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){.bmin{animation:none}}
+.motion-off .bmin,.motion-off .bmedit-in{animation:none}
+
+/* ☆ in the top bar */
+.stamp.star.on .i{fill:currentColor}
+
+/* the edit form (popover and inside the bookmarks sheet) */
+.bmpop{gap:12px}
+.bmf{display:flex;flex-direction:column;gap:10px}
+.bmf .fl{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:10px;margin:0}
+.bmf .fl>span{color:var(--ink2);font:600 12px var(--font-ui)}
+.bmf .txt,.bmf select{width:100%;max-width:none;height:32px;padding:0 10px;border:0;border-radius:8px;background:var(--white);color:var(--ink);font:500 13px var(--font-ui);box-shadow:inset 0 0 0 1px rgb(var(--inkc) / .18);outline:0}
+.bmf .txt:focus,.bmf select:focus{box-shadow:inset 0 0 0 2px var(--tape)}
+.bmf .txt.bad{box-shadow:inset 0 0 0 2px #d23b2a}
+.bmf select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);background-position:calc(100% - 15px) 14px,calc(100% - 10px) 14px;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
+.bmf .emos{display:flex;flex-wrap:wrap;gap:3px}
+.bmf .emo-b{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-size:15px;line-height:1;color:var(--ink2);transition:background .12s,transform .12s var(--ease)}
+.bmf .emo-b:hover{background:rgb(var(--inkc) / .07)}
+.bmf .emo-b.on{background:color-mix(in srgb,var(--tape) 16%,transparent);box-shadow:inset 0 0 0 1.5px var(--tape)}
+.bmf .emo-b:active{transform:scale(.9)}
+.bmf .emo-in{width:28px;height:28px;padding:0;border:0;border-radius:7px;text-align:center;font-size:15px;background:rgb(var(--inkc) / .05);color:var(--ink);outline:0}
+.bmf .emo-in:focus{box-shadow:inset 0 0 0 1.5px var(--tape)}
+.bmf .cols{display:flex;gap:5px}
+.bmf .col-b{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;transition:transform .12s var(--ease)}
+.bmf .col-b i{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgb(var(--inkc) / .15)}
+.bmf .col-b.on{box-shadow:0 0 0 2px var(--tape)}
+.bmf .col-b:active{transform:scale(.9)}
+.bmf .fbtns{display:flex;align-items:center;gap:6px;margin-top:2px}
+.bmf .fill{flex:1}
+.bmf .btn{height:32px;padding:0 14px;border-radius:9px;font-size:13px}
+.bmf .btn.plain{background:transparent;box-shadow:none}
+.bmf .btn.plain:hover{background:rgb(var(--inkc) / .07)}
+.bmf .lnk{font:600 12.5px/1 var(--font-ui);color:var(--ink2);text-decoration:underline;text-decoration-color:rgb(var(--inkc) / .3);text-underline-offset:3px}
+.bmf .lnk.warn:hover{color:#d23b2a}
+.pop .bmf .lnk{margin-top:0;align-self:center}
+
+/* the bookmarks sheet */
+.btree .brow{padding-left:calc(10px + var(--d,0) * 22px);min-height:42px}
+.btree .brow .chev{flex:none;width:12px;display:grid;place-items:center;color:var(--ink3);transition:transform .18s var(--ease)}
+.btree .brow.open .chev{transform:rotate(90deg)}
+.btree .brow .fic{flex:none;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--fc,#f2d58f) 32%,transparent);color:color-mix(in srgb,var(--fc,#c2610c) 85%,#000)}
+.btree .brow .fic .emo{font-size:15px;line-height:1}
+.btree .brow.drag{position:relative;z-index:2;background:var(--white);box-shadow:0 8px 20px rgb(var(--sh) / .2);transition:none}
+.btree .brow.into{box-shadow:inset 0 0 0 2px var(--tape)}
+.btree .brow.before{box-shadow:inset 0 2px 0 var(--tape)}
+.btree .brow.after{box-shadow:inset 0 -2px 0 var(--tape)}
+.btree .brow.editing{background:rgb(var(--inkc) / .05)}
+.btree .bempty{margin:2px 0 6px;padding-left:calc(44px + var(--d,0) * 22px);color:var(--ink3);font-size:12.5px}
+.btree .bmedit-in{margin:2px 0 10px calc(34px + var(--d,0) * 22px);padding:14px;max-width:520px;border-radius:10px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1);animation:fbin .18s var(--ease) both}
+.sheet.bookmarks .sbar .btn{display:flex;align-items:center;gap:6px;margin-left:0}
+.sheet.bookmarks .sbar #bnewf{margin-left:auto}
+
+/* Settings › Bookmarks */
+.bmi .bmrow{display:flex;align-items:center;gap:12px;cursor:default}
+.bmi .bmrow .an{flex:1}

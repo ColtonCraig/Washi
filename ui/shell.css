@@ -2,15 +2,15 @@
 body{background:var(--desk)}
 .desk{position:fixed;inset:0;background-color:var(--desk);background-image:var(--grain);overflow:hidden}
 
-.topbar{position:fixed;left:0;right:0;top:0;height:52px;z-index:2;display:flex;align-items:center;gap:8px;padding:0 14px 0 0;-webkit-app-region:drag}
+.topbar{position:fixed;left:0;right:0;top:0;height:44px;z-index:2;display:flex;align-items:center;gap:4px;padding:0 8px 0 0;-webkit-app-region:drag}
 .topbar button,.topbar .lk{-webkit-app-region:no-drag}
-.lights{width:84px;flex:none}
-.stamp{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:transparent;color:var(--ink2);transition:background .15s,color .15s,transform .12s var(--ease)}
+.lights{width:78px;flex:none}
+.stamp{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:transparent;color:var(--ink2);transition:background .15s,color .15s,transform .12s var(--ease)}
 .stamp:hover{background:rgb(var(--inkc) / .08);color:var(--ink)}
 .stamp:active{transform:scale(.92)}
 .stamp:disabled{opacity:.35;pointer-events:none}
 .stamp.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}
-.label{position:relative;flex:1;min-width:0;max-width:640px;margin:0 auto;height:34px;display:flex;align-items:center;gap:9px;padding:0 14px;border-radius:9px;background:rgb(var(--whc) / .72);color:var(--ink);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .07);transition:background .15s,box-shadow .15s}
+.label{position:relative;flex:1;min-width:0;max-width:640px;margin:0 auto;height:30px;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;background:rgb(var(--whc) / .72);color:var(--ink);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .07);transition:background .15s,box-shadow .15s}
 .label:hover{background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),var(--cut-sm)}
 .label:active{transform:scale(.995)}
 .label .lk{display:grid;color:var(--ink3)}
@@ -22,10 +22,10 @@ body{background:var(--desk)}
 @keyframes run{from{background-position:-60% 0}to{background-position:160% 0}}
 
 .stage{position:fixed;inset:0;z-index:1;pointer-events:none}
-.pane{position:absolute;pointer-events:auto;border-radius:12px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .06),0 2px 6px rgb(var(--sh) / .06),0 10px 30px rgb(var(--sh) / .08);overflow:visible}
+.pane{position:absolute;pointer-events:auto;border-radius:10px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .06),0 2px 6px rgb(var(--sh) / .06),0 10px 30px rgb(var(--sh) / .08);overflow:visible}
 .pane.off{opacity:0;pointer-events:none}
 .split .pane.focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--tape) 75%,transparent),0 10px 30px rgb(var(--sh) / .1)}
-.empty{position:absolute;inset:0;overflow:hidden;border-radius:12px;display:grid;place-content:center;text-align:center;padding:24px;background:var(--white)}
+.empty{position:absolute;inset:0;overflow:hidden;border-radius:10px;display:grid;place-content:center;text-align:center;padding:24px;background:var(--white)}
 .pane.has .empty{display:none}
 .note{position:relative;z-index:1;padding:8px 20px}
 .note h2{margin:0 0 8px;font:700 30px/1 var(--font-hand);color:var(--ink)}
@@ -50,3 +50,15 @@ body{background:var(--desk)}
 .pane.off .empty,.pane.has .empty{display:none}   /* nothing animates behind a page */
 .edge{transition:opacity .15s}.edge.away{opacity:0}
 .stamp.boost.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}
+
+/* the gap between split pages: drag to resize */
+.gutter{position:fixed;z-index:1;pointer-events:auto;display:grid;place-items:center;cursor:col-resize;-webkit-app-region:no-drag}
+.gutter[hidden]{display:none}
+.gutter i{width:4px;height:44px;border-radius:4px;background:rgb(var(--inkc) / .18);opacity:0;transform:scaleY(.6);transition:opacity .15s,transform .2s var(--ease),background .15s}
+.gutter:hover i,.gutter.drag i{opacity:1;transform:none}
+.gutter.drag i{background:var(--tape)}
+body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
+
+/* bookmarks bar (when it's set to always show) */
+.bmbar{position:fixed;z-index:2;height:30px;display:none;align-items:center;gap:2px;overflow:hidden;-webkit-app-region:no-drag}
+body.bm-always .bmbar{display:flex}

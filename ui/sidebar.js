@@ -4,7 +4,7 @@ const { esc, ic, favHTML, rot, PAL, palOf, applyTheme } = window.BL;
 BL.setup();
 const $ = (s, r = document) => r.querySelector(s);
 const body = document.body, sheet = $('#sheet'), tabsEl = $('#tabs'), pinsEl = $('#pins'), spacesEl = $('#spaces'), sname = $('#sname');
-const SB_W = 248, TOP = 52;
+const SB_W = 232, TOP = 44;
 let ST = null, pending = null, dragging = false, hold = false, justDragged = false, swapping = true, slapId = null;
 setTimeout(() => { swapping = false; }, 900);
 let peekT;
@@ -16,7 +16,7 @@ function syncList(parent, keys, make, up) {
   let ref = parent.firstElementChild;
   keys.forEach((k, i) => {
     let c = have.get(k);
-    if (!c) { c = make(k); c.dataset.key = k; c.style.setProperty('--i', i); if (slapId === k) { c.classList.add('slap'); slapId = null; } else if (swapping) c.classList.add('rise'); setTimeout(() => c.classList.remove('rise', 'slap'), 900); }
+    if (!c) { c = make(k); c.dataset.key = k; c.style.setProperty('--i', i); if (slapId === k) { c.classList.add('slap'); slapId = null; requestAnimationFrame(() => c.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); } else if (swapping) c.classList.add('rise'); setTimeout(() => c.classList.remove('rise', 'slap'), 900); }
     up(c, k);
     if (c !== ref) parent.insertBefore(c, ref); else ref = ref.nextElementSibling;
   });

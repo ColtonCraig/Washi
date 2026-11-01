@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="overlay.css">
 <link rel="stylesheet" href="setup.css">
 <link rel="stylesheet" href="panels.css">
+<link rel="stylesheet" href="bookmarks.css">
 </head>
 <body>
 <div class="drag" id="drag"><div class="dim" id="dim"></div><div id="zones"></div><div class="ghost" id="ghost"></div></div>
@@ -18,6 +19,7 @@
     <div class="res" id="res"></div>
   </div>
 </div>
+<nav class="bmstrip" id="bmstrip" aria-label="Bookmarks"><div class="bmin" id="bmin"></div></nav>
 <div class="panel" id="panel"></div>
 <div class="peek" id="peek"></div>
 <div class="setup" id="sheet" role="dialog" aria-modal="true" aria-label="Washi"></div>
@@ -25,6 +27,7 @@
 <div class="sw-tray" id="sw" role="listbox" aria-label="Recent tabs"></div>
 <div class="toast" id="toast"><i class="tp"></i><span id="toastTxt"></span><button id="toastBtn" hidden>Show</button></div>
 <script src="shared.js"></script>
+<script src="bookmarks.js"></script>
 <script src="setup.js"></script>
 <script src="panels.js"></script>
 <script src="sheets.js"></script>

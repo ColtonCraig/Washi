@@ -269,10 +269,10 @@
 .sbtns{display:flex;gap:10px;justify-content:flex-start}
 .sbtns [hidden]{display:none}
 
-/* Arc import */
-.arc{display:grid;gap:12px;max-width:620px}
-.arc .okay{margin:0}
-.arc .err{margin:0;color:#d23b2a;font-weight:600}
+/* Arc import (and bookmarks import, which looks the same) */
+.arc,.bmi{display:grid;gap:12px;max-width:620px}
+.arc .okay,.bmi .okay{margin:0}
+.arc .err,.bmi .err{margin:0;color:#d23b2a;font-weight:600}
 .arcl{display:grid;gap:6px}
 .arow{display:flex;align-items:center;gap:12px;min-height:50px;padding:8px 14px;border-radius:10px;background:var(--white);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .12);transition:box-shadow .15s,background .15s}
 .arow:hover:not(:disabled){box-shadow:0 0 0 1px rgb(var(--inkc) / .22),var(--cut-sm)}

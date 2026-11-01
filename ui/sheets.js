@@ -39,7 +39,61 @@ window.SHEETS = (() => {
     const lq = q.toLowerCase(); shown = items.filter(x => !lq || ((x.title || '') + ' ' + (x.url || '') + ' ' + (x.name || '')).toLowerCase().includes(lq));
     const m = document.getElementById('more'); if (m) m.onclick = () => { limit += 300; draw(true); };
   }
+  /* ---------- bookmarks: folders open and close, drag to reorder, edit in place ---------- */
+  let BM = null;                                           // { items, folders, favs, open:Set, editing }
+  const bmSend = m => B.setupMsg({ type: 'bm', ...m });
+  const findBm = (id, list = BM.items, parent = null) => { for (const n of list) { if (n.id === id) return { node: n, parent }; if (n.type === 'folder') { const r = findBm(id, n.kids || [], n); if (r) return r; } } return null; };
+  function bmDraw(keepScroll) {
+    const body = root.querySelector('.slist'); if (!body) return;
+    const st = body.scrollTop;
+    body.innerHTML = BMK.tree(BM.items, BM.open, q, BM.favs);
+    if (BM.editing) {
+      const row = body.querySelector(`.brow[data-id="${BM.editing.id}"]`), x = findBm(BM.editing.id);
+      if (row && x) {
+        const box = document.createElement('div'); box.className = 'bmedit-in'; box.style.setProperty('--d', row.style.getPropertyValue('--d'));
+        const n = x.node, d = { node: n, folders: BM.folders, parent: x.parent ? x.parent.id : '', fresh: BM.editing.fresh };
+        box.innerHTML = BMK.form(d); row.after(box); row.classList.add('editing');
+        BMK.wireForm(box, d, {
+          save: patch => { BM.editing = null; bmSend({ act: 'save', id: n.id, patch }); },
+          del: () => { BM.editing = null; bmSend({ act: 'del', id: n.id }); },
+          cancel: () => { const f = BM.editing; BM.editing = null; if (f && f.fresh && n.type === 'folder') bmSend({ act: 'discard', id: n.id }); else bmDraw(true); }
+        });
+        if (!keepScroll) box.scrollIntoView({ block: 'nearest' });
+      }
+    }
+    if (keepScroll) body.scrollTop = st;
+  }
+  function bmOpen(d) {
+    BM = { items: d.items || [], folders: d.folders || [], favs: d.favs || {}, open: BM ? BM.open : new Set(), editing: null };
+    root.innerHTML = `<div class="sheet lst bookmarks" tabindex="-1"><i class="tp l"></i><i class="tp r"></i>
+      <header class="shead"><h2 class="ttl">Bookmarks</h2><p class="lead">Drag to reorder, or onto a folder to put it inside. Right-click the bar for more.</p><button class="xx" aria-label="Close">×</button>
+        <div class="sbar">${ic('search', 16)}<input id="sq" type="text" placeholder="Search bookmarks" spellcheck="false" aria-label="Search bookmarks">
+          <button class="btn small" id="bnewf">${ic('folder', 14)}New folder</button><button class="btn small plain" id="bimp">Import…</button></div></header>
+      <div class="slist btree" role="tree"></div></div>`;
+    root.classList.add('on'); bmDraw();
+    root.querySelector('.xx').onclick = close;
+    const sq = document.getElementById('sq'); sq.addEventListener('input', () => { q = sq.value.trim(); BM.editing = null; bmDraw(); }); setTimeout(() => sq.focus(), 40);
+    document.getElementById('bnewf').onclick = () => bmSend({ act: 'newf' });
+    document.getElementById('bimp').onclick = () => bmSend({ act: 'import' });
+    const list = root.querySelector('.slist');
+    list.addEventListener('click', e => {
+      if (list._dragged || e.target.closest('.bmedit-in')) return;
+      const row = e.target.closest('.brow'); if (!row) return; const x = findBm(row.dataset.id); if (!x) return;
+      const a = e.target.closest('[data-a]'), n = x.node;
+      if (a && a.dataset.a === 'edit') { BM.editing = BM.editing && BM.editing.id === n.id ? null : { id: n.id }; bmDraw(true); return; }
+      if (a && a.dataset.a === 'del') { row.classList.add('gone'); setTimeout(() => bmSend({ act: 'del', id: n.id }), 160); return; }
+      if (n.type === 'folder') { BM.open.has(n.id) ? BM.open.delete(n.id) : BM.open.add(n.id); bmDraw(true); return; }
+      bmSend({ act: 'open', id: n.id, bg: e.metaKey }); if (!e.metaKey) close();
+    });
+    BMK.dragSort(list, '.brow', 'y', m => { if (!q) { if (m.into) BM.open.add(m.target); bmSend(m); } });
+  }
+  B.onSetupEvent(e => {
+    if (!open_ || kind !== 'bookmarks' || !e) return;
+    if (e.type === 'bmTree') { BM.items = e.items || []; BM.folders = e.folders || []; BM.favs = e.favs || BM.favs; bmDraw(true); }
+    else if (e.type === 'bmFresh') { const x = findBm(e.id); if (x && x.parent) BM.open.add(x.parent.id); BM.editing = { id: e.id, fresh: true }; bmDraw(); }
+  });
   function open(d) {
+    if (d.kind === 'bookmarks') { kind = 'bookmarks'; q = ''; open_ = true; items = []; return bmOpen(d); }
     kind = d.kind; items = d.items || []; q = ''; limit = 200; open_ = true;
     const [title, lead] = TITLES[kind];
     root.innerHTML = `<div class="sheet lst ${kind}" tabindex="-1"><i class="tp l"></i><i class="tp r"></i>
@@ -75,6 +129,7 @@ window.SHEETS = (() => {
   }
   function key(e) {
     if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (document.activeElement && document.activeElement.closest('.bmedit-in')) return;
     const list = [...root.querySelectorAll('.row')]; if (!list.length) return;
     const i = list.indexOf(document.activeElement);
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))] || list[0]; n.focus(); n.scrollIntoView({ block: 'nearest' }); }

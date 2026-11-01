@@ -174,6 +174,7 @@ function configure(p) {
   } catch (e) { console.error('dns', e.message); }
 }
 module.exports = {
+  isDangerStop: u => !!(P.safety && !riskOK.has(hostOf(u)) && blocker.danger(u)),
   P, UA, uaFor, googleAuth, matchUA, needsUA, setup, pageSession, configure, clearData, sessions, httpOK, riskOK, upgraded, upgradeable,
   listPerms, resetPerm, listDownloads, dlAct, bind: h => { ui = { ...ui, ...h }; }
 };

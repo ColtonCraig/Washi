@@ -57,7 +57,7 @@ const K = seq => execSync(`python3 ${__dirname}/ptr.py keys "${seq}"`);     // r
   // 5. from the sidebar (keyboard focus in Washi's own view)
   const before = await cur();
   const tr = await sb.$eval('.tab:not(.on)', e => { const r = e.getBoundingClientRect(); return [r.x + 40, r.y + r.height / 2, e.dataset.id]; });
-  execSync(`python3 ${__dirname}/ptr.py move ${60 + tr[0]} ${57 + 52 + tr[1]}`); execSync(`python3 ${__dirname}/ptr.py down`); execSync(`python3 ${__dirname}/ptr.py up`); await sleep(600);
+  execSync(`python3 ${__dirname}/ptr.py move ${60 + tr[0]} ${57 + 44 + tr[1]}`); execSync(`python3 ${__dirname}/ptr.py down`); execSync(`python3 ${__dirname}/ptr.py up`); await sleep(600);
   const clicked = await cur();
   K('down:Control_L tap:Tab up:Control_L'); await sleep(500);
   ok(clicked !== before && await cur() === before, 'works with the keyboard in the sidebar too (flips back to ' + before + ')');

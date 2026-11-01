@@ -8,8 +8,18 @@ const looksLikeUrl = v => /^[a-z][a-z0-9+.-]*:\/\//i.test(v) || /^localhost(:\d+
 
 /* ---------- command bar ---------- */
 let D = null, items = [], sel = 0, sugg = [], suggFor = '', suggT = 0;
+/* ---------- the bookmarks bar, when it shows on hover ---------- */
+const strip = $('#bmstrip'), stripIn = $('#bmin');
+function showStrip(d) {
+  BMK.draw(stripIn, d.items || [], d.favs || {}, m => B.bmAct(m));
+  strip.classList.remove('out'); strip.classList.add('on');
+}
+function hideStrip() { strip.classList.remove('on'); }
+B.onBmHide(hideStrip);
 B.onOverlayInit(d => {
   applyTheme(d.theme, d.pal);
+  if (d.mode === 'bmbar') { window.PANELS.closeAll(); window.SHEETS.close(true); close(); showStrip(d); return; }
+  hideStrip();
   if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'panel' && d.mode !== 'peek' && d.mode !== 'sheet' && d.mode !== 'setup') close();
   if (d.mode === 'setup') { window.SETUP.open(d); return; }
   if (d.mode === 'panel') { window.PANELS.open(d); return; }
@@ -46,6 +56,7 @@ function build() {
   const acts = D.actions.filter(a => has(a.label)).slice(0, v ? 4 : 12).map(a => ({ r: { kind: 'action', id: a.id }, label: a.label, icon: 'bolt', hint: a.hint }));
   groups.push({ name: 'open tabs', rows: tabs });
   if (v) groups.push({ name: 'history', rows: hist });
+  if (v && D.bookmarks) { const seen = new Set(hist.map(x => x.r.value)); groups.splice(groups.length - 1, 0, { name: 'bookmarks', rows: D.bookmarks.filter(b => !open.has(b.url) && !seen.has(b.url) && has(b.title + ' ' + b.url + ' ' + b.path)).slice(0, 4).map(b => ({ r: { kind: 'url', value: b.url, mode: D.mode }, label: b.title, icon: 'star', hint: b.path })) }); }
   if (v && D.archive) groups.push({ name: 'archived', rows: D.archive.filter(a => !open.has(a.url) && has((a.title || '') + ' ' + a.url)).slice(0, 3).map(a => ({ r: { kind: 'url', value: a.url, mode: D.mode }, label: a.title || hostOf(a.url), icon: 'clock', hint: 'archived' })) });
   groups.push({ name: 'actions', rows: acts });
   render(groups);
@@ -139,4 +150,4 @@ B.onFx(f => {
   }
 });
 
-B.onOverlayClosed(() => { close(); window.PANELS.closeAll(); window.SHEETS.close(true); });
+B.onOverlayClosed(() => { close(); hideStrip(); window.PANELS.closeAll(); window.SHEETS.close(true); });

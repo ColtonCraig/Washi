@@ -5,6 +5,8 @@ const ACTIONS = [
   // id, label, menu, default accelerator
   ['settings', 'Settings', 'app', 'CmdOrCtrl+,'],
   ['newtab', 'New Scrap (search or address)', 'file', 'CmdOrCtrl+T'],
+  ['newwindow', 'New Window', 'file', 'CmdOrCtrl+N'],
+  ['closewindow', 'Close Window', 'file', 'CmdOrCtrl+Shift+W'],
   ['scrap', 'New Little Scrap', 'file', 'Alt+CmdOrCtrl+N'],
   ['scrapadopt', 'Open Little Scrap in Washi', 'file', 'CmdOrCtrl+O'],
   ['location', 'Edit This Address', 'file', 'CmdOrCtrl+L'],
@@ -33,6 +35,9 @@ const ACTIONS = [
   ['history', 'Show History', 'history', 'CmdOrCtrl+Y'],
   ['archive', 'Show Archived Tabs', 'history', 'Alt+CmdOrCtrl+A'],
   ['downloads', 'Show Downloads', 'history', 'Alt+CmdOrCtrl+L'],
+  ['bookmark', 'Bookmark This Page…', 'bookmarks', 'CmdOrCtrl+Shift+D'],
+  ['bookmarks', 'Show All Bookmarks', 'bookmarks', 'Alt+CmdOrCtrl+B'],
+  ['bookmarkbar', 'Always Show Bookmarks Bar', 'bookmarks', 'CmdOrCtrl+Shift+B'],
   ['nexttab', 'Next Tab in Sidebar', 'spaces', 'Alt+CmdOrCtrl+Down'],
   ['prevtab', 'Previous Tab in Sidebar', 'spaces', 'Alt+CmdOrCtrl+Up'],
   ...[1, 2, 3, 4, 5, 6].map(n => [`space:${n}`, `Space ${n}`, 'spaces', `Ctrl+${n}`]),

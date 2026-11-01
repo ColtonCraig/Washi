@@ -16,7 +16,7 @@ const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a);
     await ui.evaluate(() => openSetup('settings')); await sleep(1300); snap(mode + '-settings'); await ov.keyboard.press('Escape'); await sleep(600);
     await ui.evaluate(() => { const ids = spaceTabs(sp()); makePair(ids[0], ids[1]); showTab(ids[1]); placePanes(); commit(true); }); await sleep(900); snap(mode + '-split');
     await ui.evaluate(() => { S.pairs = []; placePanes(); commit(true); }); await sleep(600);
-    await ui.click('#bSide'); await sleep(800); ptr('move 700 500'); await sleep(300); ptr('move 70 500'); await sleep(800); snap(mode + '-float');
+    await ui.click('#bSide'); await sleep(800); ptr('move 700 500'); await sleep(300); ptr('move 66 500'); await sleep(800); snap(mode + '-float');
     ptr('move 900 500'); await sleep(600); await ui.click('#bSide'); await sleep(800);
     await ui.evaluate(() => openTab('')); await sleep(900); snap(mode + '-empty');
   }

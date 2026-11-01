@@ -23,7 +23,10 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 | Boosts (per-site CSS/colors) | Arc, Zen | ✅ tint, font, zap, your own CSS |
 | Reader mode | Safari, Firefox | ⬜ later |
 | Import from Arc | Arc, Zen | ✅ spaces, pins, nested folders, splits, favorites |
-| Import from Chrome / Safari | Arc, Zen | ⬜ later |
+| Import from Chrome / Safari | Arc, Zen | ✅ bookmarks: Chrome, Brave, Edge, Arc, Dia, Helium, Vivaldi, Opera read directly; Safari/Firefox via their HTML export |
+| Bookmarks bar + folders | everyone; hover bar in Dia/Helium | ✅ always / on hover / hidden, emoji + colour folders, bookmarks sheet |
+| Several windows, each with its own tabs | Dia, Arc | ✅ restored after quit and updates |
+| Resizable split | Arc, Zen, Vivaldi | ✅ drag the gap, remembered per pair |
 | Ctrl-Tab recent-tab switcher | Arc | ✅ |
 | Folders inside folders | Arc | ✅ up to 3 deep |
 | Live folders (GitHub PRs, feeds) | Arc | ✅ |
@@ -39,6 +42,17 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   secure DNS; remembered site permissions; popup blocker; peek; find; history/archive/downloads sheets; sleeping tabs;
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
+
+## Done and tested (0.12)
+- Bookmarks: ☆ next to the address and ⇧⌘D add/edit; the bar is Always (a slim row above the pages), On hover (rest on the top bar, a paper strip drops over the page and goes when you leave) or Hidden (⇧⌘B flips Always on and back); » for what doesn't fit; drag chips to reorder or onto a folder; folders open as menus with Open All; right-click for edit/delete/new folder/bar mode
+- Bookmark folders: any emoji (16 quick picks or type your own) or the plain paper folder, 7 colours; nest as deep as 8; a folder can't go inside itself
+- Bookmarks sheet (⌥⌘B): open/close folders, search, drag rows to reorder or into folders, edit in place, delete with Undo, new folder
+- Import bookmarks: finds Chrome/Brave/Edge/Arc/Dia/Helium/Vivaldi/Opera profiles by name; HTML exports from Safari/Firefox; their bar joins yours, the rest goes in a folder, nothing is doubled on a second import, scripts are dropped
+- Bookmarks are shared by every window and update live; the command bar searches them
+- Several windows (⌘N): each has its own tabs, folders and pins in the same spaces; settings, spaces, history, archive and bookmarks are shared; every window comes back after quitting or an update; closing one on purpose forgets it
+- Split view: drag the gap between the pages to resize (300 px minimum each), remembered per pair, double-click evens it out
+- Slimmer frame: 44 px top bar, 232 px sidebar, 8 px margins; every button kept
+- New scraps can go to the top or the bottom of the sidebar (Settings › Tabs)
 
 ## Done and tested (0.11): what Arc people miss most (from r/ArcBrowser and Dia coverage)
 - Folders inside folders (3 levels): drag folders into folders, the bottom edge of a folder means "after it", collapsed folders show just the path to the open tab, loops and too-deep saves repair themselves
@@ -74,7 +88,7 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 ## Next (in this order)
 - [ ] Confirm on Colton's Mac: Google sign-in (Gmail, Drive, Calendar), Microsoft 365 / Okta / Slack sign-in work end to end
 - [ ] Passwords for work: the biggest everyday gap. Option A: Washi's own password saver using the macOS Keychain. Option B: the Chromium fork (real extensions like 1Password). Decide with Colton
-- [ ] Import Chrome/Safari bookmarks
+- [ ] Import passwords and history from other browsers (with the password work)
 - [ ] Reorder pinned tabs by dragging
 - [ ] Reader mode
 - [ ] Apple Developer ID signing + notarizing (removes the one-time Open Anyway step; needed before sharing Washi)
