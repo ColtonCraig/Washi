@@ -26,7 +26,7 @@ replacing the app never touches them.
 - Updates can never go backwards to an older version.
 
 ## Publishing a new version (what Claude does)
-1. Bump `version` in `package.json`, commit, and tag it: `git tag -a v0.9.1 -m "What changed"`, then push the tag.
+1. Bump `version` in `package.json`, commit with a one-line summary (it becomes the update note), and push to the `release` branch.
 2. The **Release** workflow builds both Macs on GitHub's Mac machines, signs them (ad hoc), makes the `.zip`
    (for updates) and `.dmg` (for first installs), signs `latest.json`, and publishes everything to `washi-releases`.
 3. Installed copies pick it up within 4 hours, or right away with **Check for updates**.

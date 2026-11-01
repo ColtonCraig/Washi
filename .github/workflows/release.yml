@@ -1,5 +1,5 @@
-# Builds Washi for Apple silicon and Intel Macs whenever a tag like v0.9.0 is pushed, and publishes it to the public
-# washi-releases repository. Installed copies of Washi see the new latest.json and update themselves.
+# Builds Washi for Apple silicon and Intel Macs whenever the `release` branch is pushed (with a new version in
+# package.json), and publishes it to the public washi-releases repository. Installed copies of Washi see the new latest.json and update themselves.
 # Secrets (Settings → Secrets and variables → Actions):
 #   WASHI_UPDATE_KEY  private release key (signs latest.json; its public half is app/update-key.pub)
 #   RELEASES_TOKEN    fine-grained token with "Contents: read and write" on the washi-releases repository only
@@ -7,7 +7,8 @@
 name: Release
 on:
   push:
-    tags: ['v*']
+    branches: [release]
+  workflow_dispatch:
 jobs:
   mac:
     runs-on: macos-latest
@@ -15,15 +16,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      - name: Skip if this version is already published
+        id: v
+        env: { GH_TOKEN: '${{ secrets.RELEASES_TOKEN }}', REPO: "${{ vars.RELEASES_REPO || 'ColtonCraig/Washi-releases' }}" }
+        run: |
+          V=$(node -p 'require("./package.json").version'); echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" --repo "$REPO" >/dev/null 2>&1; then echo "v$V is already out"; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
       - run: npm ci
-      - run: npm run lists                       # fresh blocklists baked into this release
-      - name: Check the tag matches package.json
-        run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+        if: steps.v.outputs.skip != '1'
+      - run: npm run lists
+        if: steps.v.outputs.skip != '1'                       # fresh blocklists baked into this release
       - name: Build both Macs
+        if: steps.v.outputs.skip != '1'
         run: |
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64 -c.mac.identity=null
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --x64 -c.mac.identity=null
       - name: Sign (ad hoc), zip, and make the installer disk image
+        if: steps.v.outputs.skip != '1'
         run: |
           V=$(node -p 'require("./package.json").version'); mkdir -p out
           for A in arm64 x64; do
@@ -37,11 +46,13 @@ jobs:
             hdiutil create -volname "Washi" -srcfolder "dmg-$A" -ov -format UDZO "out/Washi-$V-$A.dmg"
           done
       - name: Sign the update info
+        if: steps.v.outputs.skip != '1'
         env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
         run: |
           V=$(node -p 'require("./package.json").version')
-          node scripts/release-manifest.js "$V" out "out/Washi-$V-arm64.zip" "out/Washi-$V-x64.zip" "$(git tag -l --format='%(contents:subject)' "$GITHUB_REF_NAME")"
+          node scripts/release-manifest.js "$V" out "out/Washi-$V-arm64.zip" "out/Washi-$V-x64.zip" "$(git log -1 --format=%s)"
       - name: Publish to washi-releases
+        if: steps.v.outputs.skip != '1'
         env: { GH_TOKEN: '${{ secrets.RELEASES_TOKEN }}', REPO: "${{ vars.RELEASES_REPO || 'ColtonCraig/Washi-releases' }}" }
         run: |
           V=$(node -p 'require("./package.json").version')
