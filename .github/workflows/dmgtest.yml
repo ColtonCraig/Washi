@@ -1,0 +1,33 @@
+# Checks the installer window for real: builds a .dmg with a stand-in app, opens it in Finder and takes a screenshot.
+name: Installer window check
+on:
+  push:
+    branches: [main]
+    paths: ['build/dmg-*', 'scripts/make-dmg.sh', '.github/workflows/dmgtest.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  dmg:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stand-in app
+        run: |
+          D="$RUNNER_TEMP/app/Washi.app/Contents"; mkdir -p "$D/MacOS" "$D/Resources"; cp /bin/ls "$D/MacOS/Washi"; cp build/icon.icns "$D/Resources/icon.icns"
+          printf '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>app.washi.browser</string><key>CFBundleExecutable</key><string>Washi</string><key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>' > "$D/Info.plist"
+      - name: Build the installer
+        run: scripts/make-dmg.sh "$RUNNER_TEMP/app/Washi.app" "$RUNNER_TEMP/Washi-test.dmg"
+      - name: Open it in Finder and take a picture
+        run: |
+          mkdir -p "$RUNNER_TEMP/shots"
+          M=$(hdiutil attach "$RUNNER_TEMP/Washi-test.dmg" | awk -F'\t' '/Volumes/ {print $NF}'); echo "mounted at $M"
+          python3 -c "import ds_store,sys; d=ds_store.DSStore.open(sys.argv[1]+'/.DS_Store'); [print(e.filename, e.code, (str(e.value)[:300])) for e in d]" "$M" || true
+          open "$M"; sleep 6
+          screencapture -x "$RUNNER_TEMP/shots/finder.png" || true
+          osascript -e 'tell application "Finder" to get bounds of front window' || true
+      - name: Picture to a scratch branch
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/shots" && git init -q && git checkout -q -b s && git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm shot
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-shots-dmg
