@@ -49,7 +49,7 @@ jobs:
             ditto -c -k --keepParent "$APP" "out/Washi-$V-$A.zip"
             dmgbuild -s build/dmg-settings.py -D app="$APP" "Washi" "out/Washi-$V-$A.dmg"
             M=$(hdiutil attach -nobrowse -readonly "out/Washi-$V-$A.dmg" | awk -F'\t' '/Volumes/ {print $NF}')
-            ls -la "$M"; test -f "$M/.DS_Store"; ls "$M/.background"; test -d "$M/Washi.app"; test -L "$M/Applications"
+            ls -la "$M"; test -f "$M/.DS_Store"; test -f "$M/.background.tiff"; test -d "$M/Washi.app"; test -L "$M/Applications"
             hdiutil detach "$M"
           done
       - name: Sign the update info
