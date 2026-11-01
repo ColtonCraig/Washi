@@ -1,14 +1,15 @@
 'use strict';
 (() => {
-  /* One palette per space. Keys are the saved hue numbers, so older saved spaces keep working. */
+  /* One palette per space. Keys are the saved hue numbers, so older saved spaces keep working.
+     Desks are soft tints (the page is the star); tape is the one strong accent. */
   const PAL = {
-    40: { n: 'Tangerine', desk: '#ffb77c', tape: '#ff6a3d', s2: '#ffd84d' },
-    255: { n: 'Blueberry', desk: '#a3c1ff', tape: '#3d63ff', s2: '#ffd84d' },
-    340: { n: 'Bubblegum', desk: '#ffb3d1', tape: '#ff3d8d', s2: '#7fe0c9' },
-    150: { n: 'Clover', desk: '#b0e8a8', tape: '#1f9d57', s2: '#ffe14d' },
-    200: { n: 'Lagoon', desk: '#9ae6e2', tape: '#0e9f9f', s2: '#ff9370' },
-    300: { n: 'Grape', desk: '#d0b5ff', tape: '#7b46ff', s2: '#ffd84d' },
-    110: { n: 'Lime', desk: '#dcf088', tape: '#74b000', s2: '#ff7aa8' }
+    40: { n: 'Tangerine', desk: '#fdd3ae', tape: '#ff6a3d', s2: '#ffd84d' },
+    255: { n: 'Blueberry', desk: '#cbd9f6', tape: '#3d63ff', s2: '#ffd84d' },
+    340: { n: 'Bubblegum', desk: '#fdd1dc', tape: '#ff3d8d', s2: '#7fe0c9' },
+    150: { n: 'Clover', desk: '#d2eec6', tape: '#1f9d57', s2: '#ffe14d' },
+    200: { n: 'Lagoon', desk: '#c6ede6', tape: '#0e9f9f', s2: '#ff9370' },
+    300: { n: 'Grape', desk: '#e3d2f6', tape: '#7b46ff', s2: '#ffd84d' },
+    110: { n: 'Lime', desk: '#eaf3b4', tape: '#74b000', s2: '#ff7aa8' }
   };
   const STICK = ['#ff6a3d', '#3d63ff', '#ff3d8d', '#1f9d57', '#0e9f9f', '#7b46ff', '#74b000', '#e89a00'];
   const palOf = h => PAL[h] || PAL[40];
@@ -80,7 +81,7 @@
     light: [{ id: 'cream', n: 'Cream', paper: '#fbf6ea', ink: '#2b2118' }, { id: 'news', n: 'Newsprint', paper: '#f1f0ea', ink: '#1d1d1b' }, { id: 'blush', n: 'Blush', paper: '#fff0ee', ink: '#3b1f2b' }, { id: 'mint', n: 'Mint', paper: '#edf9f0', ink: '#15332a' }, { id: 'sky', n: 'Sky', paper: '#eef4ff', ink: '#1b2440' }],
     dark: [{ id: 'cocoa', n: 'Cocoa', paper: '#2b2520', ink: '#f3ead8' }, { id: 'midnight', n: 'Midnight', paper: '#22273a', ink: '#e8ecff' }, { id: 'forest', n: 'Forest', paper: '#1e2a24', ink: '#e2f2e7' }, { id: 'plum', n: 'Plum', paper: '#2c2133', ink: '#f4e7ff' }, { id: 'ink', n: 'Ink', paper: '#1c1c1e', ink: '#f2f2f0' }]
   };
-  const DEF = { done: false, mode: 'light', light: { preset: 'cream', paper: '', ink: '' }, dark: { preset: 'cocoa', paper: '', ink: '' }, texture: true, wobble: true, motion: true,
+  const DEF = { done: false, mode: 'light', light: { preset: 'cream', paper: '', ink: '' }, dark: { preset: 'cocoa', paper: '', ink: '' }, texture: true, wobble: false, motion: true,
     search: 'google', customSearch: '', startup: 'restore', home: '', gpc: true, askDownload: false,
     blocking: 'standard', httpsFirst: true, safety: true, dns: 'auto', clearOnExit: false, suggest: true,
     archive: 0, sleep: 60, autoPip: true, keys: {} };
@@ -124,7 +125,7 @@
     const white = dark ? mix(paper, '#ffffff', .08) : mix(paper, '#ffffff', .72);
     const v = {
       '--ink': ink, '--inkc': hx(ink).join(' '), '--paper': paper, '--paper2': mix(paper, ink, .07), '--white': white, '--whc': hx(white).join(' '),
-      '--sh': dark ? '0 0 0' : hx(ink).join(' '), '--desk': dark ? mix(pal.desk, '#120e0b', .64) : pal.desk, '--tape': pal.tape, '--s2': pal.s2,
+      '--sh': dark ? '0 0 0' : hx(ink).join(' '), '--desk': dark ? mix(pal.desk, '#120e0b', .7) : pal.desk, '--tape': pal.tape, '--s2': pal.s2,
       '--grain': p.texture ? (dark ? 'url(grain-dark.png)' : 'url(grain.png)') : 'none', '--wob': p.wobble ? 1 : 0, 'color-scheme': dark ? 'dark' : 'light'
     };
     for (const k in v) el.style.setProperty(k, v[k]);

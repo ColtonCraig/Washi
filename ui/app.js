@@ -16,6 +16,7 @@ function sanitize(s) {
   s.tabs = s.tabs || {}; s.pins = (s.pins || []).filter(id => s.tabs[id]); s.history = (s.history || []).filter(h => h && h.url); s.closed = s.closed || []; s.archive = s.archive || [];
   for (const id in s.tabs) if (!s.tabs[id].seen) s.tabs[id].seen = Date.now();
   s.dock = s.dock !== undefined ? !!s.dock : s.side !== 'hidden'; s.prefs = prefsOf(s.prefs);
+  if (!(s.prefs.look >= 2)) { s.prefs.wobble = false; s.prefs.look = 2; }   // 0.10: the calmer look starts with straight scraps (you can turn wonky back on)
   s.spaces = (s.spaces || []).filter(x => x && x.id);
   if (!s.spaces.length) return fresh();
   for (const sp of s.spaces) {
@@ -215,11 +216,9 @@ function switchSpace(id, o = {}) {
     R.split = false; R.b = null; R.focus = 'a'; R.a = null;
     const list = spaceTabs(s), want = o.want || (s.act && list.includes(s.act) ? s.act : list[0]) || null;
     if (want) showTab(want);
-    placePanes(); B.sbFx({ type: 'swap' }); commit(true); save();
+    placePanes(); B.sbFx({ type: 'swap', dir: o.quiet || o.boot ? 0 : (to > from ? 1 : -1) }); commit(true); save();
   };
-  if (o.quiet || o.boot || calm() || !target) return doit();
-  B.fx({ type: 'wipe', pal: palFor(target), theme: S.prefs, dir: to > from ? 1 : -1 });
-  setTimeout(doit, 330);
+  doit();                    // instant: the page changes right away, the sidebar slides its list in from the side you're going
 }
 function promptFor(title, value, cb) { R.promptCb = cb; B.overlayOpen({ mode: 'prompt', title, value: value || '', ...look(), tabs: [], actions: [], history: [] }); }
 function addSpace() {

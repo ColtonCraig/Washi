@@ -1,4 +1,5 @@
-/* Paper collage: cream paper, hard cut-out shadows, washi tape, handwriting. One palette (desk, tape, s2) per space. */
+/* Paper collage, kept calm: cream paper, light cut-out shadows, a little washi tape, handwriting only for titles.
+   One palette (desk, tape, s2) per space. */
 @font-face{font-family:'Bricolage Grotesque';src:url(fonts/bricolage.woff2) format('woff2');font-weight:200 800;font-display:swap}
 @font-face{font-family:'Figtree';src:url(fonts/figtree.woff2) format('woff2');font-weight:300 900;font-display:swap}
 @font-face{font-family:'Caveat';src:url(fonts/caveat.woff2) format('woff2');font-weight:400 700;font-display:swap}
@@ -11,22 +12,22 @@
   --font-hand:'Caveat','Bradley Hand','Segoe Print',cursive;
   --font-ui:'Figtree',-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
   --font-mono:ui-monospace,'SF Mono',Menlo,monospace;
-  --spring:cubic-bezier(.34,1.45,.64,1); --spring-ms:520ms;
+  --spring:cubic-bezier(.3,1.18,.5,1); --spring-ms:380ms;
   --ease:cubic-bezier(.215,.61,.355,1);
-  --cut:3px 3px 0 rgb(var(--sh) / .24);
-  --cut-sm:2px 2px 0 rgb(var(--sh) / .24);
+  --cut:2px 2px 0 rgb(var(--sh) / .12),0 4px 14px rgb(var(--sh) / .08);
+  --cut-sm:1px 1px 0 rgb(var(--sh) / .14),0 1px 3px rgb(var(--sh) / .08);
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font-family:var(--font-ui);font-size:14px;color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none;cursor:default}
 button{font:inherit;color:inherit;border:0;background:none;cursor:default;padding:0}
-button:focus-visible,.tab:focus-visible,.r:focus-visible,input:focus-visible{outline:2px dashed var(--ink);outline-offset:2px}
-svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-kbd{font:700 11px var(--font-ui);padding:2px 6px;border-radius:5px;background:var(--white);color:var(--ink2);box-shadow:0 0 0 1.5px rgb(var(--sh) / .22),1px 2px 0 rgb(var(--sh) / .22)}
+button:focus-visible,.tab:focus-visible,.r:focus-visible,input:focus-visible{outline:2px solid color-mix(in srgb,var(--tape) 70%,transparent);outline-offset:2px}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+kbd{font:700 11px var(--font-ui);padding:2px 6px;border-radius:5px;background:var(--white);color:var(--ink2);box-shadow:0 0 0 1px rgb(var(--sh) / .16)}
 .grain{background-image:var(--grain)}
 .tape{position:absolute;width:38px;height:15px;opacity:.9;background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);box-shadow:0 1px 0 rgb(var(--sh) / .15)}
-.fav{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--font-display);color:#fff;flex:none;overflow:hidden;box-shadow:0 0 0 2px var(--white),1.5px 2px 0 2px rgb(var(--sh) / .28)}
+.fav{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--font-display);color:#fff;flex:none;overflow:hidden;box-shadow:0 0 0 1px rgb(var(--sh) / .1)}
 .fav.img{background:var(--white)!important}
 .fav img{width:15px;height:15px;object-fit:contain}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

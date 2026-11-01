@@ -21,7 +21,7 @@ const { start, sleep, ok, shot, done } = require('./lib');
   await ov.click('.cf .rs.vis'); await sleep(200);
   await ov.click('.seg.modes .sg[data-v="light"]'); await sleep(400);
   await ov.click('.sw >> nth=1'); await sleep(200);
-  ok(await ui.evaluate(() => S.prefs.wobble === false), 'wobble toggle off');
+  ok(await ui.evaluate(() => S.prefs.wobble === true), 'wonky scraps toggle (off by default) turns on');
   await ov.click('.sw >> nth=1');
   await ov.click('.next'); await sleep(900); shot('onb-o2');
   await ov.click('.seg.grid .sg[data-v="duckduckgo"]'); await sleep(200);

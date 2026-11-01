@@ -42,6 +42,7 @@ const AUDIT = () => {
       if (/inset/.test(part)) continue;
       const n = (part.replace(/rgba?\([^)]*\)|#[0-9a-f]+|[a-z-]+\([^)]*\)/gi, '').match(/-?[\d.]+px/g) || []).map(parseFloat);
       const [ox = 0, oy = 0, bl = 0, sp = 0] = n, a = Math.round(bl / 2) + sp;
+      if (bl >= 10) continue;                       // a big soft ambient shadow has no edge to see cut off; hard and small shadows count
       x.r = Math.max(x.r, ox + a); x.l = Math.max(x.l, -ox + a); x.b = Math.max(x.b, oy + a); x.t = Math.max(x.t, -oy + a);
     }
     if (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth)) { const o = parseFloat(s.outlineWidth) + parseFloat(s.outlineOffset || 0); for (const k in x) x[k] = Math.max(x[k], o); }

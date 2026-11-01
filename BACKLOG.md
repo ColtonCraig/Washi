@@ -35,6 +35,10 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.10)
+- Calmer look (~30% less decoration), same paper identity: soft desk tints, flat top-bar buttons, light address field, soft page shadows, no idle animations, no confetti, handwriting only for titles, straight scraps by default (Wonky scraps still in Settings)
+- Motion made purposeful and quicker: gentler spring, 0.2–0.3 s transitions; switching spaces is now instant (was a 0.8 s full-screen wipe that delayed the page by 0.33 s); sidebar list slides in from the side you're going
+
 ## Done and tested (v9)
 - Washi updates itself: signed latest.json + SHA-256 + bundle checks, background download, Restart or install-on-quit, rollback if the swap fails. Tested end to end (forged, edited and corrupted updates are refused)
 - Release workflow: GitHub's Mac machines build Apple silicon + Intel, make .dmg (first install) and .zip (updates), publish to washi-releases

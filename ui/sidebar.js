@@ -127,24 +127,11 @@ document.documentElement.addEventListener('pointerleave', () => { if (!dragging)
 addEventListener('blur', () => { inside = false; });
 B.onSbFx(f => {
   if (f.type === 'new') slapId = f.id;
-  else if (f.type === 'swap') { swapping = true; setTimeout(() => { swapping = false; }, 900); }
+  else if (f.type === 'swap') { swapping = true; document.body.style.setProperty('--dx', (f.dir || 0) * 18 + 'px'); document.body.style.setProperty('--dy', f.dir ? '0px' : '6px'); setTimeout(() => { swapping = false; document.body.style.removeProperty('--dx'); document.body.style.removeProperty('--dy'); }, 600); }
   else if (f.type === 'close') { const el = tabsEl.querySelector(`.tab[data-id="${f.id}"]`); if (el) crumple(el); }
 });
 
-/* ---------- paper bits ---------- */
-function bits(x, y, n = 10) {
-  if (window.BL.motion.off) return;
-  const p = ST ? ST.pal : palOf(40), cols = [p.tape, p.s2, 'var(--white)', 'var(--ink)'];
-  for (let i = 0; i < n; i++) {
-    const d = document.createElement('i'); d.className = 'bit';
-    const w = 6 + Math.random() * 8, h = 4 + Math.random() * 6;
-    d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${cols[i % cols.length]};box-shadow:1px 1px 0 rgba(43,33,24,.3)`;
-    document.body.append(d);
-    const a = (i / n) * Math.PI * 2 + Math.random() * .6, r = 28 + Math.random() * 46;
-    d.animate([{ transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * r}px),calc(-50% + ${Math.sin(a) * r + 30}px)) rotate(${(Math.random() - .5) * 540}deg)`, opacity: 0 }], { duration: 620 + Math.random() * 200, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }).onfinish = () => d.remove();
-  }
-}
-function crumple(el) { const r = el.getBoundingClientRect(); bits(r.left + r.width / 2, r.top + r.height / 2); el.classList.add('crumple'); }
+function crumple(el) { el.classList.add("crumple"); }
 
 /* ---------- instant feedback: the clicked tab lights up right away, the real state follows a moment later ---------- */
 function highlight(id) {

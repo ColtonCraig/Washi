@@ -68,7 +68,7 @@ function render(groups) {
 function move() {
   const el = res.querySelector(`.r[data-n="${sel}"]`), hl = $('#hl'); if (!hl) return;
   if (!el) { hl.style.height = '0px'; return; }
-  hl.style.transform = `translateY(${el.offsetTop}px) skewX(-2deg)`; hl.style.height = el.offsetHeight + 'px'; el.scrollIntoView({ block: 'nearest' });
+  hl.style.transform = `translateY(${el.offsetTop}px)`; hl.style.height = el.offsetHeight + 'px'; el.scrollIntoView({ block: 'nearest' });
 }
 q.addEventListener('input', build);
 res.addEventListener('pointermove', e => { const r = e.target.closest('.r'); if (r && +r.dataset.n !== sel) { sel = +r.dataset.n; move(); } });
@@ -91,8 +91,8 @@ const minis = id => ({ splitL: '<b class="me"></b><b></b>', splitR: '<b></b><b c
 function loop() {
   raf = requestAnimationFrame(loop);
   const vx = gx - lastX; lastX = gx;
-  tilt += (Math.max(-16, Math.min(16, vx * .9)) - tilt) * .22;
-  ghost.style.transform = `translate(${gx - 28}px,${gy - 22}px) rotate(${tilt - 3}deg)`;
+  tilt += (Math.max(-6, Math.min(6, vx * .5)) - tilt) * .22;
+  ghost.style.transform = `translate(${gx - 28}px,${gy - 22}px) rotate(${tilt}deg)`;
 }
 B.onDrag(m => {
   if (m.type === 'start') {
@@ -112,18 +112,8 @@ B.onDrag(m => {
 
 /* ---------- effects ---------- */
 let toastT;
-function wipe(f) {
-  const dir = f.dir || 1;
-  applyTheme(f.theme, f.pal);
-  [['paper', 0], ['sheet', 70]].forEach(([k, delay]) => {
-    const d = document.createElement('div'); d.className = 'wipe ' + k; document.body.append(d);
-    const a = -dir * 135, b = dir * 135;
-    d.animate([{ transform: `translateX(${a}%)`, easing: 'cubic-bezier(.3,.6,.3,1)' }, { transform: 'translateX(0%)', offset: .42 }, { transform: 'translateX(0%)', offset: .56, easing: 'cubic-bezier(.6,0,.9,.5)' }, { transform: `translateX(${b}%)` }], { duration: 800, delay, fill: 'both' }).onfinish = () => d.remove();
-  });
-}
 B.onFx(f => {
-  if (f.type === 'wipe') wipe(f);
-  else if (f.type === 'toast') {
+  if (f.type === 'toast') {
     $('#toastTxt').textContent = f.text;
     const btn = $('#toastBtn'), a = f.action || (f.reveal ? { label: 'Show in Finder', cmd: 'reveal', path: f.reveal } : null);
     btn.hidden = !a; if (a) { btn.textContent = a.label; btn.onclick = () => { toast.classList.remove('on'); B.toastAct(a); }; }
