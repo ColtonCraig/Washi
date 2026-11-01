@@ -5,7 +5,6 @@ struct PhoneLayout: View {
     @Environment(Store.self) private var store
     @Environment(\.theme) private var th
     var size: CGSize
-    @GestureState private var drag: CGFloat = 0
     var body: some View {
         let w = min(340, size.width * 0.86)
         ZStack(alignment: .leading) {
@@ -13,19 +12,31 @@ struct PhoneLayout: View {
                 PageCard(id: store.current).padding(.horizontal, 6).padding(.top, 2)
                 PhoneBar()
             }
+            SidebarDrawer(width: w)
+        }
+    }
+}
+/* the sidebar as a sheet that slides in from the left (phones, and big screens busy with a split) */
+struct SidebarDrawer: View {
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var th
+    var width: CGFloat
+    @GestureState private var drag: CGFloat = 0
+    var body: some View {
+        ZStack(alignment: .leading) {
             if store.sidebarOpen {
                 Color.black.opacity(th.dark ? 0.45 : 0.22).ignoresSafeArea()
-                    .onTapGesture { withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { store.sidebarOpen = false } }
+                    .onTapGesture { store.sidebarOpen = false }
                     .transition(.opacity)
                     .accessibilityIdentifier("sidebarDim")
                 SidebarView(drawer: true)
-                    .frame(width: w)
+                    .frame(width: width)
                     .background(th.desk.ignoresSafeArea())
                     .clipShape(UnevenRoundedRectangle(bottomTrailingRadius: 16, topTrailingRadius: 16, style: .continuous))
                     .shadow(color: .black.opacity(0.2), radius: 16, x: 4)
                     .offset(x: min(0, drag))
                     .gesture(DragGesture(minimumDistance: 12).updating($drag) { v, s, _ in if abs(v.translation.width) > abs(v.translation.height) { s = v.translation.width } }
-                        .onEnded { v in if v.translation.width < -70 || v.predictedEndTranslation.width < -160 { withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { store.sidebarOpen = false } } })
+                        .onEnded { v in if v.translation.width < -70 || v.predictedEndTranslation.width < -160 { store.sidebarOpen = false } })
                     .transition(.move(edge: .leading))
                     .ignoresSafeArea(edges: .bottom)
             }
@@ -55,30 +66,35 @@ struct WideLayout: View {
     @Environment(\.theme) private var th
     var size: CGSize
     var body: some View {
+        let sideW: CGFloat = size.width < 760 ? 220 : 248
+        let tight = store.split != nil && size.width - sideW - 10 < Stage.minPane * 2 + Stage.gap      // two pages need the room
+        let docked = store.s.prefs.docked && !tight
         VStack(spacing: 0) {
-            TopBar()
+            TopBar(tight: tight)
             HStack(spacing: 0) {
-                if store.s.prefs.docked {
-                    SidebarView(drawer: false).frame(width: size.width < 760 ? 220 : 248).transition(.move(edge: .leading).combined(with: .opacity))
+                if docked {
+                    SidebarView(drawer: false).frame(width: sideW).transition(.move(edge: .leading).combined(with: .opacity))
                 }
                 VStack(spacing: 0) {
                     if store.s.prefs.bookmarkBar && !store.s.bookmarks.isEmpty { BookmarksBar().transition(.move(edge: .top).combined(with: .opacity)) }
-                    Stage().padding(.leading, store.s.prefs.docked ? 2 : 8).padding(.trailing, 8).padding(.bottom, 8).padding(.top, 2)
+                    Stage().padding(.leading, docked ? 2 : 8).padding(.trailing, 8).padding(.bottom, 8).padding(.top, 2)
                 }
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.88), value: store.s.prefs.docked)
+        .overlay(alignment: .leading) { if tight || !store.s.prefs.docked { SidebarDrawer(width: min(320, size.width * 0.5)) } }
+        .animation(.spring(response: 0.32, dampingFraction: 0.88), value: docked)
         .animation(.spring(response: 0.3, dampingFraction: 0.9), value: store.s.prefs.bookmarkBar)
     }
 }
 struct TopBar: View {
     @Environment(Store.self) private var store
     @Environment(\.theme) private var th
+    var tight = false
     var body: some View {
         let id = store.current, st = id.flatMap { store.browser?.state($0) }, t = store.currentTab
         let starred = t.flatMap { store.bookmark(for: $0.url) } != nil
         HStack(spacing: 0) {
-            Stamp(icon: "sidebar.left", label: "Show or hide the sidebar", id: "sidebarButton", on: store.s.prefs.docked) { store.setPref { $0.docked.toggle() } }
+            Stamp(icon: "sidebar.left", label: "Show or hide the sidebar", id: "sidebarButton", on: store.s.prefs.docked && !tight) { if tight { store.sidebarOpen.toggle() } else { store.setPref { $0.docked.toggle() } } }
             Stamp(icon: "chevron.backward", label: "Back", id: "back", disabled: !(st?.canBack ?? false)) { if let id { store.browser?.back(id) } }
             Stamp(icon: "chevron.forward", label: "Forward", id: "forward", disabled: !(st?.canFwd ?? false)) { if let id { store.browser?.forward(id) } }
             Stamp(icon: st?.loading == true ? "xmark" : "arrow.clockwise", label: "Reload", id: "reload", disabled: id == nil) { if let id { store.browser?.reload(id) } }
@@ -97,7 +113,7 @@ struct Stage: View {
     @Environment(Store.self) private var store
     @Environment(\.theme) private var th
     @State private var start: Double? = nil
-    static let gap: CGFloat = 10, minPane: CGFloat = 280
+    static let gap: CGFloat = 10, minPane: CGFloat = 260
     var body: some View {
         GeometryReader { g in
             if let p = store.split, g.size.width >= Stage.minPane * 2 + Stage.gap {

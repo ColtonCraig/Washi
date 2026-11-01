@@ -101,7 +101,7 @@ final class WashiUITests: XCTestCase {
         f.typeText("page one")
         waitFor(el("result:Page one"), "typing finds the bookmark")
         shot("07-command-bar")
-        if el("commandCancel").exists { el("commandCancel").tap() } else { el("commandDim").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.97)).tap() }
+        if el("commandCancel").exists { el("commandCancel").tap() } else { el("commandDim").coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.3)).tap() }
         XCTAssertTrue(gone(f), "the command bar closes")
 
         // a link that opens a new window becomes a new tab
