@@ -112,7 +112,7 @@ final class Browser: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
     func back(_ id: String) { views[id]?.goBack() }
     func forward(_ id: String) { views[id]?.goForward() }
-    func reload(_ id: String) { if let v = views[id] { v.isLoading ? v.stopLoading() : v.reload() } }
+    func reload(_ id: String) { guard let v = views[id] else { return }; if v.isLoading { v.stopLoading() } else { v.reload() } }
     func find(_ id: String) { views[id]?.findInteraction?.presentFindNavigator(showingReplace: false) }
     func reloadForSettings(_ id: String) {                       // blocking or desktop mode changed for this site
         guard let v = views[id], let u = v.url ?? URL(string: store.s.tabs[id]?.url ?? "") else { return }
