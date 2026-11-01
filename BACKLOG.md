@@ -43,6 +43,9 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done (0.12.1)
+- Washi is signed with its own (free, self-made) certificate instead of ad hoc, so macOS remembers "Always Allow" for the Keychain and keeps site permissions across updates (one last Keychain prompt after updating to 0.12.1)
+
 ## Washi for iPhone (first version, tested on iPhone 17 + iPad mini simulators)
 - SwiftUI + WebKit app in `ios/`: spaces (Work keeps its own logins), pins, folders, swipe to close/pin, command bar with !bangs, bookmarks with emoji/colour folders, history, EasyList/EasyPrivacy blocking (per-site off), desktop-site toggle, find on page, share, pop-up sign-ins keep working, pull to refresh, site icons, everything saved between launches
 - Phone layout (Duo folded): page + bottom bar, sidebar slides in. Big-screen layout (Duo open, iPad, phone on its side): full-width top bar, docked sidebar, bookmarks bar, split view with a draggable gap (the sidebar becomes a drawer when two pages need the room). Folding/turning switches instantly and keeps the page

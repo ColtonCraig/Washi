@@ -31,16 +31,16 @@ jobs:
         run: |
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64 -c.mac.identity=null
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --x64 -c.mac.identity=null
-      - name: Sign (ad hoc), zip, and make the installer disk image
+      - name: Sign (with Washi's own certificate), zip, and make the installer disk image
         if: steps.v.outputs.skip != '1'
+        env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
         run: |
           V=$(node -p 'require("./package.json").version'); mkdir -p out
           for A in arm64 x64; do
             L=$([ "$A" = x64 ] && echo x86_64 || echo arm64)
             APP=$(ls -d dist/mac*/Washi.app | while read d; do lipo -archs "$d/Contents/MacOS/Washi" | grep -qw "$L" && echo "$d"; done | head -1)
             test -n "$APP"
-            codesign --force --deep --sign - "$APP"
-            codesign --verify --deep --strict "$APP"
+            scripts/sign-mac.sh "$APP"
             ditto -c -k --keepParent "$APP" "out/Washi-$V-$A.zip"
             mkdir -p "dmg-$A" && ditto "$APP" "dmg-$A/Washi.app" && ln -s /Applications "dmg-$A/Applications"
             hdiutil create -volname "Washi" -srcfolder "dmg-$A" -ov -format UDZO "out/Washi-$V-$A.dmg"

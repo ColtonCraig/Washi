@@ -15,7 +15,7 @@ fi
 ID=$(security find-identity -p codesigning "$KC" | awk '/Washi \(Colton Craig\)/ {print $2; exit}')
 [ -n "$ID" ] || { echo "signing identity not found"; security find-identity "$KC"; exit 1; }
 for APP in "$@"; do
-  codesign --force --deep --sign "$ID" --keychain "$KC" --identifier com.coltoncraig.washi "$APP"
+  codesign --force --deep --sign "$ID" --keychain "$KC" "$APP"
   codesign --verify --deep --strict "$APP"
   codesign -d -r- "$APP" 2>&1 | grep designated
 done
