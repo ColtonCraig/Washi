@@ -13,8 +13,8 @@ jobs:
       - name: Sign a test app twice and compare
         env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
         run: |
-          ditto /System/Applications/Calculator.app "$RUNNER_TEMP/A/Washi.app"
-          ditto /System/Applications/Chess.app "$RUNNER_TEMP/B/Washi.app"
+          for X in A:ls B:cat; do D="$RUNNER_TEMP/${X%%:*}/Washi.app/Contents"; mkdir -p "$D/MacOS"; cp "/bin/${X##*:}" "$D/MacOS/Washi"
+            printf '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.coltoncraig.washi</string><key>CFBundleExecutable</key><string>Washi</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>' > "$D/Info.plist"; done
           scripts/sign-mac.sh "$RUNNER_TEMP/A/Washi.app" "$RUNNER_TEMP/B/Washi.app" | tee "$RUNNER_TEMP/dr.txt"
           [ "$(sort -u "$RUNNER_TEMP/dr.txt" | wc -l | tr -d ' ')" = "1" ] && echo "SAME IDENTITY across different builds"
           grep -q 'certificate leaf' "$RUNNER_TEMP/dr.txt"
