@@ -35,7 +35,7 @@ replacing the app never touches them.
 - Private repository `washi` (this code) and public repository `washi-releases` (only finished downloads).
 - In `washi` → Settings → Secrets and variables → Actions:
   - secret `WASHI_UPDATE_KEY`: the private release key (PEM)
-  - secret `RELEASES_TOKEN`: a fine-grained personal access token with **Contents: Read and write** on
+  - secret `RELEASE_TOKEN` (or `RELEASES_TOKEN`): a fine-grained personal access token with **Contents: Read and write** on
     `washi-releases` only
   - variable `RELEASES_REPO`: `<your-username>/washi-releases`
 - `package.json` → `washi.updates`: `https://github.com/<your-username>/washi-releases/releases/latest/download/latest.json`
