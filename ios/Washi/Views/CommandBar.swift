@@ -92,9 +92,11 @@ struct CommandBar: View {
         let open = Set(all.compactMap { store.s.tabs[$0]?.url })
         if !v.isEmpty {
             var seen = Set<String>()
-            for x in store.s.bookmarks.flat() where !open.contains(x.bm.url) && has(x.bm.label + " " + x.bm.url + " " + x.path) && seen.insert(x.bm.url).inserted {
+            for x in store.s.bookmarks.flat() where has(x.bm.label + " " + x.bm.url + " " + x.path) && seen.insert(x.bm.url).inserted {
                 let b = x.bm, path = x.path
-                out.append(Row(id: "bm:" + b.id, label: b.label, hint: path.isEmpty ? "bookmark" : path, icon: "star", fav: nil) { go(b.url) })
+                out.append(Row(id: "bm:" + b.id, label: b.label, hint: path.isEmpty ? "bookmark" : path, icon: "star", fav: nil) {
+                    if mode == .new, store.intoFolder == nil, !store.pendingSplit { close(); store.open(bookmark: b) } else { go(b.url) }      // already open: switch to it
+                })
                 if seen.count >= 4 { break }
             }
             var n = 0

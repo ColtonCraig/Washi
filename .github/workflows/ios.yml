@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths: ['ios/**', '.github/workflows/ios.yml']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   test:
     runs-on: macos-latest
@@ -39,3 +41,9 @@ jobs:
             ${{ runner.temp }}/shots
             ${{ runner.temp }}/xcodebuild.log
           if-no-files-found: ignore
+      - name: Screenshots to a scratch branch (for checking the look)
+        if: always()
+        run: |
+          D="$RUNNER_TEMP/shots"; mkdir -p "$D"; tail -n 4000 "$RUNNER_TEMP/xcodebuild.log" > "$D/xcodebuild-tail.log" 2>/dev/null || true
+          cd "$D" && git init -q && git checkout -q -b s && git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm "shots ${{ matrix.device }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-shots-${{ strategy.job-index }}
