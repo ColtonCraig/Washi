@@ -43,8 +43,8 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
-## Done (0.12.2)
-- The installer window (the .dmg) is a taped-up paper sheet: "Hi! Let's tape Washi in.", a dashed arrow from Washi to Applications, and a sticky note explaining Open Anyway for the first launch
+## Done (0.12.2–0.12.3)
+- The installer window (the .dmg) is a taped-up paper sheet: "Hi! Let's tape Washi in.", a dashed arrow from Washi to Applications, and a sticky note explaining Open Anyway for the first launch. Finder itself lays the window out at build time (hand-written window settings stopped showing backgrounds on macOS 26); checked with a real Finder screenshot on every change
 
 ## Done (0.12.1)
 - Washi is signed with its own (free, self-made) certificate instead of ad hoc, so macOS remembers "Always Allow" for the Keychain and keeps site permissions across updates (one last Keychain prompt after updating to 0.12.1)
