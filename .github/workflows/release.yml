@@ -31,6 +31,11 @@ jobs:
         run: |
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64 -c.mac.identity=null
           CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --x64 -c.mac.identity=null
+      - name: Tools for the installer window
+        if: steps.v.outputs.skip != '1'
+        run: |
+          pip3 install --break-system-packages dmgbuild==1.6.5 || pip3 install dmgbuild==1.6.5
+          tiffutil -cathidpicheck build/dmg-background.png build/dmg-background@2x.png -out build/dmg-background.tiff
       - name: Sign (with Washi's own certificate), zip, and make the installer disk image
         if: steps.v.outputs.skip != '1'
         env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
@@ -42,8 +47,10 @@ jobs:
             test -n "$APP"
             scripts/sign-mac.sh "$APP"
             ditto -c -k --keepParent "$APP" "out/Washi-$V-$A.zip"
-            mkdir -p "dmg-$A" && ditto "$APP" "dmg-$A/Washi.app" && ln -s /Applications "dmg-$A/Applications"
-            hdiutil create -volname "Washi" -srcfolder "dmg-$A" -ov -format UDZO "out/Washi-$V-$A.dmg"
+            dmgbuild -s build/dmg-settings.py -D app="$APP" "Washi" "out/Washi-$V-$A.dmg"
+            M=$(hdiutil attach -nobrowse -readonly "out/Washi-$V-$A.dmg" | awk -F'\t' '/Volumes/ {print $NF}')
+            ls -la "$M"; test -f "$M/.DS_Store"; ls "$M/.background"; test -d "$M/Washi.app"; test -L "$M/Applications"
+            hdiutil detach "$M"
           done
       - name: Sign the update info
         if: steps.v.outputs.skip != '1'
