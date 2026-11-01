@@ -5,9 +5,11 @@ const ACTIONS = [
   // id, label, menu, default accelerator
   ['settings', 'Settings', 'app', 'CmdOrCtrl+,'],
   ['newtab', 'New Scrap (search or address)', 'file', 'CmdOrCtrl+T'],
+  ['scrap', 'New Little Scrap', 'file', 'Alt+CmdOrCtrl+N'],
+  ['scrapadopt', 'Open Little Scrap in Washi', 'file', 'CmdOrCtrl+O'],
   ['location', 'Edit This Address', 'file', 'CmdOrCtrl+L'],
   ['newspace', 'New Space', 'file', 'CmdOrCtrl+Shift+N'],
-  ['newfolder', 'New Folder', 'file', 'CmdOrCtrl+Alt+N'],
+  ['newfolder', 'New Folder', 'file', 'CmdOrCtrl+Shift+F'],
   ['close', 'Close Tab', 'file', 'CmdOrCtrl+W'],
   ['reopen', 'Reopen Closed Tab', 'file', 'CmdOrCtrl+Shift+T'],
   ['pin', 'Pin or Unpin Tab', 'file', 'CmdOrCtrl+D'],
@@ -31,8 +33,8 @@ const ACTIONS = [
   ['history', 'Show History', 'history', 'CmdOrCtrl+Y'],
   ['archive', 'Show Archived Tabs', 'history', 'Alt+CmdOrCtrl+A'],
   ['downloads', 'Show Downloads', 'history', 'Alt+CmdOrCtrl+L'],
-  ['nexttab', 'Next Tab', 'spaces', 'Ctrl+Tab'],
-  ['prevtab', 'Previous Tab', 'spaces', 'Ctrl+Shift+Tab'],
+  ['nexttab', 'Next Tab in Sidebar', 'spaces', 'Alt+CmdOrCtrl+Down'],
+  ['prevtab', 'Previous Tab in Sidebar', 'spaces', 'Alt+CmdOrCtrl+Up'],
   ...[1, 2, 3, 4, 5, 6].map(n => [`space:${n}`, `Space ${n}`, 'spaces', `Ctrl+${n}`]),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => [`pin:${n}`, `Pinned Tab ${n}`, 'spaces', `CmdOrCtrl+${n}`])
 ].map(([id, label, menu, def]) => ({ id, label, menu, def }));

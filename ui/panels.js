@@ -37,12 +37,42 @@ window.PANELS = (() => {
     if (sw) sw.onclick = async () => { const block = !sw.classList.contains('on'); sw.classList.toggle('on', block); await B.setupAct({ type: 'blocking:site', host: d.host, block }); setTimeout(() => B.overlayCancel(), 350); };
     document.getElementById('toset').onclick = () => B.overlayResult({ kind: 'cmd', cmd: 'settings:privacy' });
   }
-  addEventListener('blur', () => { if (kind === 'shield') { kind = null; panel.classList.remove('on'); B.overlayCancel(); } });
+  /* ---------- boost: make this site look your way ---------- */
+  const TINTS = [['none', 'Site', 'transparent'], ['warm', 'Warm', '#f3d9b0'], ['cool', 'Cool', '#c7dcf2'], ['soft', 'Soft', '#e7e2da'], ['gray', 'Gray', '#c9c9c9'], ['dark', 'Dark', '#2a2622']];
+  const FONTS = [['site', 'Site', 'inherit'], ['sans', 'Sans', "-apple-system,system-ui,sans-serif"], ['serif', 'Serif', "'New York',Georgia,serif"], ['rounded', 'Round', "ui-rounded,'SF Pro Rounded',system-ui,sans-serif"], ['mono', 'Mono', "ui-monospace,Menlo,monospace"]];
+  function boost() {
+    let host = data.host, b = data.boost || { on: false, tint: 'none', font: 'site', zaps: [], css: '' }, cssT = 0;
+    const set = async patch => { const r = await B.setupAct({ type: 'boost:set', host, patch }); b = (r && r.boost) || { on: false, tint: 'none', font: 'site', zaps: [], css: '' }; draw(); };
+    function draw() {
+      const on = !!b.on, z = (b.zaps || []).length;
+      panel.innerHTML = `<div class="pop boostp" role="dialog" aria-label="Boost this site">
+        <div class="ph">${ic('bolt', 18)}<b>Boost</b><span class="host">${esc(host)}</span>
+          <button class="sw${on ? ' on' : ''}" id="bon" role="switch" aria-checked="${on}" aria-label="Boost on for this site"><i></i></button></div>
+        <div class="bsec"><h6>Colors</h6><div class="chips">${TINTS.map(([k, n, c]) => `<button class="tint${(b.tint || 'none') === k ? ' on' : ''}" data-t="${k}" title="${n}"><i style="background:${c}"></i><span>${n}</span></button>`).join('')}</div></div>
+        <div class="bsec"><h6>Font</h6><div class="chips">${FONTS.map(([k, n, f]) => `<button class="font${(b.font || 'site') === k ? ' on' : ''}" data-f="${k}" style="font-family:${f}">${n}</button>`).join('')}</div></div>
+        <div class="bsec"><h6>Hide things</h6><div class="zrow"><button class="zap" id="bzap">${ic('close', 14)}Zap things on this page</button>
+          <span class="zc">${z ? `${z} hidden` : 'nothing hidden'}</span>${z ? `<button class="lnk" id="bundo">Undo</button><button class="lnk" id="bclear">Show all</button>` : ''}</div></div>
+        <div class="bsec"><h6>Your own CSS</h6><textarea id="bcssv" spellcheck="false" placeholder="h1 { color: tomato }" aria-label="Your own CSS">${esc(b.css || '')}</textarea></div>
+        <button class="lnk" id="breset">Remove this boost</button></div>`;
+      const $ = s => panel.querySelector(s);
+      $('#bon').onclick = () => set({ on: !b.on });
+      panel.querySelectorAll('.tint').forEach(x => x.onclick = () => set({ on: true, tint: x.dataset.t }));
+      panel.querySelectorAll('.font').forEach(x => x.onclick = () => set({ on: true, font: x.dataset.f }));
+      $('#bzap').onclick = () => { B.setupAct({ type: 'boost:zap' }); };
+      if ($('#bundo')) $('#bundo').onclick = () => set({ undoZap: true });
+      if ($('#bclear')) $('#bclear').onclick = () => set({ clearZaps: true });
+      const ta = $('#bcssv'); ta.addEventListener('input', () => { clearTimeout(cssT); cssT = setTimeout(() => B.setupAct({ type: 'boost:set', host, patch: { on: true, css: ta.value } }).then(r => { b = (r && r.boost) || b; panel.querySelector('#bon').classList.toggle('on', !!b.on); }), 350); });
+      ta.addEventListener('keydown', e => { if (e.key !== 'Escape') e.stopPropagation(); });
+      $('#breset').onclick = () => set({ reset: true });
+    }
+    draw();
+  }
+  addEventListener('blur', () => { if (kind === 'shield' || kind === 'boost') { kind = null; panel.classList.remove('on'); B.overlayCancel(); } });
 
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
-    if (kind === 'find') find(); else if (kind === 'shield') shield();
+    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost();
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

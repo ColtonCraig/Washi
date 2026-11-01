@@ -102,23 +102,29 @@ body.float .pair{background:rgb(var(--inkc) / .04)}
 .fh .fi{display:grid;color:#9a6b12}
 .fh .fn{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chev{transition:transform .2s var(--snap)}
-.fold.open .chev,.fold.peek .chev{transform:rotate(90deg)}
+.fold.open>.fh .chev{transform:rotate(90deg)}
 .fh .ct{font:600 12px/1 var(--font-ui);color:rgb(43 33 24 / .5);padding:0 4px}
 .fplus{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:rgb(43 33 24 / .7);opacity:0;transition:opacity .1s,background .12s}
 .fh:hover .fplus{opacity:1}
 .fplus:hover{background:rgb(43 33 24 / .12)}
-.fold.drop .fh{background:#f7c75a;box-shadow:0 0 0 2px #e0a92a}
+.fold.drop>.fh{background:#f7c75a;box-shadow:0 0 0 2px #e0a92a}
 .fold.drag{z-index:5;touch-action:none}
-.fold.drag .fh{box-shadow:0 8px 24px rgb(var(--sh) / .18)}
+.fold.drag>.fh{box-shadow:0 8px 24px rgb(var(--sh) / .18)}
 .fb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s var(--ease)}
-.fold.open .fb,.fold.peek .fb,.fold.drop .fb{grid-template-rows:1fr}
+.fold.open>.fb,.fold.peek>.fb,.fold.drop>.fb{grid-template-rows:1fr}
 .fl{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:2px;margin-left:10px;padding:4px 0 2px 8px;border-left:2px solid rgb(var(--inkc) / .14);transition:padding .28s var(--ease),border-color .28s}
-.fold:not(.open):not(.peek):not(.drop) .fl{padding-top:0;padding-bottom:0;border-left-color:transparent}
-.fold.open .fl:empty,.fold.drop .fl:empty{min-height:32px}
+.fold:not(.open):not(.peek):not(.drop)>.fb>.fl{padding-top:0;padding-bottom:0;border-left-color:transparent}
+.fold.open>.fb>.fl:empty,.fold.drop>.fb>.fl:empty{min-height:32px}
 .fl:empty::after{content:"Drop tabs here";align-self:flex-start;padding:6px 4px;font:500 12.5px/1.2 var(--font-ui);color:var(--ink3)}
-.fold:not(.open):not(.drop) .fl>:is(.tab,.pair):not(.vis):not(.drag){max-height:0;height:0;opacity:0;margin:0 0 -2px;padding-top:0;padding-bottom:0;overflow:hidden;pointer-events:none}
-.fold:not(.open):not(.drop) .fl:empty::after{display:none}
+.fold:not(.open):not(.drop)>.fb>.fl>:is(.tab,.pair):not(.vis):not(.drag),.fold:not(.open):not(.drop)>.fb>.fl>.fold:not(.vis):not(.drag){max-height:0;height:0;opacity:0;margin:0 0 -2px;padding-top:0;padding-bottom:0;overflow:hidden;pointer-events:none}
+.fold:not(.open):not(.drop)>.fb>.fl:empty::after{display:none}
 .fl .pair{margin-top:8px}
+.fl>.fold{margin-top:4px}
+.fl>.fold:last-child{margin-bottom:6px}       /* room to drop just after an inner folder, still inside the outer one */
+.fl>.fold>.fh{height:30px;background:#f6e2ae}           /* a folder inside a folder: a lighter manila */
+.fl>.fold>.fh:hover{background:#f8e8bd}
+.fl>.fold>.fh::before{width:30px}
+.fl>.fold.drop>.fh{background:#f7c75a}
 
 /* spaces: index-card tabs along the bottom */
 .spaces{display:flex;align-items:flex-end;gap:5px;flex:none;padding:0 2px;border-bottom:2px solid rgb(var(--inkc) / .7);margin-top:2px}
@@ -130,3 +136,10 @@ body.float .pair{background:rgb(var(--inkc) / .04)}
 .sp.on .nm{display:block}
 .sp.add{background:transparent;border:1.5px solid rgb(var(--inkc) / .3);border-bottom:0;color:var(--ink2);min-width:26px;padding:0 5px}
 .sp.add:hover{color:var(--ink);background:rgb(var(--whc) / .5)}
+
+/* live folders: a feed icon, a "new" count, and a dot on tabs you haven't opened yet */
+.fold.live>.fh .fi{color:#c2610c}
+.fold.err>.fh .fi{color:#d23b2a}
+.fh .ct.new{padding:2px 7px;border-radius:9px;background:var(--tape);color:#fff;font-weight:700}
+.tab.unread .ttl{font-weight:650}
+.tab.unread::after{content:"";position:absolute;left:3px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:var(--tape)}

@@ -112,7 +112,24 @@ B.onDrag(m => {
 
 /* ---------- effects ---------- */
 let toastT;
+const swEl = $('#sw');
+function drawSwitch(f) {
+  applyTheme(f.theme, f.pal);
+  const n = f.items.length, show = Math.min(n, 7);
+  let from = Math.max(0, Math.min(f.index - 3, n - show));                      // keep the picked card in view
+  const vis = f.items.slice(from, from + show);
+  const key = vis.map(x => x.id).join();
+  if (swEl._key !== key) {
+    swEl._key = key;
+    swEl.innerHTML = vis.map((t, j) => `<button class="swc" role="option" data-i="${from + j}">${favHTML(t)}<b>${esc(t.title)}</b><small>${esc(t.pin ? 'Pinned' : hostOf(t.url) || '')}</small></button>`).join('');
+    swEl.querySelectorAll('.swc').forEach(c => c.addEventListener('click', () => B.toastAct({ cmd: 'switch:pick:' + c.dataset.i })));
+  }
+  swEl.querySelectorAll('.swc').forEach(c => { const on = +c.dataset.i === f.index; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
+  swEl.classList.add('on');
+}
 B.onFx(f => {
+  if (f.type === 'switch') return drawSwitch(f);
+  if (f.type === 'switchEnd') { swEl.classList.remove('on'); swEl._key = ''; return; }
   if (f.type === 'toast') {
     $('#toastTxt').textContent = f.text;
     const btn = $('#toastBtn'), a = f.action || (f.reveal ? { label: 'Show in Finder', cmd: 'reveal', path: f.reveal } : null);

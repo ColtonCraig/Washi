@@ -14,6 +14,10 @@ const proto = require('./app/protocol');
 const sec = require('./app/security');
 const web = require('./app/web');
 const blocker = require('./app/blocker');
+const arc = require('./app/arc');
+const boost = require('./app/boost');
+const live = require('./app/live');
+const arcOK = new Set();                          // Arc sidebar files the user picked themselves (besides the usual place)
 const os = require('os');
 const pages = require('./app/pages');
 const keys = require('./app/shortcuts');
@@ -59,12 +63,12 @@ function internal(t, url) {                    // a button on one of our notices
   const host = (() => { try { return new URL(target).hostname; } catch { return ''; } })();
   const action = u.pathname.slice(1);
   if (action === 'retry') go(t.wc, target).catch(() => {});
-  else if (action === 'back') { t.notice = null; if (t.wc.navigationHistory.canGoBack()) goBack(t.wc); else toUI('tab:event', { id: t.id, closeMe: true }); }   // nowhere to go back to: close the tab, like Chrome
+  else if (action === 'back') { t.notice = null; if (t.wc.navigationHistory.canGoBack()) goBack(t.wc); else if (t.isScrap) t.win.close(); else toUI('tab:event', { id: t.id, closeMe: true }); }   // nowhere to go back to: close the tab, like Chrome
   else if (action === 'insecure' && kind === 'insecure') { web.httpOK.add(host); go(t.wc, target.replace(/^https:/, 'http:')).catch(() => {}); }
   else if (action === 'proceed' && kind === 'danger') { web.riskOK.add(host); go(t.wc, target).catch(() => {}); }
 }
 web.bind({ win: () => win, toast: f => showFx({ type: 'toast', ...f }), downloads: () => { const l = web.listDownloads(); toUI('dl:update', l); toOverlay('dl:update', l); }, onPerm: () => toOverlay('perms:update', web.listPerms()),
-  danger: (wc, url, why) => { const t = [...tabs.values()].find(x => x.wc === wc); if (t) notice(t, 'danger', url, why); else if (peek && peek.wc === wc) wc.loadURL(pages.dangerous(url, why, 'x')); } });
+  danger: (wc, url, why) => { const t = [...tabs.values()].find(x => x.wc === wc) || [...scraps.values()].find(x => x.wc === wc); if (t) notice(t, 'danger', url, why); else if (peek && peek.wc === wc) wc.loadURL(pages.dangerous(url, why, 'x')); } });
 blocker.onStats((id, n) => { const t = [...tabs.values()].find(x => x.wc.id === id); if (t) toUI('tab:event', { id: t.id, blocked: n }); });
 
 /* ---------- page views ---------- */
@@ -102,6 +106,8 @@ function hook(t) {
   const send = p => toUI('tab:event', { id, ...p });
   wc.on('render-process-gone', (_, d) => { logCrash('tab', d); if (d.reason !== 'clean-exit' && !wc.isDestroyed()) { send({ crashed: true }); setTimeout(() => { try { wc.reload(); } catch {} }, 300); } });
   wc.on('input-event', (_, i) => { if (/^(mouseDown|keyDown|rawKeyDown|touchStart|gestureTap)$/.test(i.type)) t.lastInput = Date.now(); });
+  wc.on('before-input-event', switchKeys);
+  boost.watch(wc); wc.on('did-navigate', (_, url) => send({ boosted: boost.isOn(url) }));
   wc.on('page-title-updated', (_, title) => { if (!pages.isNotice(wc.getURL())) send({ title }); });
   wc.on('page-favicon-updated', (_, favs) => { if (favs[0] && /^(https?|data):/.test(favs[0])) send({ fav: favs[0] }); });
   wc.on('did-start-loading', () => send({ loading: true }));
@@ -259,7 +265,8 @@ sec.on('sb:hover', (_, inside) => {
   else if (sbShown && !dragging && !menuOpen) sbLeaveSoon();
 });
 sec.handle('side:set', (_, m) => { sbDocked = !!m.docked; sbShown = false; applySidebar(); sbMode(); return true; });
-sec.on('sb:state', (_, s) => toSide('sb:state', s));
+let lastLook = null;
+sec.on('sb:state', (_, s) => { lastLook = { theme: s.theme, pal: s.pal }; toSide('sb:state', s); });
 sec.on('sb:fx', (_, f) => toSide('sb:fx', f));
 sec.on('sb:ready', () => { sbMode(); toUI('sb:ready'); });
 sec.on('sb:intent', (_, m) => toUI('sb:intent', m));
@@ -279,13 +286,28 @@ sec.on('drag:msg', (_, m) => {
 
 /* ---------- overlay: command bar, sheets, panels (find, shield), peek, effects ---------- */
 function fitOverlay() { const [w, h] = win.getContentSize(); overlay.setBounds({ x: 0, y: 0, width: w, height: h }); }
+/* ---------- Ctrl-Tab: flip through recent tabs. Works wherever the keyboard is (a page or Washi's own views). ---------- */
+let switching = false;
+function switchKeys(e, i) {
+  if (i.type === 'keyDown' && i.key === 'Tab' && i.control && !i.meta && !i.alt) {
+    /* Not preventDefault: Chromium drops every key-up after a key the browser swallowed, and we need Ctrl's key-up to
+       know when to switch. Pages have no default action for Ctrl-Tab, so letting it through is harmless. */
+    if (!overlayOpen && !dragging) { switching = true; toUI('cmd', i.shift ? 'switch:prev' : 'switch:next'); }
+    return;
+  }
+  if (!switching) return;
+  if (i.type === 'keyUp' && (i.key === 'Control' || !i.control)) { switching = false; toUI('cmd', 'switch:commit'); }
+  else if (i.type === 'keyDown' && i.key === 'Escape') { e.preventDefault(); switching = false; toUI('cmd', 'switch:cancel'); }
+}
 function showFx(f) {
+  if (f.type === 'switchEnd') { if (!overlayOpen && !dragging && overlay) { toOverlay('overlay:fx', f); overlay.setVisible(false); } return; }
   if (overlayOpen || dragging || !overlay || !alive(win)) return;
   const [w, h] = win.getContentSize();
   overlay.setBounds(f.type === 'toast' ? { x: Math.round((w - 520) / 2), y: h - 100, width: 520, height: 88 } : { x: 0, y: 0, width: w, height: h });
   overlay.setVisible(true);
   toOverlay('overlay:fx', f);
   clearTimeout(fxTimer);
+  if (f.type === 'switch') return;                          // stays up until Ctrl is let go
   fxTimer = setTimeout(() => { if (!overlayOpen && !dragging) overlay.setVisible(false); }, f.type === 'toast' ? (f.short ? 1600 : f.action || f.reveal ? 6000 : 4200) : 1000);
 }
 sec.on('toast:act', (_, a) => { clearTimeout(fxTimer); overlay.setVisible(false); if (a && a.cmd === 'openUrl' && /^https?:/.test(a.url)) toUI('tab:openRequest', { url: a.url }); else if (a && a.cmd === 'update:install') updater.install(); else if (a && a.cmd === 'reveal' && a.path && fs.existsSync(a.path)) shell.showItemInFolder(a.path); else if (a && typeof a.cmd === 'string') toUI('cmd', a.cmd); });
@@ -346,6 +368,7 @@ function openPeek(url) {
   for (const ev of ['did-start-loading', 'did-stop-loading', 'page-title-updated', 'did-navigate', 'did-navigate-in-page']) wc.on(ev, info);
   wc.setWindowOpenHandler(({ url: u }) => { if (/^https?:/.test(u)) toUI('tab:openRequest', { url: u }); return { action: 'deny' }; });
   wc.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape') { e.preventDefault(); closeOverlay(); } });
+  wc.on('before-input-event', switchKeys); boost.watch(wc);
   wc.on('did-start-navigation', d => { if (d.isMainFrame && !d.isSameDocument) web.matchUA(wc, d.url); });
   wc.on('will-redirect', d => { if (d.isMainFrame && web.needsUA(wc, d.url) && d.method !== 'POST') { d.preventDefault(); web.matchUA(wc, d.url); wc.loadURL(d.url).catch(() => {}); } });
   toOverlay('overlay:init', { mode: 'peek', rect: r, url });
@@ -372,6 +395,71 @@ sec.handle('peek:adopt', (_, id, space) => {               // "Open as tab": the
   return { url: p.wc.getURL(), title: p.wc.getTitle() };
 });
 
+/* ---------- Little scraps: a small throwaway window for a quick look at a link ----------
+   ⌥⌘N opens one (or links from other apps, if you choose that in Settings). "Open in Washi" (⌘O) moves the page into
+   your sidebar as a real tab without reloading it; closing the window throws it away. */
+const scraps = new Map();                                  // scrap window's webContents id → scrap
+const SCRAP_TOP = 48;
+function openScrap(url) {
+  const pb = alive(win) ? win.getBounds() : { x: 80, y: 80, width: 1200, height: 800 }, n = scraps.size % 6;
+  const w = 860, h = 620;
+  const sw = new BrowserWindow({ width: w, height: h, x: Math.round(pb.x + (pb.width - w) / 2 + n * 26), y: Math.round(pb.y + 64 + n * 26), minWidth: 460, minHeight: 320,
+    titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 17 }, autoHideMenuBar: true, backgroundColor: '#fbf6ea', show: false, title: 'Little scrap',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, session: uiSes, spellcheck: false } });
+  sec.trustUI(sw.webContents);
+  const view = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, session: web.pageSession(curSpace), safeDialogs: true, spellcheck: true } });
+  try { view.setBorderRadius(10); } catch {}
+  sw.contentView.addChildView(view);
+  const wc = view.webContents, sid = sw.webContents.id;
+  const sc = { isScrap: true, win: sw, view, wc, space: curSpace, adopted: false, tok: null, notice: null };
+  scraps.set(sid, sc);
+  const place = () => { if (sw.isDestroyed()) return; const [cw, ch] = sw.getContentSize(); view.setBounds({ x: 8, y: SCRAP_TOP, width: Math.max(0, cw - 16), height: Math.max(0, ch - SCRAP_TOP - 8) }); };
+  sw.on('resize', place); place();
+  const info = () => { if (!wc.isDestroyed() && !sw.isDestroyed()) sw.webContents.send('scrap:info', { url: pages.isNotice(wc.getURL()) ? (sc.notice && sc.notice.url) || '' : wc.getURL(), title: wc.getTitle(), loading: wc.isLoading(), ...nav(wc), search: P.search, look: lastLook }); };
+  const L = sc.listeners = {
+    'did-start-loading': info, 'did-stop-loading': info, 'page-title-updated': info, 'did-navigate': info, 'did-navigate-in-page': info,
+    'did-start-navigation': d => { if (d.isMainFrame && !d.isSameDocument) web.matchUA(wc, d.url); },
+    'will-navigate': (e, u) => { web.matchUA(wc, u); if (pages.isInternal(u)) { e.preventDefault(); internal(sc, u); return; } let pr = ''; try { pr = new URL(u).protocol; } catch {} if (pr && !OK_SCHEMES.has(pr)) { e.preventDefault(); external(u, wc); } },
+    'did-fail-load': (_, code, desc, u, isMain) => { if (isMain && code !== -3 && code !== 0) notice(sc, 'failed', u, desc.replace(/^ERR_/, '').replace(/_/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase())); }
+  };
+  for (const k in L) wc.on(k, L[k]);
+  boost.watch(wc);
+  wc.setWindowOpenHandler(({ url: u }) => { if (/^https?:/.test(u)) toUI('tab:openRequest', { url: u }); return { action: 'deny' }; });   // new windows from a scrap open as tabs in Washi
+  sw.webContents.loadURL(proto.url('scrap.html'));
+  sw.webContents.once('did-finish-load', () => { info(); if (!url) sw.webContents.send('scrap:focus'); });
+  sw.once('ready-to-show', () => sw.show());
+  sw.on('closed', () => { scraps.delete(sid); if (!sc.adopted && !wc.isDestroyed()) wc.close(); });
+  if (url) go(wc, url).catch(() => {});
+  return sc;
+}
+const scrapOf = w => w && [...scraps.values()].find(s => s.win === w);
+sec.on('scrap:open', (_, url) => openScrap(typeof url === 'string' && /^https?:/.test(url) ? url : ''));
+sec.on('scrap:act', (e, a) => {
+  const sc = scraps.get(e.sender.id); if (!sc || !a) return;
+  const wc = sc.wc;
+  if (a.type === 'go' && typeof a.url === 'string' && /^(https?:|about:blank)/.test(a.url)) { sc.notice = null; go(wc, a.url).catch(() => {}); wc.focus(); }
+  else if (a.type === 'back' && wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
+  else if (a.type === 'forward' && wc.navigationHistory.canGoForward()) wc.navigationHistory.goForward();
+  else if (a.type === 'reload') wc.isLoading() ? wc.stop() : wc.reload();
+  else if (a.type === 'adopt') toUI('scrap:adopt', { sid: e.sender.id });
+  else if (a.type === 'copy') clipboard.writeText(wc.getURL());
+  else if (a.type === 'close') sc.win.close();
+});
+/* the shell gave the page a tab id and a space: move the page into the main window, keeping it as it is */
+sec.handle('scrap:adopt', (_, sid, id, space) => {
+  const sc = scraps.get(sid); if (!sc || tabs.has(id) || sc.wc.isDestroyed()) return null;
+  const r = { url: pages.isNotice(sc.wc.getURL()) ? (sc.notice && sc.notice.url) || '' : sc.wc.getURL(), title: sc.wc.getTitle() };
+  if (web.pageSession(space) !== sc.wc.session) { sc.win.close(); return { ...r, reload: true }; }   // a different login jar: open it fresh there
+  sc.adopted = true;
+  for (const k in sc.listeners) sc.wc.removeListener(k, sc.listeners[k]);
+  try { sc.win.contentView.removeChildView(sc.view); } catch {}
+  const t = { id, view: sc.view, wc: sc.wc, rect: null, visible: false, lastInput: Date.now(), playing: false };
+  tabs.set(id, t); sc.view.setVisible(false); try { sc.view.setBorderRadius(12); } catch {}
+  win.contentView.addChildView(sc.view, 0); hook(t);
+  sc.win.close(); if (alive(win)) { win.show(); win.focus(); }
+  return r;
+});
+
 /* ---------- settings coming from the interface ---------- */
 let menuKeys = '';
 sec.on('prefs:sync', (_, p) => {
@@ -387,8 +475,9 @@ sec.on('keys:recording', (_, on) => {                        // while a shortcut
 });
 sec.handle('keys:list', () => ({ actions: keys.ACTIONS, custom: P.keys || {} }));
 sec.on('setup:msg', (_, m) => toUI('setup:msg', m));
+sec.on('setup:reply', (_, m) => toOverlay('setup:event', m));     // the shell answering something the setup sheet asked for
 const isDefault = () => { try { return app.isDefaultProtocolClient('https') && app.isDefaultProtocolClient('http'); } catch { return false; } };
-sec.handle('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms() }));
+sec.handle('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms(), ghToken: live.tokenHas() }));
 sec.handle('setup:act', async (_, a) => {
   if (a.type === 'defaultBrowser') {
     if (!app.isPackaged) return { ok: false, isDefault: false, why: 'dev' };
@@ -401,6 +490,31 @@ sec.handle('setup:act', async (_, a) => {
   if (a.type === 'perm:reset') { web.resetPerm(a.origin, a.perm); return web.listPerms(); }
   if (a.type === 'perms') return web.listPerms();
   if (a.type === 'perf') return perfReport();
+  if (a.type === 'boost:info') { const t = activeTab(), host = t ? boost.hostOf(t.wc.getURL()) : ''; return { host, boost: boost.get(host) }; }
+  if (a.type === 'boost:undoLast') { const t = activeTab(); if (t) a = { type: 'boost:set', host: boost.hostOf(t.wc.getURL()), patch: { undoZap: true } }; else return null; }
+  if (a.type === 'boost:set') {
+    const b = boost.set(a.host, a.patch || {});
+    for (const w of [...tabs.values(), ...scraps.values(), ...(peek ? [peek] : [])]) if (!w.wc.isDestroyed() && boost.hostOf(w.wc.getURL()) === a.host) { boost.apply(w.wc); if (w.id) toUI('tab:event', { id: w.id, boosted: boost.isOn(w.wc.getURL()) }); }
+    return { host: a.host, boost: b };
+  }
+  if (a.type === 'boost:zap') {
+    const t = activeTab(); if (!t) return { n: 0 };
+    const host = boost.hostOf(t.wc.getURL()); if (!host) return { n: 0 };
+    closeOverlay(); t.wc.focus();
+    const n = await boost.zap(t.wc);
+    toUI('tab:event', { id: t.id, boosted: boost.isOn(t.wc.getURL()) });
+    if (n) showFx({ type: 'toast', text: `Hid ${n} thing${n > 1 ? 's' : ''} on ${host}`, action: { label: 'Undo', cmd: 'boost:undo' } });
+    return { n };
+  }
+  if (a.type === 'live:fetch') return live.fetchLive(a.kind === 'github' ? 'github' : 'feed', a.src);
+  if (a.type === 'github:token') return live.tokenSet(a.value);
+  if (a.type === 'arc:scan') return arc.scan(arcOK.has(a.path) ? a.path : undefined);
+  if (a.type === 'arc:read') { try { return { ok: true, ...arc.read(arcOK.has(a.path) ? a.path : undefined) }; } catch (e) { return { ok: false, error: e.message }; } }
+  if (a.type === 'arc:pick') {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose Arc\'s sidebar file', message: 'Pick StorableSidebar.json (in Library › Application Support › Arc)', defaultPath: arc.where(), properties: ['openFile', 'showHiddenFiles'], filters: [{ name: 'Arc sidebar', extensions: ['json'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    arcOK.add(r.filePaths[0]); return arc.scan(r.filePaths[0]);
+  }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
@@ -447,7 +561,7 @@ sec.handle('suggest', async (_, q, tpl) => {                // search suggestion
 let pollA = null, pollB = null;
 function uiView(page) {
   const v = new WebContentsView({ webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, session: uiSes, spellcheck: false } });
-  v.setBackgroundColor('#00000000'); sec.trustUI(v.webContents); v.webContents.loadURL(proto.url(page)); return v;
+  v.setBackgroundColor('#00000000'); sec.trustUI(v.webContents); v.webContents.on('before-input-event', switchKeys); v.webContents.loadURL(proto.url(page)); return v;
 }
 function createWindow() {
   const b = store.readJSON('bounds.json', {});
@@ -456,7 +570,8 @@ function createWindow() {
     titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, backgroundColor: '#ffb77c', show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, session: uiSes, spellcheck: false }
   });
-  sec.trustUI(win.webContents);
+  sec.trustUI(win.webContents); win.webContents.on('before-input-event', switchKeys);
+  win.on('blur', () => { if (switching) { switching = false; toUI('cmd', 'switch:cancel'); } });
   win.loadURL(proto.url('index.html'));
   win.once('ready-to-show', () => win.show());
   sidebar = uiView('sidebar.html'); win.contentView.addChildView(sidebar); applySidebar();
@@ -495,7 +610,19 @@ async function startFresh() {
 
 /* ---------- menu bar, built from the shortcut list so custom keys show up everywhere ---------- */
 const MAIN_ACTIONS = { reload: 'reload', hardreload: 'hardreload', zoomin: 'zoomin', zoomout: 'zoomout', zoomreset: 'zoomreset', devtools: 'devtools', back: 'back', forward: 'forward', print: 'print', mute: 'mute', pip: 'pip' };
+const SCRAP_ACTIONS = { reload: 'reload', hardreload: 'hardreload', zoomin: 'zoomin', zoomout: 'zoomout', zoomreset: 'zoomreset', devtools: 'devtools', back: 'back', forward: 'forward', print: 'print' };
 function run(id) {
+  if (id === 'scrap') return openScrap('');
+  const sc = scrapOf(BrowserWindow.getFocusedWindow());
+  if (sc) {                                                 // a little scrap has the keyboard: these keys act on it
+    if (SCRAP_ACTIONS[id]) return tabAct(sc, SCRAP_ACTIONS[id]);
+    if (id === 'close') return sc.win.close();
+    if (id === 'scrapadopt') return toUI('scrap:adopt', { sid: sc.win.webContents.id });
+    if (id === 'location') return sc.win.webContents.send('scrap:focus');
+    if (id === 'copyurl') return clipboard.writeText(sc.wc.getURL());
+    if (alive(win)) { win.show(); win.focus(); }            // anything else belongs to the main window
+  }
+  if (id === 'scrapadopt') return;
   if (MAIN_ACTIONS[id]) return tabAct(activeTab(), MAIN_ACTIONS[id]);
   if (id === 'findnext' || id === 'findprev') { if (panelOpen === 'find') return toOverlay('find:step', id === 'findnext' ? 1 : -1); return toUI('cmd', 'find'); }
   toUI('cmd', id);
@@ -505,7 +632,7 @@ function buildMenu() {
   const group = m => keys.ACTIONS.filter(a => a.menu === m).map(a => a.id);
   const tpl = [
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { role: 'quit' }] },
-    { label: 'File', submenu: [...['newtab', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
+    { label: 'File', submenu: [...['newtab', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
     { label: 'View', submenu: [...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
@@ -518,7 +645,7 @@ function buildMenu() {
 
 /* ---------- app lifecycle ---------- */
 const pendingUrls = [];
-app.on('open-url', (e, url) => { e.preventDefault(); if (alive(win)) toUI('tab:openRequest', { url }); else pendingUrls.push(url); });
+app.on('open-url', (e, url) => { e.preventDefault(); if (alive(win) && P.scrapLinks && /^https?:/.test(url)) openScrap(url); else if (alive(win)) toUI('tab:openRequest', { url }); else pendingUrls.push(url); });   // links from other apps
 app.whenReady().then(async () => {
   if (process.argv.includes('--fresh')) await wipeData();
   setupUISession();

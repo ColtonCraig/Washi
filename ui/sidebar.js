@@ -30,7 +30,7 @@ const setFav = (e, t) => {
 /* ---------- elements ---------- */
 let PLAN = { root: [], folders: {} };
 const shownSet = () => ST ? new Set(ST.split ? [ST.a, ST.b] : [ST.a]) : new Set();
-const isShown = k => { const sh = shownSet(); return k.startsWith('p:') ? k.slice(2).split('|').some(id => sh.has(id)) : sh.has(k); };
+const isShown = k => { const sh = shownSet(); if (k.startsWith('f:')) return (PLAN.folders[k.slice(2)] || []).some(isShown); return k.startsWith('p:') ? k.slice(2).split('|').some(id => sh.has(id)) : sh.has(k); };
 function mkTab(id) {
   const e = document.createElement('div');
   e.className = 'tab'; e.dataset.id = id; e.tabIndex = 0; e.setAttribute('role', 'tab');
@@ -45,7 +45,7 @@ function upTab(e, id) {
   e.classList.toggle('on', id === on); e.classList.toggle('also', id === also);
   e.classList.toggle('vis', shownSet().has(id));
   e.classList.toggle('audible', t.audible); e.classList.toggle('muted', !!t.muted); e.classList.toggle('loading', t.loading);
-  e.classList.toggle('asleep', !t.live && id !== on && id !== also); e.classList.toggle('warn', t.notice === 'danger');
+  e.classList.toggle('asleep', !t.live && id !== on && id !== also); e.classList.toggle('warn', t.notice === 'danger'); e.classList.toggle('unread', !!t.unread);
   const snd = e.querySelector('.snd'); if (snd && snd._m !== !!t.muted) { snd._m = !!t.muted; snd.innerHTML = ic(t.muted ? 'mute' : 'sound', 14); snd.setAttribute('aria-label', t.muted ? 'Unmute tab' : 'Mute tab'); }
 }
 /* two tabs that are split together live on one card */
@@ -72,16 +72,24 @@ function mkFold(k) {
   e.innerHTML = `<div class="fh" tabindex="0" role="button">${ic('chev', 14, 'chev')}<span class="fi">${ic('folder', 16)}</span><span class="fn"></span><span class="ct"></span><button class="fplus" title="New tab in folder" aria-label="New tab in folder">${ic('plus', 14)}</button></div><div class="fb"><div class="fl"></div></div>`;
   return e;
 }
+const countIn = fid => (PLAN.folders[fid] || []).reduce((n, k) => n + (k.startsWith('f:') ? countIn(k.slice(2)) : k.startsWith('p:') ? 2 : 1), 0);
 function upFold(e, k) {
   const f = ST.folders.find(x => 'f:' + x.id === k); if (!f) return;
   const keys = PLAN.folders[f.id] || [];
   e.classList.toggle('open', !!f.open);
-  e.classList.toggle('peek', !f.open && keys.some(isShown));             // collapsed, but the tab you're on stays in view
-  e.querySelector('.fn').textContent = f.name; e.querySelector('.ct').textContent = f.tabs.length;
-  syncList(e.querySelector('.fl'), keys, mkItem, upItem);
+  const has = keys.some(isShown); e.classList.toggle('vis', has);
+  e.classList.toggle('peek', !f.open && has);                            // collapsed, but the tab you're on stays in view
+  e.querySelector('.fn').textContent = f.name;
+  const unread = f.live ? (PLAN.folders[f.id] || []).filter(k => ST.tabs[k] && ST.tabs[k].unread).length : 0, ct = e.querySelector(':scope>.fh .ct');
+  ct.textContent = unread ? unread + ' new' : countIn(f.id); ct.classList.toggle('new', !!unread);
+  const fi = e.querySelector(':scope>.fh .fi'), kind = f.live ? (f.live.error ? 'warn' : 'live') : 'folder';
+  if (fi.dataset.k !== kind) { fi.dataset.k = kind; fi.innerHTML = ic(kind, 16); }
+  e.classList.toggle('live', !!f.live); e.classList.toggle('err', !!(f.live && f.live.error));
+  e.querySelector(':scope>.fh').title = f.live ? (f.live.error ? `Couldn't update: ${f.live.error}` : `Live: ${f.live.kind === 'github' ? 'pull requests in ' + f.live.src : f.live.src}`) : '';
+  syncList(e.querySelector(':scope>.fb>.fl'), keys, mkItem, upItem);
 }
-const mkItem = k => k.startsWith('p:') ? mkPair(k) : mkTab(k);
-const upItem = (e, k) => k.startsWith('p:') ? upPair(e, k) : upTab(e, k);
+const mkItem = k => k.startsWith('f:') ? mkFold(k) : k.startsWith('p:') ? mkPair(k) : mkTab(k);
+const upItem = (e, k) => k.startsWith('f:') ? upFold(e, k) : k.startsWith('p:') ? upPair(e, k) : upTab(e, k);
 const focused = () => ST && (ST.focus === 'b' && ST.split && ST.b ? ST.b : ST.a);
 const other = () => ST && ST.split ? (focused() === ST.b ? ST.a : ST.b) : null;
 
@@ -89,12 +97,11 @@ const other = () => ST && ST.split ? (focused() === ST.b ? ST.a : ST.b) : null;
 function plan(s) {
   const pk = new Map(); for (const p of s.pairs || []) { const k = 'p:' + p[0] + '|' + p[1]; pk.set(p[0], k); pk.set(p[1], k); }
   const done = new Set();
-  const conv = ids => { const out = []; for (const id of ids) { if (!ST.tabs[id]) continue; const k = pk.get(id); if (k) { if (!done.has(k)) { done.add(k); out.push(k); } } else out.push(id); } return out; };
-  const P = { root: [], folders: {} };
-  for (const k of s.order) {
-    if (k.startsWith('f:')) { P.root.push(k); const f = s.folders.find(x => 'f:' + x.id === k); if (f) P.folders[f.id] = conv(f.tabs); }
-    else P.root.push(...conv([k]));
-  }
+  const P = { root: [], folders: {} }, seenF = new Set();
+  const conv = ids => { const out = []; for (const id of ids) {
+    if (id.startsWith('f:')) { const f = s.folders.find(x => 'f:' + x.id === id); if (!f || seenF.has(id)) continue; seenF.add(id); out.push(id); P.folders[f.id] = conv(f.tabs); continue; }
+    if (!ST.tabs[id]) continue; const k = pk.get(id); if (k) { if (!done.has(k)) { done.add(k); out.push(k); } } else out.push(id); } return out; };
+  P.root = conv(s.order);
   return P;
 }
 
@@ -102,7 +109,7 @@ function apply(s) {
   ST = s; applyTheme(s.theme, s.pal); PLAN = plan(s);
   if (sname.textContent !== s.name) sname.textContent = s.name;
   syncList(pinsEl, s.pins, mkPin, upPin);
-  syncList(tabsEl, PLAN.root, k => k.startsWith('f:') ? mkFold(k) : mkItem(k), (e, k) => k.startsWith('f:') ? upFold(e, k) : upItem(e, k));
+  syncList(tabsEl, PLAN.root, mkItem, upItem);
   syncList(spacesEl, [...s.spaces.map(x => x.id), '+'], k => {
     const e = document.createElement('button'); e.className = 'sp' + (k === '+' ? ' add' : ''); if (k === '+') { e.id = 'addSp'; e.title = 'New space (⇧⌘N)'; e.innerHTML = ic('plus', 16); } else e.innerHTML = '<span class="nm"></span>'; return e;
   }, (e, k) => {
@@ -153,7 +160,7 @@ sheet.addEventListener('click', e => {
   if (x) { e.stopPropagation(); const el = x.closest('.tab'); crumple(el); setTimeout(() => B.intent({ type: 'close', id: x.dataset.x }), 240); return; }
   if (e.target.closest('#nt')) return B.intent({ type: 'newtab' });
   const fp = e.target.closest('.fplus'); if (fp) return B.intent({ type: 'folderNew', id: fp.closest('.fold').dataset.fid });
-  if (e.target.closest('#nf')) return B.intent({ type: 'newfolder' });
+  if (e.target.closest('#nf')) return B.intent({ type: 'nfMenu' });
   const fh = e.target.closest('.fh'); if (fh) return B.intent({ type: 'folder', id: fh.parentElement.dataset.fid });
   const t = e.target.closest('.tab,.pin'); if (t) { highlight(t.dataset.id); return B.intent({ type: 'select', id: t.dataset.id }); }
   const s = e.target.closest('.sp');
@@ -185,22 +192,35 @@ function place(d) {
   el.style.transform = `translateY(${d.ty}px) rotate(-1.5deg)`;
 }
 /* where would the card land? inside a folder (over its header or body) or between root items */
-function reorder(d) {
-  const el = d.el, y = d.y; let into = null;
-  if (d.kind !== 'fold') {
-    for (const f of tabsEl.querySelectorAll(':scope>.fold')) {
-      if (f === el) continue;
-      const hr = f.querySelector('.fh').getBoundingClientRect(), fr = f.getBoundingClientRect();
-      if (y >= hr.top && y < hr.bottom) { if (y >= hr.top + hr.height * .3) into = f; break; }
-      if (y >= hr.bottom && y < fr.bottom && (f.classList.contains('open') || f.classList.contains('peek') || f.classList.contains('drop'))) { into = f; break; }
-    }
+const MAX_DEPTH = 3;
+const foldDepth = f => { let d = 0; for (let x = f; x && x !== tabsEl; x = x.parentElement) if (x.classList.contains('fold')) d++; return d; };
+const foldHeight = f => 1 + Math.max(0, ...[...f.querySelectorAll(':scope>.fb>.fl>.fold')].map(foldHeight));
+const shows = f => f.classList.contains('open') || f.classList.contains('peek') || f.classList.contains('drop');
+/* the innermost folder under the pointer that can take what's being dragged (folders: not into themselves, not deeper than 3) */
+function targetFold(d) {
+  const el = d.el, y = d.y, h = d.kind === 'fold' ? (d.h ||= foldHeight(el)) : 0;
+  let hit = null, header = false;
+  for (const f of tabsEl.querySelectorAll('.fold')) {
+    if (f === el || el.contains(f)) continue;
+    if (f.parentElement && f.parentElement.closest('.fold') && !f.parentElement.closest('.fold').matches('.open,.peek,.drop')) continue;   // hidden inside a collapsed folder
+    const hr = f.querySelector(':scope>.fh').getBoundingClientRect(), fr = f.getBoundingClientRect();
+    if (y >= hr.top && y < hr.bottom) { hit = f; header = y < hr.top + hr.height * .3; }
+    else if (y >= hr.bottom && y < fr.bottom - 7 && shows(f)) { hit = f; header = false; }  // later (deeper) matches win; a folder's bottom edge means "after it"
   }
-  const cont = into ? into.querySelector('.fl') : tabsEl;
+  let into = hit && !header ? hit : hit && header ? hit.parentElement.closest('.fold') : null;
+  const fits = f => !f || (d.kind !== 'fold' || foldDepth(f) + h <= MAX_DEPTH);
+  while (into && !fits(into)) into = into.parentElement.closest('.fold');
+  return into;
+}
+function reorder(d) {
+  const el = d.el, y = d.y, into = targetFold(d);
+  const cont = into ? into.querySelector(':scope>.fb>.fl') : tabsEl;
   const kids = [...cont.children].filter(c => c !== el);
   let idx = 0;
   for (const c of kids) { const r = c.getBoundingClientRect(), pv = (c.classList.contains('fold') && d.kind !== 'fold') ? r.top + 10 : r.top + r.height / 2; if (y > pv) idx++; else break; }
   if (cont === d.cont && idx === d.idx) return;
-  tabsEl.querySelectorAll('.fold.drop').forEach(f => { if (f !== into) f.classList.remove('drop'); });
+  tabsEl.querySelectorAll('.fold.drop').forEach(f => { if (f !== into && !(into && f.contains(into))) f.classList.remove('drop'); });
+  for (let x = into; x; x = x.parentElement.closest('.fold')) x.classList.add('drop');
   if (into) into.classList.add('drop');
   const items = flipItems(el), first = new Map(items.map(c => [c, c.getBoundingClientRect().top]));
   cont.insertBefore(el, kids[idx] || null); d.cont = cont; d.idx = idx;
@@ -230,7 +250,7 @@ addEventListener('pointermove', e => {
 });
 function frame(d) { if (d.kind !== 'pin') reorder(d); place(d); }
 function sendLayout() {
-  const folders = {}; for (const f of tabsEl.querySelectorAll(':scope>.fold')) folders[f.dataset.fid] = keysOf(f.querySelector('.fl'));
+  const folders = {}; for (const f of tabsEl.querySelectorAll('.fold')) folders[f.dataset.fid] = keysOf(f.querySelector(':scope>.fb>.fl'));
   B.intent({ type: 'layout', root: keysOf(tabsEl), folders });
 }
 function endDrag(e, cancel) {

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Little scrap</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<link rel="stylesheet" href="paper.css">
+<link rel="stylesheet" href="scrap.css">
+</head>
+<body>
+<header class="bar" id="bar">
+  <span class="lights" id="lights"></span>
+  <button class="ib" id="back" title="Back (⌘[)" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button>
+  <button class="ib" id="fwd" title="Forward (⌘])" aria-label="Forward"><svg class="i"><use href="#i-fwd"/></svg></button>
+  <button class="ib" id="reload" title="Reload (⌘R)" aria-label="Reload"><svg class="i"><use href="#i-reload"/></svg></button>
+  <form class="addr" id="form" autocomplete="off"><input id="q" placeholder="Type an address or search" spellcheck="false" aria-label="Address"><i class="ld" id="ld"></i></form>
+  <button class="keep" id="keep" title="Move this page into your sidebar (⌘O)"><svg class="i"><use href="#i-sidebar"/></svg><span>Open in Washi</span></button>
+</header>
+<script src="shared.js"></script>
+<script src="scrap.js"></script>
+</body>
+</html>

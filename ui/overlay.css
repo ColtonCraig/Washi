@@ -56,3 +56,14 @@ html,body{background:transparent}
 .dark .hl{background:color-mix(in srgb,var(--tape) 22%,transparent)}
 
 .ico.fav{overflow:visible}
+
+/* Ctrl-Tab: recent tabs as a row of paper cards */
+.sw-tray{position:fixed;left:50%;top:42%;display:flex;gap:10px;padding:12px;border-radius:16px;background:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),0 24px 60px rgb(var(--sh) / .25);transform:translate(-50%,-50%) scale(.97);opacity:0;visibility:hidden;max-width:calc(100vw - 40px);transition:transform .16s var(--ease),opacity .12s,visibility 0s .16s}
+.sw-tray.on{opacity:1;visibility:visible;transform:translate(-50%,-50%);transition:transform .2s cubic-bezier(.2,.9,.3,1.04),opacity .12s}
+.swc{flex:none;width:132px;height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 10px;border-radius:12px;text-align:center;transition:background .1s,box-shadow .1s}
+.swc .fav{width:36px;height:36px;font-size:16px;margin-bottom:4px}
+.swc .fav img{width:22px;height:22px}
+.swc b{max-width:100%;font:600 13px/1.25 var(--font-ui);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.swc small{max-width:100%;color:var(--ink3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swc:hover{background:rgb(var(--inkc) / .05)}
+.swc.on{background:var(--white);box-shadow:0 0 0 2px var(--tape),var(--cut-sm)}

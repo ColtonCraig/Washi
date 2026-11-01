@@ -49,3 +49,4 @@ body{background:var(--desk)}
 .label.warn .lk{color:#ffb020}
 .pane.off .empty,.pane.has .empty{display:none}   /* nothing animates behind a page */
 .edge{transition:opacity .15s}.edge.away{opacity:0}
+.stamp.boost.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}

@@ -44,6 +44,7 @@
 <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
 <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M6.5 7l1 13h9l1-13"/></symbol>
 <symbol id="i-folderopen" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v1H7.5L5 19H5a2 2 0 0 1-2-2zM7.5 10H22l-2.8 9H5z"/></symbol>
+<symbol id="i-live" viewBox="0 0 24 24"><circle cx="6" cy="18" r="1.6"/><path d="M4.5 11.5a8 8 0 0 1 8 8M4.5 5a14.5 14.5 0 0 1 14.5 14.5"/></symbol>
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
 </defs></svg>`;
   const ic = (n, s, c) => `<svg class="i${c ? ' ' + c : ''}" viewBox="0 0 24 24"${s ? ` style="width:${s}px;height:${s}px"` : ''}><use href="#i-${n}"/></svg>`;
@@ -84,7 +85,7 @@
   const DEF = { done: false, mode: 'light', light: { preset: 'cream', paper: '', ink: '' }, dark: { preset: 'cocoa', paper: '', ink: '' }, texture: true, wobble: false, motion: true,
     search: 'google', customSearch: '', startup: 'restore', home: '', gpc: true, askDownload: false,
     blocking: 'standard', httpsFirst: true, safety: true, dns: 'auto', clearOnExit: false, suggest: true,
-    archive: 0, sleep: 60, autoPip: true, keys: {} };
+    archive: 0, sleep: 60, autoPip: true, scrapLinks: false, keys: {} };
   const prefsOf = p => { p = p || {}; return { ...DEF, ...p, light: { ...DEF.light, ...(p.light || {}) }, dark: { ...DEF.dark, ...(p.dark || {}) }, keys: { ...(p.keys || {}) } }; };
   const ENGINES = [
     { id: 'google', n: 'Google', url: 'https://www.google.com/search?q=%s' }, { id: 'duckduckgo', n: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },

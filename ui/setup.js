@@ -7,7 +7,8 @@ window.SETUP = (() => {
   const root = document.getElementById('setup');
   let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null;
 
-  const hooks = { perms: null, update: null };
+  const hooks = { perms: null, update: null, arc: null };
+  B.onSetupEvent(e => { if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); });
   B.onPerms(l => hooks.perms && hooks.perms(l)); B.onUpdate(u => hooks.update && hooks.update(u));
   const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['guide', 'Quick start'], ['done', 'Done']];
   const curSp = () => SPACES.find(x => x.id === CUR) || SPACES[0];
@@ -177,7 +178,10 @@ window.SETUP = (() => {
     return [arch,
       field('Sleeping tabs', seg([{ v: 0, label: 'Never' }, { v: 15, label: 'After 15 min' }, { v: 60, label: 'After 1 hour' }, { v: 240, label: 'After 4 hours' }], () => +P.sleep, v => setPref({ sleep: v }), 'grid'),
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
-      field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v })))];
+      field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
+      secLive(),
+      field('Little scraps', toggle('Open links from other apps in a little scrap', 'A small window you can glance at and close, or keep with ⌘O. Needs Washi as your default browser.', () => P.scrapLinks, v => setPref({ scrapLinks: v })),
+        'Open one any time with ⌥⌘N.')];
   }
   function secDefault() {
     const out = h('div', { class: 'dfb' });
@@ -252,6 +256,7 @@ window.SETUP = (() => {
             h('button', { class: 'rs' + (custom ? ' vis' : ''), title: 'Back to ' + (fmt(a.def) || 'none'), onclick: () => { const n = { ...(P.keys || {}) }; delete n[a.id]; save(n); draw(); } }, 'reset')));
         }
       }
+      box.append(h('p', { class: 'hint' }, 'Always: hold ⌃ and tap Tab to flip through your recent tabs (add ⇧ to go back, esc to stay put).'));
       box.append(h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => { save({}); draw(); flash('All shortcuts are back to their defaults.'); } }, 'Reset all shortcuts')));
     }
     B.keysList().then(r => { ACT = r.actions; draw(); });
@@ -271,6 +276,84 @@ window.SETUP = (() => {
   }
 
 
+  /* ---------- live folders: a GitHub token for private repositories ---------- */
+  function secLive() {
+    const out = h('div', { class: 'ghk' });
+    const draw = (msg, bad) => {
+      out.innerHTML = '';
+      if (INFO.ghToken) out.append(h('p', { class: 'okay' }, '✓ A GitHub token is saved (in your Mac\'s Keychain).'), h('button', { class: 'btn small', onclick: async () => { const r = await B.setupAct({ type: 'github:token', value: '' }); INFO.ghToken = !!(r && r.has); draw('Removed.'); } }, 'Remove token'));
+      else {
+        const inp = h('input', { type: 'password', class: 'txt', placeholder: 'GitHub token (github_pat_… or ghp_…)', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'GitHub token' });
+        const save = async () => { const r = await B.setupAct({ type: 'github:token', value: inp.value }); if (r && r.ok) { INFO.ghToken = !!r.has; draw(); } else draw((r && r.error) || 'Couldn\'t save it.', true); };
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.stopPropagation(); save(); } });
+        out.append(h('div', { class: 'sbtns' }, inp, h('button', { class: 'btn small', onclick: save }, 'Save')));
+      }
+      if (msg) out.append(h('small', { class: bad ? 'err' : 'hint' }, msg));
+    };
+    draw();
+    return field('Live folders', out, 'Live folders fill themselves from GitHub pull requests or any RSS/Atom feed (make one from the folder button in the sidebar). Public repos need nothing; for private ones, add a token that can read pull requests.');
+  }
+
+  /* ---------- bring your Arc setup over ---------- */
+  function secImport(brief) {
+    const box = h('div', { class: 'arc' });
+    let scan = null, pick = new Set(), favs = true, unpinned = false, busy = false, done = null;
+    const merges = s => SPACES.some(x => x.name.toLowerCase() === s.name.slice(0, 12).toLowerCase());
+    const newCount = set => scan.spaces.filter(s => set.has(s.key) && !merges(s)).length;
+    const fits = set => SPACES.length + newCount(set) <= 6;
+    const desc = c => [c.tabs && `${c.tabs} tab${c.tabs > 1 ? 's' : ''}`, c.folders && `${c.folders} folder${c.folders > 1 ? 's' : ''}`].filter(Boolean).join(' · ') || 'empty';
+    const choose = async () => { const r = await B.setupAct({ type: 'arc:pick' }); if (r) { scan = r; preselect(); draw(); } };
+    const preselect = () => { pick = new Set(); if (!scan || !scan.found) return; for (const s of scan.spaces) { const next = new Set(pick).add(s.key); if (fits(next)) pick = next; } };
+    const go = () => {
+      if (busy || !pick.size) return; busy = true; draw();
+      send({ type: 'arcImport', path: scan.path, keys: [...pick], favorites: favs, unpinned });
+    };
+    hooks.arc = r => { busy = false; done = r; if (r.ok) { for (const s of scan.spaces) if (pick.has(s.key) && !merges(s) && SPACES.length < 6) SPACES.push({ id: 'arc-' + s.key, name: s.name.slice(0, 12), h: 40 }); } draw(); };
+    function draw() {
+      box.innerHTML = '';
+      if (done) { box.append(h('p', { class: done.ok ? 'okay' : 'err' }, (done.ok ? '✓ ' : '') + (done.text || done.error))); if (done.ok) { box.append(h('p', { class: 'hint' }, 'Pages load when you first click them. Run it again any time: nothing gets doubled up.')); return; } }
+      if (!scan) { box.append(h('p', { class: 'hint' }, 'Looking for Arc on this Mac…')); return; }
+      if (!scan.found) {
+        if (brief) return;
+        box.append(h('p', { class: 'hint' }, scan.error ? `Couldn't read Arc's sidebar: ${scan.error}` : 'Arc isn\'t on this Mac, or its sidebar file is somewhere else (for example, copied from another Mac).'),
+          h('button', { class: 'btn small', onclick: choose }, 'Choose Arc\'s sidebar file…'));
+        return;
+      }
+      if (brief) {
+        const n = scan.spaces.filter(s => pick.has(s.key));
+        box.append(h('p', { class: 'hint' }, `Found ${scan.spaces.length} Arc space${scan.spaces.length > 1 ? 's' : ''}: ${scan.spaces.map(s => s.name).join(', ')}. Bring their pinned tabs, folders and favorites over?`),
+          h('button', { class: 'btn primary small', disabled: busy || !n.length, onclick: go }, busy ? 'Bringing them in…' : 'Bring in my Arc setup'));
+        return;
+      }
+      const list = h('div', { class: 'arcl' });
+      for (const s of scan.spaces) {
+        const on = pick.has(s.key), next = new Set(pick); on ? next.delete(s.key) : next.add(s.key);
+        const blocked = !on && !fits(next);
+        list.append(h('button', { class: 'arow' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on), disabled: blocked || busy, title: blocked ? 'Washi has room for 6 spaces' : '', onclick: () => { pick = next; draw(); } },
+          h('i', { class: 'ck' }), h('span', { class: 'an' }, h('b', {}, s.name), h('small', {}, desc(s.pinned) + (s.unpinned.tabs ? ` (+${s.unpinned.tabs} unpinned)` : ''))),
+          h('em', { class: 'tag' }, merges(s) ? 'adds to ' + SPACES.find(x => x.name.toLowerCase() === s.name.slice(0, 12).toLowerCase()).name : blocked ? 'no room' : 'new space')));
+      }
+      const unp = scan.spaces.reduce((a, s) => a + (pick.has(s.key) ? s.unpinned.tabs : 0), 0);
+      box.append(list, h('div', { class: 'tgls' },
+        toggleLocal('Favorites become pinned tabs', `${scan.favorites} favorite${scan.favorites === 1 ? '' : 's'} at the top of Arc's sidebar`, () => favs, v => { favs = v; draw(); }),
+        toggleLocal('Also bring tabs that weren\'t pinned', unp ? `${unp} tab${unp > 1 ? 's' : ''} from Arc's "Today" list` : 'None in the spaces you picked', () => unpinned, v => { unpinned = v; draw(); })),
+        h('div', { class: 'sbtns' }, h('button', { class: 'btn primary small', disabled: busy || !pick.size, onclick: go }, busy ? 'Bringing them in…' : `Bring in ${pick.size} space${pick.size === 1 ? '' : 's'}`),
+          h('button', { class: 'btn small plain', onclick: choose }, 'Use a different file…')));
+      if (SPACES.length + newCount(new Set(scan.spaces.map(s => s.key))) > 6) box.append(h('p', { class: 'hint' }, 'Washi has room for 6 spaces. Pick the ones you want, or rename a Washi space to match an Arc one to merge them.'));
+    }
+    /* toggles here aren't settings, so they don't go through setPref */
+    function toggleLocal(label, sub, get, set) {
+      const sw = h('button', { class: 'sw' + (get() ? ' on' : ''), role: 'switch', 'aria-checked': String(!!get()), 'aria-label': label, onclick: () => set(!get()) }, h('i'));
+      return h('div', { class: 'tgl' }, h('span', { class: 'tl' }, h('b', {}, label), h('small', {}, sub)), sw);
+    }
+    const fld = field(brief ? 'Coming from Arc?' : 'Bring your Arc setup', box, brief ? null : 'Reads the sidebar file Arc keeps on your Mac. Spaces, pinned tabs, folders (even folders in folders), split views and favorites come over. Arc stays untouched and nothing leaves your Mac.');
+    const show = () => { if (brief) fld.hidden = !done && !(scan && scan.found); };
+    const draw0 = draw; draw = () => { draw0(); show(); };
+    B.setupAct({ type: 'arc:scan' }).then(r => { scan = r; preselect(); draw(); });
+    draw();
+    return fld;
+  }
+
   function secSpeed() {
     const out = h('div', { class: 'speed' }), btn = h('button', { class: 'btn small' }, 'Run a speed check'), copy = h('button', { class: 'btn small plain', hidden: true }, 'Copy report');
     let text = '';
@@ -289,7 +372,7 @@ window.SETUP = (() => {
       text = r.text; copy.hidden = false;
     };
     copy.onclick = () => { B.copy(text); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy report'; }, 1200); };
-    return field('Speed check', h('div', {}, h('div', { class: 'sbtns' }, btn, copy), out),
+    return field('Speed check', h('div', {}, h('div', { class: 'sbtns speed-btns' }, btn, copy), out),
       'If Washi feels slow, run this while it is slow, then copy the report and send it along. It shows which part is busy.');
   }
 
@@ -394,7 +477,7 @@ window.SETUP = (() => {
         secLook(), field('Home space colors', spaceColors(CUR))),
       h('div', { class: 'prev' }, mini('pv'), h('p', { class: 'cap' }, '↑ live preview')));
     if (id === 'basics') return h('div', { class: 'pg' }, h('h2', { class: 'ttl' }, 'The basics'), h('p', { class: 'lead' }, 'The usual browser settings. Sensible defaults are already picked.'),
-      h('div', { class: 'grid2' }, h('div', {}, ...secSearch(), secStartup(), secTabs(true)), h('div', {}, secSidebar(), secBlocking(true), secDownloads(), secDefault())));
+      secImport(true), h('div', { class: 'grid2' }, h('div', {}, ...secSearch(), secStartup(), secTabs(true)), h('div', {}, secSidebar(), secBlocking(true), secDownloads(), secDefault())));
     if (id === 'guide') return h('div', { class: 'pg gpage' }, h('div', { class: 'ghead' }, h('h2', { class: 'ttl' }, 'Quick-start guide'), h('p', { class: 'lead' }, 'Here\'s what everything is. Point at a note to light up its spot.')), guide());
     if (id === 'done') {
       setTimeout(confetti, 250);
@@ -441,6 +524,7 @@ window.SETUP = (() => {
       ['browser', 'Browser', () => [secSidebar(), secDownloads(), secDefault()]],
       ['privacy', 'Privacy & security', () => [secBlocking(), ...secSecurity(), secPerms(), secData()]],
       ['keys', 'Shortcuts', () => secKeys()],
+      ['import', 'Import', () => secImport()],
       ['help', 'Help', () => [
         field('Quick-start guide', h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => open({ page: 'guide' }, true) }, 'Show the guide'), h('button', { class: 'btn', onclick: () => open({ page: 'onboard' }, true) }, 'Run the welcome setup again'))),
         field('Start fresh', h('div', {}, h('p', { class: 'hint' }, 'Erase every tab, space, setting and cookie and start Washi as if it was just installed.'), h('button', { class: 'btn warn', onclick: () => B.setupAct({ type: 'startFresh' }) }, 'Start fresh…'))),

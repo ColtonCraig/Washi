@@ -19,10 +19,15 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 | Container tabs / profiles (separate logins) | Zen, Arc | ✅ per space |
 | Picture in picture when switching tabs | Arc, Dia | ✅ |
 | Find in page, history, downloads | everyone | ✅ |
-| Little Arc (quick throwaway window) | Arc | ⬜ next |
-| Boosts (per-site CSS/colors) | Arc, Zen | ⬜ later |
+| Little Arc (quick throwaway window) | Arc | ✅ Little scraps (⌥⌘N, ⌘O keeps it) |
+| Boosts (per-site CSS/colors) | Arc, Zen | ✅ tint, font, zap, your own CSS |
 | Reader mode | Safari, Firefox | ⬜ later |
-| Import from Arc / Chrome / Safari | Arc, Zen | ⬜ next |
+| Import from Arc | Arc, Zen | ✅ spaces, pins, nested folders, splits, favorites |
+| Import from Chrome / Safari | Arc, Zen | ⬜ later |
+| Ctrl-Tab recent-tab switcher | Arc | ✅ |
+| Folders inside folders | Arc | ✅ up to 3 deep |
+| Live folders (GitHub PRs, feeds) | Arc | ✅ |
+| Easels (whiteboards) | Arc | ⬜ later |
 | Extensions (1Password, etc.) | Chromium browsers | ⬜ needs the Chromium fork (see below) |
 | Password manager + autofill | Chrome, Safari | ⬜ needs the Chromium fork |
 | Sync between devices | Chrome, Firefox, Zen | ⬜ much later |
@@ -34,6 +39,14 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
   secure DNS; remembered site permissions; popup blocker; peek; find; history/archive/downloads sheets; sleeping tabs;
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
+
+## Done and tested (0.11): what Arc people miss most (from r/ArcBrowser and Dia coverage)
+- Folders inside folders (3 levels): drag folders into folders, the bottom edge of a folder means "after it", collapsed folders show just the path to the open tab, loops and too-deep saves repair themselves
+- Import from Arc: reads Arc's own sidebar file, merges spaces by name, folders stay nested (a 4th level folds into the 3rd), split views become pairs, favorites become pins, easels/arc:// skipped, running it twice adds nothing; Settings › Import and in the welcome setup
+- Ctrl-Tab: recent tabs as cards, quick tap flips back, Shift reverses, Esc cancels, works from pages or Washi's own views (tested with real key presses)
+- Little scraps: ⌥⌘N, address field, back/forward/reload, ⌘O / "Open in Washi" moves the page into the sidebar without reloading, ⌘W throws it away, new windows open as tabs, optional: links from other apps open in one
+- Boosts: tint, font, zap (pick with the mouse, Esc when done, Undo), your own CSS; per site, survives reloads/restarts, switch off or remove cleanly
+- Live folders: GitHub pull requests (token for private repos, kept in the Keychain) or RSS/Atom; new items get a dot and a "N new" count; items leaving the source go unless open; errors show on the folder
 
 ## Done and tested (0.10)
 - Calmer look (~30% less decoration), same paper identity: soft desk tints, flat top-bar buttons, light address field, soft page shadows, no idle animations, no confetti, handwriting only for titles, straight scraps by default (Wonky scraps still in Settings)
@@ -61,10 +74,8 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 ## Next (in this order)
 - [ ] Confirm on Colton's Mac: Google sign-in (Gmail, Drive, Calendar), Microsoft 365 / Okta / Slack sign-in work end to end
 - [ ] Passwords for work: the biggest everyday gap. Option A: Washi's own password saver using the macOS Keychain. Option B: the Chromium fork (real extensions like 1Password). Decide with Colton
-- [ ] Import from Arc (spaces, pinned tabs, folders) and Chrome/Safari bookmarks
-- [ ] Little scrap: a quick, throwaway mini window (⌥⌘N)
+- [ ] Import Chrome/Safari bookmarks
 - [ ] Reorder pinned tabs by dragging
-- [ ] Boosts: per-site colors / hide elements
 - [ ] Reader mode
 - [ ] Apple Developer ID signing + notarizing (removes the one-time Open Anyway step; needed before sharing Washi)
 - [ ] Longer term: move the engine to a Chromium fork for extensions + password autofill (interface carries over)
@@ -75,3 +86,5 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 - Auto-update (signed, published app only)
 - Real Google sign-in (Google isn't reachable from the test container; the identity logic is tested locally)
 - GPU-accelerated animation smoothness (the container renders in software at 30 fps)
+- Links from other apps opening in a little scrap (macOS open-url; built app as default browser)
+- The macOS Keychain for the GitHub token (tests use Chromium's plain-text store on Linux)
