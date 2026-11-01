@@ -33,9 +33,7 @@ final class PageContainer: UIView, UIGestureRecognizerDelegate {
         if let old = page, old.superview === self, old !== v { old.removeFromSuperview() }
         page = v
         guard let v else { return }
-        v.removeFromSuperview()
-        v.frame = bounds; v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        addSubview(v)
+        attach(v)
     }
     func release() {
         PageContainer.all.remove(self)
@@ -45,8 +43,27 @@ final class PageContainer: UIView, UIGestureRecognizerDelegate {
     }
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        if window == nil, let p = page, p.superview === self,          // leaving the screen while another holder wants this page
-           let heir = PageContainer.all.allObjects.last(where: { $0 !== self && $0.wantID == wantID && $0.window != nil }) { heir.show(p) }
+        if window == nil { handOff() } else { claim() }
+    }
+    /* coming on screen: take the page if whoever has it isn't on screen any more */
+    private func claim() {
+        guard let p = page, p.superview !== self, p.superview?.window == nil else { return }
+        attach(p)
+    }
+    /* leaving the screen: give the page to a holder that's on screen and wants it */
+    private func handOff() {
+        guard let p = page, p.superview === self,
+              let heir = PageContainer.all.allObjects.last(where: { $0 !== self && $0.wantID == wantID && $0.window != nil }) else { return }
+        heir.attach(p)
+    }
+    private func attach(_ v: WKWebView) {
+        v.removeFromSuperview()
+        v.frame = bounds; v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(v); page = v
+    }
+    /* after the layout changes (folding, turning the phone), make sure every page on screen is in its place */
+    static func settle() {
+        for c in all.allObjects where c.window != nil { c.claim() }
     }
 }
 

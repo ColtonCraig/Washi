@@ -51,7 +51,10 @@ struct RootView: View {
             }
             .animation(.spring(response: 0.32, dampingFraction: 0.86), value: store.command)
             .onAppear { store.browser?.wide = wide }
-            .onChange(of: wide) { _, w in store.browser?.wide = w; store.sidebarOpen = false }
+            .onChange(of: wide) { _, w in
+                store.browser?.wide = w; store.sidebarOpen = false
+                for t in [0.05, 0.4, 1.0] { DispatchQueue.main.asyncAfter(deadline: .now() + t) { PageContainer.settle() } }
+            }
         }
         .environment(\.theme, th)
         .tint(th.tape)
