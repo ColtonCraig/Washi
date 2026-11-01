@@ -49,7 +49,7 @@ struct FolderChip: View {
     var body: some View {
         let c = b.color.map { Color(hex: $0) } ?? Color(hex: "#f2d58f")
         HStack(spacing: 5) {
-            if let e = b.icon { Text(e).font(.system(size: 13)) } else { Image(systemName: "folder.fill").font(.system(size: 12)).foregroundStyle(c.mix(with: .black, by: 0.25)) }
+            if let e = b.icon { Text(e).font(.system(size: 13)) } else { Image(systemName: "folder.fill").font(.system(size: 12)).foregroundStyle(c.blend(with: .black, by: 0.25)) }
             Text(b.title).font(.ui(13, .semibold)).foregroundStyle(th.ink).lineLimit(1)
         }
         .padding(.horizontal, 9).frame(height: 26)
@@ -77,7 +77,7 @@ struct BookmarkMenu: View {
     }
 }
 extension Color {
-    func mix(with o: Color, by t: Double) -> Color {
+    func blend(with o: Color, by t: Double) -> Color {
         let a = UIColor(self), b = UIColor(o)
         var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0, r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
         a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1); b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
@@ -157,7 +157,7 @@ struct BMRow: View {
         HStack(spacing: 12) {
             if b.isFolder {
                 let c = b.color.map { Color(hex: $0) } ?? Color(hex: "#f2d58f")
-                Group { if let e = b.icon { Text(e).font(.system(size: 17)) } else { Image(systemName: "folder.fill").foregroundStyle(c.mix(with: .black, by: 0.25)) } }
+                Group { if let e = b.icon { Text(e).font(.system(size: 17)) } else { Image(systemName: "folder.fill").foregroundStyle(c.blend(with: .black, by: 0.25)) } }
                     .frame(width: 32, height: 32).background(c.opacity(0.3), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             } else { Fav(url: b.url, title: b.label, fav: nil, size: 26).frame(width: 32) }
             VStack(alignment: .leading, spacing: 1) {

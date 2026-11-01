@@ -50,7 +50,12 @@ struct Theme: Equatable {
 extension Paper {
     static func mix(_ a: String, _ b: String, _ t: Double) -> String {
         let A = rgb(a), B = rgb(b)
-        let m = (0..<3).map { Int((Double(A[$0]) + (Double(B[$0]) - Double(A[$0])) * t).rounded()) }
+        var m: [Int] = []
+        for i in 0..<3 {
+            let x = Double(A[i]), y = Double(B[i])
+            let v: Double = x + (y - x) * t
+            m.append(Int(v.rounded()))
+        }
         return String(format: "#%02x%02x%02x", m[0], m[1], m[2])
     }
     static func rgb(_ h: String) -> [Int] {

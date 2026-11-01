@@ -31,6 +31,7 @@ struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(\.colorScheme) private var scheme
     static let wideAt: CGFloat = 600
+    @State private var promptValue = ""
 
     private var dark: Bool { store.s.prefs.mode == "dark" || (store.s.prefs.mode == "auto" && scheme == .dark) }
     var body: some View {
@@ -67,30 +68,25 @@ struct RootView: View {
             .environment(store).environment(\.theme, th).tint(th.tape)
         }
         .alert(store.prompt?.title ?? "", isPresented: Binding(get: { store.prompt != nil }, set: { if !$0 { store.prompt = nil } })) {
-            PromptFields()
+            TextField("Name", text: $promptValue)
+            Button("Cancel", role: .cancel) { store.prompt = nil }
+            Button("Save") { savePrompt() }
         }
+        .onChange(of: store.prompt) { _, p in if let p { promptValue = p.value } }
     }
-}
-
-/* the little "name it" box (new space, rename, new folder) */
-private struct PromptFields: View {
-    @Environment(Store.self) private var store
-    @State private var value = ""
-    var body: some View {
-        TextField("Name", text: $value).onAppear { value = store.prompt?.value ?? "" }
-        Button("Cancel", role: .cancel) { store.prompt = nil }
-        Button("Save") {
-            let v = value.trimmingCharacters(in: .whitespaces), p = store.prompt
-            store.prompt = nil
-            guard let p, !v.isEmpty else { return }
-            let parts = p.action.split(separator: ":", maxSplits: 1).map(String.init)
-            switch parts[0] {
-            case "newspace": store.addSpace(v)
-            case "renamespace": store.renameSpace(parts.count > 1 ? parts[1] : store.s.cur, v)
-            case "newfolder": store.newFolder(v, with: parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil)
-            case "renamefolder": if parts.count > 1 { store.renameFolder(parts[1], v) }
-            default: break
-            }
+    /* the little "name it" box: new space, rename, new folder */
+    private func savePrompt() {
+        let v = promptValue.trimmingCharacters(in: .whitespaces), p = store.prompt
+        store.prompt = nil
+        guard let p, !v.isEmpty else { return }
+        let parts = p.action.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        let arg = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
+        switch parts[0] {
+        case "newspace": store.addSpace(v)
+        case "renamespace": store.renameSpace(arg ?? store.s.cur, v)
+        case "newfolder": store.newFolder(v, with: arg)
+        case "renamefolder": if let arg { store.renameFolder(arg, v) }
+        default: break
         }
     }
 }

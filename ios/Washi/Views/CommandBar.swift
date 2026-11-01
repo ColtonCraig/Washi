@@ -78,7 +78,10 @@ struct CommandBar: View {
         var out: [Row] = []
         if !v.isEmpty && !(mode == .this && v == store.currentTab?.url) {
             let b = Web.bang(v), url = Web.looksLikeURL(v)
-            out.append(Row(id: "go:0", label: b.map { "Search \($0.name) for “\($0.q)”" } ?? (url ? "Go to \(v)" : "Search for “\(v)”"), hint: "go", icon: url ? "globe" : "magnifyingglass", fav: nil) { go(Web.toURL(v, engine: store.s.prefs.search)) })
+            var label = url ? "Go to \(v)" : "Search for “\(v)”"
+            if let b { label = "Search \(b.name) for “\(b.q)”" }
+            let target = Web.toURL(v, engine: store.s.prefs.search)
+            out.append(Row(id: "go:0", label: label, hint: "go", icon: url ? "globe" : "magnifyingglass", fav: nil) { go(target) })
         }
         let all = Array(Set(store.s.pins + store.s.spaces.flatMap { store.spaceTabs($0) }))
         let tabs = all.compactMap { store.s.tabs[$0] }.filter { has($0.title + " " + $0.url) }.sorted { $0.seen > $1.seen }.prefix(v.isEmpty ? 6 : 6)

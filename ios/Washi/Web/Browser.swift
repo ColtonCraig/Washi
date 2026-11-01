@@ -221,7 +221,7 @@ final class Browser: NSObject, WKNavigationDelegate, WKUIDelegate {
             MainActor.assumeIsolated {
                 guard let s = r as? String, let u = URL(string: s) else { return }
                 Task { [weak self] in
-                    guard let (data, _) = try? await URLSession.shared.data(from: u), let im = UIImage(data: data), im.size.width >= 8 else { return }
+                    guard let got = try? await URLSession.shared.data(from: u), let im = UIImage(data: got.0), im.size.width >= 8 else { return }
                     let small = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).pngData { _ in im.draw(in: CGRect(x: 0, y: 0, width: 40, height: 40)) }
                     let b64 = small.base64EncodedString()
                     guard b64.count < 12_000 else { return }
