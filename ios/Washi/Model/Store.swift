@@ -53,7 +53,7 @@ final class Store {
     func save() {
         saveTask?.cancel()
         saveTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 600_000_000)
+            try? await Task.sleep(nanoseconds: 300_000_000)
             guard let self, !Task.isCancelled else { return }
             self.saveNow()
         }
@@ -217,7 +217,7 @@ final class Store {
         guard id != s.cur, s.spaces.contains(where: { $0.id == id }) else { return }
         s.cur = id; s.split = nil; focusB = false
         if space.active == nil, let f = spaceTabs(space).first { mutateSpace { $0.active = f } }
-        save()
+        saveNow()
     }
     func addSpace(_ name: String) {
         guard s.spaces.count < 6 else { return }

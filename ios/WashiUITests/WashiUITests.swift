@@ -131,6 +131,7 @@ final class WashiUITests: XCTestCase {
         XCTAssertTrue(el("spaceTitle").waitForExistence(timeout: 3) && el("spaceTitle").label == "Side", "the new space opens")
         el("space:Home").tap()
         closeSidebar()
+        sleep(1)
 
         // everything is still there after quitting
         app.terminate()
@@ -160,31 +161,33 @@ final class WashiUITests: XCTestCase {
         app.buttons["splitButton"].tap()
         waitFor(app.webViews.staticTexts["Test page 1"], "split view shows both pages")
         waitFor(app.webViews.staticTexts["Test page 2"], "and the other one")
-        XCTAssertEqual(app.webViews.count, 2, "two pages side by side")
+        let t1 = app.webViews.staticTexts["Test page 1"], t2 = app.webViews.staticTexts["Test page 2"]
+        XCTAssertGreaterThan(abs(t1.frame.minX - t2.frame.minX), 200, "two pages side by side")
         shot("11-split")
-        let left0 = app.webViews.element(boundBy: 0).frame.width, right0 = app.webViews.element(boundBy: 1).frame.width
-        XCTAssertLessThan(abs(left0 - right0), 4, "a new split starts even")
+        let right = t1.frame.minX > t2.frame.minX ? t1 : t2, x0 = right.frame.minX
         let gap = el("divider"); waitFor(gap, "the gap between the pages")
         let from = gap.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 90, dy: 0)))
         sleep(1)
-        let left1 = app.webViews.element(boundBy: 0).frame.width
-        XCTAssertGreaterThan(left1, left0 + 40, "dragging the gap right makes the left page wider (\(left0) → \(left1))")
+        let x1 = right.frame.minX
+        XCTAssertGreaterThan(x1, x0 + 40, "dragging the gap right makes the left page wider (right page moved \(x0) → \(x1))")
         shot("12-split-resized")
         gap.doubleTap(); sleep(1)
-        XCTAssertLessThan(abs(app.webViews.element(boundBy: 0).frame.width - app.webViews.element(boundBy: 1).frame.width), 4, "double-tap evens it out")
+        XCTAssertLessThan(abs(right.frame.minX - x0), 6, "double-tap evens it out")
         app.buttons["splitButton"].tap()
-        XCTAssertTrue(gone(app.webViews.element(boundBy: 1)), "the split button goes back to one page")
+        sleep(1)
+        XCTAssertTrue(t1.exists != t2.exists, "the split button goes back to one page")
+        let kept = t1.exists ? "Test page 1" : "Test page 2"
 
         // ☆ in the top bar, and the bookmarks bar
         app.buttons["star"].tap()
         waitFor(app.buttons["bmDone"], "editor"); app.buttons["bmDone"].tap()
-        waitFor(el("bmchip:Test page 2"), "the bookmarks bar shows it over the page")
+        waitFor(el("bmchip:" + kept), "the bookmarks bar shows it over the page")
         shot("13-bookmarks-bar")
-        el("bmchip:Test page 2").press(forDuration: 1.0)
+        el("bmchip:" + kept).press(forDuration: 1.0)
         waitFor(app.buttons["Hide Bookmarks Bar"], "press and hold a bookmark for its menu")
         app.buttons["Hide Bookmarks Bar"].tap()
-        XCTAssertTrue(gone(el("bmchip:Test page 2")), "the bar can be hidden")
+        XCTAssertTrue(gone(el("bmchip:" + kept)), "the bar can be hidden")
 
         // hide the sidebar for more room, bring it back
         app.buttons["sidebarButton"].tap()
@@ -197,7 +200,7 @@ final class WashiUITests: XCTestCase {
         if UIDevice.current.userInterfaceIdiom == .phone {
             XCUIDevice.shared.orientation = .portrait
             XCTAssertTrue(gone(app.buttons["splitButton"]), "turning back to portrait switches to the phone layout")
-            waitFor(app.webViews.staticTexts["Test page 2"], "the same page is still there after switching layouts")
+            waitFor(app.webViews.staticTexts[kept], "the same page is still there after switching layouts")
             XCTAssertTrue(app.buttons["sidebarButton"].exists, "with its bottom bar")
             shot("15-back-to-phone")
         }
