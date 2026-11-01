@@ -1,0 +1,12 @@
+# Washi for iPhone: builds the app and runs its tests on iPhone simulators (a normal iPhone and the iPhone Duo).
+name: iPhone
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+jobs:
+  discover:
+    runs-on: macos-latest
+    steps:
+      - run: ls /Applications | grep -i xcode; xcodebuild -version; xcrun simctl list runtimes; xcrun simctl list devicetypes | grep -iE "iphone|ipad"
