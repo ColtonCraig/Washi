@@ -47,6 +47,7 @@ Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), 
 - SwiftUI + WebKit app in `ios/`: spaces (Work keeps its own logins), pins, folders, swipe to close/pin, command bar with !bangs, bookmarks with emoji/colour folders, history, EasyList/EasyPrivacy blocking (per-site off), desktop-site toggle, find on page, share, pop-up sign-ins keep working, pull to refresh, site icons, everything saved between launches
 - Phone layout (Duo folded): page + bottom bar, sidebar slides in. Big-screen layout (Duo open, iPad, phone on its side): full-width top bar, docked sidebar, bookmarks bar, split view with a draggable gap (the sidebar becomes a drawer when two pages need the room). Folding/turning switches instantly and keeps the page
 - Install with Xcode and a free Apple ID (ios/README.md). Not on a real Duo yet: GitHub has no Duo simulator
+- Paused (Nov 2026): the free Apple ID means re-installing from Xcode every 7 days and leaving Developer Mode on. Picks back up if/when there's an Apple Developer account (then TestFlight, no cable)
 - [ ] Confirm on Colton's Duo (fold/unfold, both screens)
 - [ ] Later on iPhone: TestFlight (needs the $99 developer account), downloads, search suggestions, reader mode, sync with the Mac
 
