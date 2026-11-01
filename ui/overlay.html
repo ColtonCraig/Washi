@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Washi overlay</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<link rel="stylesheet" href="paper.css">
+<link rel="stylesheet" href="overlay.css">
+<link rel="stylesheet" href="setup.css">
+<link rel="stylesheet" href="panels.css">
+</head>
+<body>
+<div class="drag" id="drag"><div class="dim" id="dim"></div><div id="zones"></div><div class="ghost" id="ghost"></div></div>
+<div class="cmd" id="cmd" role="dialog" aria-label="Command bar">
+  <div class="box grain">
+    <i class="tp"></i>
+    <div class="qrow"><svg class="i" viewBox="0 0 24 24" style="width:22px;height:22px"><use href="#i-search"/></svg><input id="q" placeholder="Search, go to a tab, or run a command" autocomplete="off" spellcheck="false" aria-label="Command bar"><span class="mode" id="mode"></span></div>
+    <div class="res" id="res"></div>
+  </div>
+</div>
+<div class="panel" id="panel"></div>
+<div class="peek" id="peek"></div>
+<div class="setup" id="sheet" role="dialog" aria-modal="true" aria-label="Washi"></div>
+<div class="setup" id="setup" role="dialog" aria-modal="true" aria-label="Washi setup"></div>
+<div class="toast" id="toast"><i class="tp"></i><span id="toastTxt"></span><button id="toastBtn" hidden>Show</button></div>
+<script src="shared.js"></script>
+<script src="setup.js"></script>
+<script src="panels.js"></script>
+<script src="sheets.js"></script>
+<script src="overlay.js"></script>
+</body>
+</html>

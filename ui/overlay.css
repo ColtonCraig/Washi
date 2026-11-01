@@ -1,0 +1,62 @@
+html,body{background:transparent}
+.tp{position:absolute;left:50%;top:-10px;width:64px;height:18px;margin-left:-32px;transform:rotate(-3deg);background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);opacity:.92;box-shadow:0 1px 0 rgb(var(--sh) / .15)}
+
+/* command bar:an index card */
+.cmd{position:fixed;inset:0;display:grid;justify-items:center;align-content:start;padding:13vh 16px 0;background:rgb(var(--inkc) / .3);visibility:hidden;opacity:0;transition:opacity .18s,visibility 0s .18s}
+.cmd.on{visibility:visible;opacity:1;transition:opacity .18s}
+.box{position:relative;width:min(640px,100%);border-radius:10px;background-color:var(--paper);box-shadow:8px 9px 0 rgb(var(--sh) / .3),0 0 0 1px rgb(var(--inkc) / .08);transform:translateY(-22px) rotate(-1.6deg) scale(.95);transition:transform var(--spring-ms) var(--spring)}
+.cmd.on .box{transform:rotate(-.35deg)}
+.qrow{display:flex;align-items:center;gap:12px;padding:0 24px;height:70px;border-bottom:2px solid var(--ink);margin:0 14px;color:var(--tape)}
+.qrow input{flex:1;min-width:0;border:0;background:none;outline:0;color:var(--ink);font:700 24px var(--font-display);user-select:text;cursor:text}
+.qrow input::placeholder{color:var(--ink3);font-weight:500}
+.mode{flex:none;padding:2px 12px 4px;border-radius:99px;background:var(--s2);color:var(--ink);font:700 21px/1.1 var(--font-hand);box-shadow:var(--cut-sm);transform:rotate(2deg)}
+.res{position:relative;max-height:min(50vh,400px);overflow:auto;padding:10px 14px 14px;scrollbar-width:none}
+.res::-webkit-scrollbar{display:none}
+.res:empty{display:none}
+.hl{position:absolute;left:12px;right:12px;top:0;height:48px;border-radius:4px;pointer-events:none;background:linear-gradient(var(--s2),var(--s2));opacity:.75;transform:skewX(-2deg);transition:transform .38s var(--spring),height .2s}
+.rh{padding:12px 12px 2px;font:700 22px/1 var(--font-hand);color:var(--ink2)}
+.r{position:relative;display:flex;align-items:center;gap:12px;height:48px;width:100%;padding:0 12px;border-radius:6px;text-align:left}
+.r .lb{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.r .hint{margin-left:auto;padding-left:8px;flex:none;color:var(--ink2);font:600 12.5px var(--font-ui);max-width:42%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ico{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--white);color:var(--ink);overflow:hidden;box-shadow:0 0 0 1.5px var(--ink),1.5px 2px 0 1.5px rgb(var(--sh) / .25)}
+.ico.fav{box-shadow:0 0 0 2px var(--white),1.5px 2px 0 2px rgb(var(--sh) / .28)}
+.ico img{width:18px;height:18px}
+.stagger .r{animation:rise .45s var(--spring) both;animation-delay:calc(var(--i) * 22ms)}
+@keyframes rise{from{opacity:0;transform:translateY(14px) rotate(1.5deg)}}
+.note{padding:16px;color:var(--ink2);font:700 22px var(--font-hand)}
+
+/* toast */
+.toast{position:fixed;left:0;right:0;bottom:16px;margin:auto;height:50px;width:fit-content;max-width:calc(100% - 20px);display:flex;gap:12px;align-items:center;padding:0 18px;border-radius:6px;background:var(--paper) var(--grain);box-shadow:var(--cut);font-weight:700;transform:translateY(40px) rotate(-1.5deg);opacity:0;pointer-events:none;transition:transform var(--spring-ms) var(--spring),opacity .25s}
+.toast.on{transform:rotate(-.8deg);opacity:1;pointer-events:auto}
+.toast .tp{top:-9px;width:46px;height:15px;margin-left:-23px}
+.toast span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast button{flex:none;padding:3px 12px 5px;border-radius:99px;background:var(--tape);color:#fff;font:700 20px/1.1 var(--font-hand);box-shadow:var(--cut-sm)}
+
+/* drop zones while carrying a tab out of the sidebar */
+.drag{position:fixed;inset:0;visibility:hidden;pointer-events:none}
+.drag.on{visibility:visible}
+.dim{position:fixed;border-radius:12px;background:rgba(251,246,234,.62);opacity:0;transition:opacity .2s}
+.drag.on .dim{opacity:1}
+.zone{position:fixed;display:grid;place-content:center;justify-items:center;gap:10px;text-align:center;padding:12px;border-radius:12px;border:3px dashed var(--ink);background:rgb(var(--whc) / .82);opacity:0;transform:scale(.9) rotate(var(--r,0deg));transition:background .18s,transform var(--spring-ms) var(--spring),opacity .2s,box-shadow .2s,border-color .2s;box-shadow:0 0 0 rgb(var(--sh) / 0)}
+.drag.on .zone{opacity:1;transform:scale(1) rotate(var(--r,0deg));transition-delay:calc(var(--i) * 50ms),0s,calc(var(--i) * 50ms),0s,0s}
+.zone .zl{font:700 34px/1 var(--font-hand);max-width:90%}
+.zone.hot{background:var(--tape);border-style:solid;border-color:var(--ink);color:#fff;transform:scale(1.025) rotate(0deg);box-shadow:8px 9px 0 rgb(var(--sh) / .32);transition-delay:0s}
+.mini{display:flex;gap:6px;width:84px;height:54px}
+.mini b{flex:1;border-radius:5px;border:2.5px solid currentColor;opacity:.5}
+.mini b.me{background:currentColor;opacity:1;animation:wobble .9s ease-in-out infinite alternate}
+.zone.hot .mini b{opacity:.75}
+.zone.hot .mini b.me{background:#fff;border-color:#fff;opacity:1}
+@keyframes wobble{to{transform:translateY(-4px) rotate(3deg)}}
+.ghost{position:fixed;left:0;top:0;display:flex;align-items:center;gap:10px;width:200px;height:42px;padding:0 12px;border-radius:5px 9px 6px 10px;background:var(--white);box-shadow:8px 11px 0 rgb(var(--sh) / .3);font-weight:700;opacity:0;will-change:transform;transition:opacity .15s}
+.ghost::before{content:"";position:absolute;left:-9px;top:-7px;width:36px;height:14px;transform:rotate(-14deg);background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);opacity:.92}
+.drag.on .ghost{opacity:1}
+.ghost span.t{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* wipe between spaces:a torn sheet of the new space's paper */
+.wipe{position:fixed;top:0;left:0;width:100vw;height:100vh;will-change:transform;pointer-events:none;box-shadow:-14px 0 0 rgb(var(--sh) / .25)}
+.wipe.paper{background:var(--paper)}
+.wipe.sheet{background:var(--desk) var(--grain)}
+/* dark theme: keep the highlighter readable */
+.dark .hl{opacity:.32}
+.mode{color:#2b2118}
+.ico.fav{overflow:visible}

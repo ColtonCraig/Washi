@@ -1,0 +1,135 @@
+/* Sidebar. Calm and readable first: tabs are plain text on the desk; the paper personality lives in the active tab,
+   the tape, the title and the space tabs. Docked it is transparent over the desk; floating it is one sheet of paper. */
+html,body{background:transparent}
+:root{--snap:cubic-bezier(.2,.8,.2,1)}
+.sheet{position:absolute;left:0;top:0;bottom:0;width:248px;display:flex;flex-direction:column;gap:10px;padding:10px 12px 12px 14px}
+
+/* floating: a single sheet of paper with a strip of tape, sliding in from the edge */
+body.float .sheet{top:8px;bottom:12px;left:8px;width:244px;padding:16px 12px 12px 12px;border-radius:14px;background:var(--paper);box-shadow:6px 7px 0 rgb(var(--sh) / .26),0 0 0 1px rgb(var(--inkc) / .08);transform:translateX(-112%) rotate(-3deg);transform-origin:0 50%;transition:transform .17s cubic-bezier(.55,0,.85,.4);will-change:transform;backface-visibility:hidden}
+body.float .sheet::before{content:"";position:absolute;inset:0;border-radius:inherit;background-image:var(--grain);opacity:.5;pointer-events:none}
+body.float .sheet::after{content:"";position:absolute;left:50%;top:-9px;width:70px;height:20px;margin-left:-35px;transform:rotate(-3deg);opacity:.92;background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);box-shadow:0 1px 0 rgb(var(--sh) / .14)}
+body.float.open .sheet{transform:none;transition:transform .28s cubic-bezier(.18,.9,.32,1.12)}
+body.still .sheet{transition:none!important}
+.sheet>*{position:relative}
+
+/* space name */
+.sname{margin:0 0 2px 2px;font:700 38px/1.1 var(--font-hand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:4px;transform:rotate(-1.5deg);transform-origin:left;background:linear-gradient(var(--tape),var(--tape)) 0 100%/60% 3px no-repeat;animation:rise .45s var(--spring) both}
+
+/* new scrap + new folder */
+.toprow{display:flex;gap:6px;flex:none}
+.scrap,.nfold{height:38px;border-radius:10px;background:rgb(var(--whc) / .62);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .12);color:var(--ink);transition:background .12s,box-shadow .12s,transform .15s var(--snap)}
+body.float :is(.scrap,.nfold){background:rgb(var(--inkc) / .05)}
+.scrap{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:0 8px 0 8px;text-align:left}
+.scrap .plus{flex:none;width:22px;height:22px;border-radius:50%;background:var(--tape);color:#fff;display:grid;place-items:center;font:800 17px/1 var(--font-ui);transition:transform .2s var(--snap)}
+.scrap .hand{flex:1;min-width:0;font:700 22px/1 var(--font-hand);white-space:nowrap}
+.scrap kbd{flex:none;opacity:.75}
+.nfold{flex:none;width:38px;display:grid;place-items:center;color:var(--ink2)}
+.nfold .i{width:19px;height:19px}
+:is(.scrap,.nfold):hover{background:var(--white);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .18),var(--cut-sm)}
+.nfold:hover{color:var(--ink)}
+.scrap:hover .plus{transform:rotate(90deg)}
+:is(.scrap,.nfold):active{transform:scale(.97)}
+
+/* pinned tabs: little polaroids */
+.pins{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:2px 2px 2px;flex:none}
+.pins:empty{display:none}
+.pin{position:relative;aspect-ratio:1.15;display:grid;place-items:center;border-radius:8px;background:rgb(var(--whc) / .7);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .1);transform:rotate(calc(var(--rot,0) * var(--wob,1) * 1.2deg));transition:transform .18s var(--snap),box-shadow .12s,background .12s}
+.pin:hover{background:var(--white);transform:translateY(-2px);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .14),var(--cut-sm)}
+.pin:active{transform:scale(.94)}
+.pin.on{background:var(--white);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .14),var(--cut)}
+.pin.on::before{content:"";position:absolute;left:50%;top:-6px;width:26px;height:10px;margin-left:-13px;transform:rotate(-4deg);background:repeating-linear-gradient(-45deg,var(--tape) 0 5px,color-mix(in srgb,var(--tape) 62%,#fff) 5px 10px);opacity:.92}
+.pin.also{box-shadow:0 0 0 2px var(--tape)}
+.pin.cold .fav{opacity:.5;filter:grayscale(.5)}
+.pin .fav{width:22px;height:22px;box-shadow:none}
+
+/* the tab list */
+.tabs{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:2px;margin:0 -6px;padding:6px 6px 8px;scrollbar-width:none;contain:layout style}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;display:flex;align-items:center;gap:9px;height:36px;max-height:36px;padding:0 4px 0 9px;flex:none;border-radius:8px;color:var(--ink);transition:background .12s,box-shadow .12s,transform .18s var(--snap),max-height .28s var(--ease),height .28s var(--ease),opacity .18s,margin .28s var(--ease)}
+.tab:hover{background:rgb(var(--whc) / .55)}
+body.float .tab:hover{background:rgb(var(--inkc) / .06)}
+.tab .fav{width:20px;height:20px;font-size:11px;box-shadow:none}
+.tab .ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:500 14px/1.2 var(--font-ui);letter-spacing:.005em}
+/* the tab you're on: a scrap of white paper, taped down */
+.tab.on{background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),var(--cut-sm);transform:rotate(calc(var(--rot,0) * var(--wob,1) * -.5deg))}
+.tab.on .ttl{font-weight:650}
+.tab.on::before{content:"";position:absolute;left:-7px;top:-5px;width:28px;height:11px;transform:rotate(-14deg);background:repeating-linear-gradient(-45deg,var(--tape) 0 5px,color-mix(in srgb,var(--tape) 62%,#fff) 5px 10px);opacity:.92}
+body.float .tab.on{background:var(--white)}
+.tab.also{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tape) 70%,transparent)}
+.tab.asleep .fav{opacity:.55;filter:grayscale(.4)}   /* only the icon dims: titles stay fully readable */
+.tab.warn .ttl{color:#d23b2a}
+.tab.loading .fav{animation:jig .5s ease-in-out infinite alternate}
+@keyframes jig{from{transform:rotate(-12deg)}to{transform:rotate(12deg)}}
+.tab .x{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink2);opacity:0;transition:opacity .1s,background .12s}
+.tab:hover .x,.tab.on .x{opacity:1}
+.tab .x:hover{background:rgb(var(--inkc) / .1);color:var(--ink)}
+.snd{display:none;flex:none;width:24px;height:24px;border-radius:6px;place-items:center;color:var(--tape);transition:background .12s}
+.audible .snd,.muted .snd{display:grid}
+.audible:not(.muted) .snd svg{animation:pulse 1.2s ease-in-out infinite}
+.muted .snd{color:var(--ink2)}
+.snd:hover{background:rgb(var(--inkc) / .1)}
+@keyframes pulse{50%{transform:scale(1.15)}}
+
+/* moments: new tab slaps down, closed tab crumples, lists rise in */
+.tab.slap{animation:slap .42s var(--spring) both}
+@keyframes slap{0%{opacity:0;transform:translateY(-26px) rotate(-6deg) scale(1.15)}40%{opacity:1}}
+.tab.rise,.fold.rise,.pair.rise{animation:rise .4s var(--spring) both;animation-delay:calc(var(--i,0) * 22ms)}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+.tab.crumple{pointer-events:none;animation:crumple .28s cubic-bezier(.55,0,.85,.45) forwards!important}
+@keyframes crumple{40%{transform:rotate(-9deg) scale(.7);opacity:.9}100%{transform:translateX(-24px) rotate(-24deg) scale(.08);opacity:0;height:0;margin-bottom:-2px}}
+.tab.drag,.pair.drag{z-index:5;touch-action:none;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),5px 7px 0 rgb(var(--sh) / .24);transition:none}
+.tab.lifted,.pin.lifted{opacity:.3}
+.pin.drag{z-index:5;box-shadow:5px 7px 0 rgb(var(--sh) / .24);transition:none}
+
+/* split pairs: one card, two rows */
+.pair{position:relative;flex:none;display:flex;flex-direction:column;gap:1px;margin:10px 0 2px;padding:4px 3px 4px 10px;border-radius:9px;background:rgb(var(--whc) / .45);box-shadow:0 0 0 1.5px rgb(var(--inkc) / .1);max-height:90px;transition:background .12s,box-shadow .12s,max-height .28s var(--ease),opacity .18s,margin .28s var(--ease)}
+body.float .pair{background:rgb(var(--inkc) / .04)}
+.pair::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:5px;border-radius:0 3px 3px 0;background:repeating-linear-gradient(-45deg,var(--tape) 0 5px,color-mix(in srgb,var(--tape) 62%,#fff) 5px 10px)}
+.pair::after{content:"split";position:absolute;right:12px;top:-11px;padding:0 7px 1px;border-radius:3px;background:var(--tape);color:#fff;font:700 15px/1.1 var(--font-hand);transform:rotate(3deg)}
+.pair.live{background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),var(--cut-sm)}
+.pair .tab{height:34px;max-height:none;margin:0;background:transparent;box-shadow:none;transform:none}
+.pair .tab::before{display:none}
+.pair .tab:hover{background:rgb(var(--inkc) / .05)}
+.pair .tab.on{background:rgb(var(--inkc) / .05);box-shadow:inset 3px 0 0 var(--tape)}
+.pair .tab.on .ttl{font-weight:650}
+.pair .tab.also{box-shadow:none}
+.pair.join{animation:join .5s var(--spring) both}
+@keyframes join{0%{opacity:0;transform:translateX(50px) rotate(5deg)}40%{opacity:1}}
+
+/* folders: a manila tab */
+.fold{flex:none;margin-top:6px}
+.fh{position:relative;display:flex;align-items:center;gap:7px;width:100%;height:32px;padding:0 4px 0 8px;border-radius:3px 9px 8px 8px;background:#f2d58f;color:#2b2118;font:650 14px var(--font-ui);text-align:left;box-shadow:0 1px 0 rgb(0 0 0 / .08);cursor:pointer;transition:background .12s,box-shadow .12s,transform .15s var(--snap)}
+.fh::before{content:"";position:absolute;left:0;top:-5px;width:38px;height:7px;border-radius:5px 7px 0 0;background:inherit}
+.fh:hover{background:#f5dc9f}
+.fh .fi{display:grid;color:#9a6b12}
+.fh .fn{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{transition:transform .2s var(--snap)}
+.fold.open .chev,.fold.peek .chev{transform:rotate(90deg)}
+.fh .ct{font:700 16px/1 var(--font-hand);color:rgb(43 33 24 / .6);padding:0 2px}
+.fplus{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:rgb(43 33 24 / .7);opacity:0;transition:opacity .1s,background .12s}
+.fh:hover .fplus{opacity:1}
+.fplus:hover{background:rgb(43 33 24 / .12)}
+.fold.drop .fh{background:#f7c75a;box-shadow:0 0 0 2px #e0a92a}
+.fold.drag{z-index:5;touch-action:none}
+.fold.drag .fh{box-shadow:5px 7px 0 rgb(var(--sh) / .24)}
+.fb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s var(--ease)}
+.fold.open .fb,.fold.peek .fb,.fold.drop .fb{grid-template-rows:1fr}
+.fl{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:2px;margin-left:10px;padding:4px 0 2px 8px;border-left:2px solid rgb(var(--inkc) / .14);transition:padding .28s var(--ease),border-color .28s}
+.fold:not(.open):not(.peek):not(.drop) .fl{padding-top:0;padding-bottom:0;border-left-color:transparent}
+.fold.open .fl:empty,.fold.drop .fl:empty{min-height:32px}
+.fl:empty::after{content:"drop tabs here";align-self:flex-start;padding:2px 4px;font:700 18px/1.2 var(--font-hand);color:var(--ink3)}
+.fold:not(.open):not(.drop) .fl>:is(.tab,.pair):not(.vis):not(.drag){max-height:0;height:0;opacity:0;margin:0 0 -2px;padding-top:0;padding-bottom:0;overflow:hidden;pointer-events:none}
+.fold:not(.open):not(.drop) .fl:empty::after{display:none}
+.fl .pair{margin-top:8px}
+
+/* spaces: index-card tabs along the bottom */
+.spaces{display:flex;align-items:flex-end;gap:5px;flex:none;padding:0 2px;border-bottom:3px solid var(--ink);margin-top:2px}
+.sp{position:relative;height:24px;min-width:28px;padding:0 9px;display:flex;align-items:center;justify-content:center;border-radius:8px 8px 0 0;background:var(--c);color:#fff;transition:height .2s var(--snap),transform .15s var(--snap)}
+.sp:hover{transform:translateY(-2px)}
+.sp:active{transform:scale(.94)}
+.sp.on{height:34px;min-width:60px;z-index:1}
+.sp .nm{display:none;font:700 21px/1 var(--font-hand);text-shadow:0 1px 0 rgba(0,0,0,.25);white-space:nowrap}
+.sp.on .nm{display:block}
+.sp.add{background:transparent;border:1.5px solid rgb(var(--inkc) / .3);border-bottom:0;color:var(--ink2);min-width:26px;padding:0 5px}
+.sp.add:hover{color:var(--ink);background:rgb(var(--whc) / .5)}
+.bit{position:fixed;z-index:50;pointer-events:none;border-radius:1px}

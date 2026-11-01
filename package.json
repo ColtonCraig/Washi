@@ -1,0 +1,135 @@
+{
+  "name": "washi",
+  "productName": "Washi",
+  "version": "0.9.0",
+  "description": "Washi: a paper-collage browser for macOS with a vertical sidebar, spaces and split view. Built on Chromium.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "fresh": "electron . --fresh",
+    "lists": "node scripts/build-lists.js",
+    "test": "bash test/run.sh",
+    "icon": "node scripts/build-icon.js",
+    "dist": "npm run lists && electron-builder --mac",
+    "dist:dir": "electron-builder --mac --dir",
+    "app": "bash scripts/install-mac.sh"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "app.washi.browser",
+    "productName": "Washi",
+    "copyright": "\u00a9 2026 Colton Craig",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**",
+      "ui/**",
+      "resources/lists/**",
+      "package.json"
+    ],
+    "asar": true,
+    "protocols": [
+      {
+        "name": "Web page",
+        "schemes": [
+          "http",
+          "https"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "html",
+          "htm"
+        ],
+        "name": "HTML document",
+        "role": "Viewer"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Websites you allow can use your camera, for things like video calls.",
+        "NSMicrophoneUsageDescription": "Websites you allow can use your microphone, for things like video calls.",
+        "NSLocationUsageDescription": "Websites you allow can ask for your location.",
+        "NSBluetoothAlwaysUsageDescription": "Websites you allow can connect to Bluetooth devices.",
+        "LSApplicationCategoryType": "public.app-category.productivity"
+      }
+    },
+    "dmg": {
+      "title": "Washi",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 640,
+        "height": 420
+      },
+      "contents": [
+        {
+          "x": 180,
+          "y": 220
+        },
+        {
+          "x": 460,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "loadBrowserProcessSpecificV8Snapshot": false,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.png"
+    }
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "2.20.3"
+  },
+  "author": {
+    "name": "Colton Craig"
+  },
+  "homepage": "https://github.com/YOUR_GITHUB_USERNAME/washi",
+  "washi": {
+    "updates": "https://github.com/ColtonCraig/Washi-releases/releases/latest/download/latest.json"
+  }
+}

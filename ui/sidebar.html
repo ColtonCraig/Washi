@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Washi sidebar</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<link rel="stylesheet" href="paper.css">
+<link rel="stylesheet" href="sidebar.css">
+</head>
+<body class="docked">
+<div class="sheet grain" id="sheet">
+  <h1 class="sname" id="sname"></h1>
+  <div class="toprow"><button class="scrap" id="nt"><span class="plus">+</span><span class="hand">new scrap</span><kbd>⌘T</kbd></button><button class="nfold" id="nf" title="New folder" aria-label="New folder"><svg class="i" viewBox="0 0 24 24"><use href="#i-folder"/></svg></button></div>
+  <div class="pins" id="pins"></div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div>
+  <div class="spaces" id="spaces"></div>
+</div>
+<script src="shared.js"></script>
+<script src="sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>
+  <clipPath id="body"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+  <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" values="0 0 0 0 .17  0 0 0 0 .13  0 0 0 0 .09  0 0 0 -1.15 .62" result="s"/><feComposite in="s" in2="SourceGraphic" operator="in" result="t"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="t"/></feMerge></filter>
+  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".3"/></filter>
+  <pattern id="tO" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ff6a3d"/><rect width="20" height="40" fill="#ffa07f"/></pattern>
+  <pattern id="tB" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#3d63ff"/><rect width="20" height="40" fill="#7f97ff"/></pattern>
+  <pattern id="tP" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ff3d8d"/><rect width="20" height="40" fill="#ff86b8"/></pattern>
+  <pattern id="tY" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ffcf2e"/><rect width="20" height="40" fill="#ffe27a"/></pattern>
+  <pattern id="tG" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#1f9d57"/><rect width="20" height="40" fill="#5fc58c"/></pattern>
+  <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc08a"/><stop offset="1" stop-color="#ffa767"/></linearGradient>
+  <linearGradient id="cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf9ef"/><stop offset="1" stop-color="#f3ead6"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b5ccff"/><stop offset="1" stop-color="#93b2ff"/></linearGradient>
+</defs>
+<g filter="url(#lift)"><g clip-path="url(#body)"><rect x="100" y="100" width="824" height="824" fill="url(#desk)" filter="url(#grain)"/>
+<circle cx="860" cy="250" r="120" fill="#ff3d8d" opacity=".85"/>
+<circle cx="512" cy="530" r="268" fill="#2b2118" opacity=".25" transform="translate(20 24)"/>
+<circle cx="512" cy="530" r="268" fill="#3d63ff"/>
+<g fill="none" stroke="#fbf6ea" stroke-width="22" stroke-linecap="round">
+  <ellipse cx="512" cy="530" rx="108" ry="268"/>
+  <path d="M244 530 H780"/>
+  <path d="M286 400 Q512 440 738 400"/><path d="M286 660 Q512 620 738 660"/>
+</g>
+<circle cx="512" cy="530" r="268" fill="none" stroke="#2b2118" stroke-opacity=".15" stroke-width="5"/>
+<g transform="rotate(-36 400 271)" opacity="0.94"><path d="M250.0 232.0 L550.0 232.0 L541.0 245.0 L550.0 258.0 L541.0 271.0 L550.0 284.0 L541.0 297.0 L550.0 310.0 L250.0 310.0 L259.0 297.0 L250.0 284.0 L259.0 271.0 L250.0 258.0 L259.0 245.0 Z" fill="url(#tO)"/><rect x="250" y="232" width="300" height="78" fill="#fff" opacity=".1"/></g><g transform="rotate(-28 635 809)" opacity="0.94"><path d="M470.0 770.0 L800.0 770.0 L791.0 783.0 L800.0 796.0 L791.0 809.0 L800.0 822.0 L791.0 835.0 L800.0 848.0 L470.0 848.0 L479.0 835.0 L470.0 822.0 L479.0 809.0 L470.0 796.0 L479.0 783.0 Z" fill="url(#tY)"/><rect x="470" y="770" width="330" height="78" fill="#fff" opacity=".1"/></g>
+<rect x="100" y="100" width="824" height="824" rx="186" fill="none" stroke="#2b2118" stroke-opacity=".12" stroke-width="4"/></g></g></svg>

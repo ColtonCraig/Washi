@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>
+  <clipPath id="body"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+  <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" values="0 0 0 0 .17  0 0 0 0 .13  0 0 0 0 .09  0 0 0 -1.15 .62" result="s"/><feComposite in="s" in2="SourceGraphic" operator="in" result="t"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="t"/></feMerge></filter>
+  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".3"/></filter>
+  <pattern id="tO" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ff6a3d"/><rect width="20" height="40" fill="#ffa07f"/></pattern>
+  <pattern id="tB" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#3d63ff"/><rect width="20" height="40" fill="#7f97ff"/></pattern>
+  <pattern id="tP" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ff3d8d"/><rect width="20" height="40" fill="#ff86b8"/></pattern>
+  <pattern id="tY" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#ffcf2e"/><rect width="20" height="40" fill="#ffe27a"/></pattern>
+  <pattern id="tG" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="40" height="40" fill="#1f9d57"/><rect width="20" height="40" fill="#5fc58c"/></pattern>
+  <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc08a"/><stop offset="1" stop-color="#ffa767"/></linearGradient>
+  <linearGradient id="cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf9ef"/><stop offset="1" stop-color="#f3ead6"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b5ccff"/><stop offset="1" stop-color="#93b2ff"/></linearGradient>
+</defs>
+<g filter="url(#lift)"><g clip-path="url(#body)"><rect x="100" y="100" width="824" height="824" fill="url(#sky)" filter="url(#grain)"/>
+<circle cx="188" cy="878" r="210" fill="#ffd84d" opacity=".9"/>
+<circle cx="868" cy="214" r="64" fill="#ff3d8d" opacity=".9"/>
+<!-- the strip unrolling across the desk, ending in a torn edge -->
+<path d="M560 600 C 680 640, 770 700, 820 790 L 846 778 L 838 808 L 866 802 L 852 832 L 880 830 L 858 856 C 790 800, 690 730, 540 692 Z" fill="#2b2118" opacity=".2" transform="translate(14 16)"/>
+<path d="M560 600 C 680 640, 770 700, 820 790 L 846 778 L 838 808 L 866 802 L 852 832 L 880 830 L 858 856 C 790 800, 690 730, 540 692 Z" fill="url(#tO)"/>
+<path d="M560 600 C 680 640, 770 700, 820 790 L 846 778 L 838 808 L 866 802 L 852 832 L 880 830 L 858 856 C 790 800, 690 730, 540 692 Z" fill="#fff" opacity=".1"/>
+<!-- the roll, seen from a little above: side band first, then the face -->
+<g transform="translate(470 470)">
+  <ellipse cx="18" cy="104" rx="262" ry="196" fill="#2b2118" opacity=".22"/>
+  <path d="M-262 0 V70 A262 196 0 0 0 262 70 V0 Z" fill="#d9542c"/>
+  <path d="M-262 0 V70 A262 196 0 0 0 262 70 V0 Z" fill="url(#tO)" opacity=".35"/>
+  <path d="M-262 36 A262 196 0 0 0 262 36" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3"/>
+  <ellipse cx="0" cy="0" rx="262" ry="196" fill="url(#tO)"/>
+  <ellipse cx="0" cy="0" rx="262" ry="196" fill="none" stroke="#2b2118" stroke-opacity=".16" stroke-width="5"/>
+  <ellipse cx="0" cy="0" rx="232" ry="172" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3"/>
+  <ellipse cx="0" cy="0" rx="200" ry="148" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>
+  <ellipse cx="0" cy="-4" rx="138" ry="102" fill="#e3bd83"/>
+  <ellipse cx="0" cy="8" rx="112" ry="82" fill="#c99e62"/>
+  <ellipse cx="0" cy="14" rx="112" ry="80" fill="url(#sky)" filter="url(#grain)"/>
+  <ellipse cx="0" cy="-4" rx="138" ry="102" fill="none" stroke="#2b2118" stroke-opacity=".18" stroke-width="4"/>
+</g>
+<rect x="100" y="100" width="824" height="824" rx="186" fill="none" stroke="#2b2118" stroke-opacity=".12" stroke-width="4"/></g></g></svg>

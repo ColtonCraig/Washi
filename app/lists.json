@@ -1,0 +1,4 @@
+{
+  "badware": ["https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/badware.txt"],
+  "phishing": ["https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt"]
+}

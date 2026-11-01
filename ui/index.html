@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Washi</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<link rel="stylesheet" href="paper.css">
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<div class="desk grain" aria-hidden="true">
+  <i class="deco d1"></i><i class="deco d2"></i><i class="deco d3"></i>
+  <svg class="deco d4" viewBox="0 0 120 40"><path d="M4 22c10-18 18 18 28 0s18 18 28 0 18 18 28 0 18 14 28 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+</div>
+
+<i class="edge" id="edge" hidden></i>
+<header class="topbar">
+  <div class="lights"></div>
+  <button class="stamp" id="bSide" title="Pin or float the sidebar (⌘S)" aria-label="Pin or float the sidebar"><svg class="i" viewBox="0 0 24 24"><use href="#i-sidebar"/></svg></button>
+  <button class="stamp" id="bBack" title="Back (⌘[)" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><use href="#i-back"/></svg></button>
+  <button class="stamp" id="bFwd" title="Forward (⌘])" aria-label="Forward"><svg class="i" viewBox="0 0 24 24"><use href="#i-fwd"/></svg></button>
+  <button class="stamp" id="bReload" title="Reload (⌘R)" aria-label="Reload"><svg class="i" viewBox="0 0 24 24"><use href="#i-reload"/></svg></button>
+  <button class="label" id="url" title="Go to address (⌘L)"><span class="lk" id="lk"></span><span class="txt" id="urlTxt"></span><i class="stitch"></i></button>
+  <button class="stamp shield" id="bShield" title="Ads and trackers blocked" aria-label="Blocking on this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-shield"/></svg><b></b></button>
+  <button class="stamp dl" id="bDl" title="Downloads" aria-label="Downloads" hidden><svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg><svg class="i" viewBox="0 0 24 24"><use href="#i-download"/></svg></button>
+  <button class="stamp" id="bSplit" title="Split view (⌘\)" aria-label="Split view"><svg class="i" viewBox="0 0 24 24"><use href="#i-split"/></svg></button>
+</header>
+
+<main class="stage" id="stage">
+  <section class="pane" id="pa" aria-label="Page">
+    <div class="empty">
+      <i class="sh s1"></i><i class="sh s2"></i><i class="sh s3"></i>
+      <div class="note">
+        <h2 id="emptyTitle">Nothing taped up yet</h2>
+        <p>Press <kbd>⌘T</kbd> to search or type an address</p>
+      </div>
+    </div>
+  </section>
+  <section class="pane off" id="pb" aria-label="Second page">
+    <div class="empty">
+      <i class="sh s1"></i><i class="sh s3"></i>
+      <div class="note"><h2>Pick a page for this side</h2><p>Drag a tab here, or press <kbd>⌘T</kbd></p></div>
+    </div>
+  </section>
+</main>
+<script src="shared.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

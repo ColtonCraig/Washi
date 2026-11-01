@@ -1,0 +1,8 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    { "description": "Electron carries Chromium's security fixes: update it as soon as a release is out", "matchPackageNames": ["electron"], "schedule": ["at any time"], "automerge": false, "labels": ["security", "chromium"] },
+    { "matchPackageNames": ["@ghostery/adblocker-electron", "electron-updater", "electron-builder"], "schedule": ["before 6am on monday"] }
+  ]
+}

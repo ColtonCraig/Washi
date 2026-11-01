@@ -1,0 +1,48 @@
+# Builds Washi for Apple silicon and Intel Macs whenever a tag like v0.9.0 is pushed, and publishes it to the public
+# washi-releases repository. Installed copies of Washi see the new latest.json and update themselves.
+# Secrets (Settings → Secrets and variables → Actions):
+#   WASHI_UPDATE_KEY  private release key (signs latest.json; its public half is app/update-key.pub)
+#   RELEASES_TOKEN    fine-grained token with "Contents: read and write" on the washi-releases repository only
+# Variable: RELEASES_REPO  e.g. yourname/washi-releases
+name: Release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lists                       # fresh blocklists baked into this release
+      - name: Check the tag matches package.json
+        run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - name: Build both Macs
+        run: |
+          CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64 -c.mac.identity=null
+          CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --x64 -c.mac.identity=null
+      - name: Sign (ad hoc), zip, and make the installer disk image
+        run: |
+          V=$(node -p 'require("./package.json").version'); mkdir -p out
+          for A in arm64 x64; do
+            L=$([ "$A" = x64 ] && echo x86_64 || echo arm64)
+            APP=$(ls -d dist/mac*/Washi.app | while read d; do lipo -archs "$d/Contents/MacOS/Washi" | grep -qw "$L" && echo "$d"; done | head -1)
+            test -n "$APP"
+            codesign --force --deep --sign - "$APP"
+            codesign --verify --deep --strict "$APP"
+            ditto -c -k --keepParent "$APP" "out/Washi-$V-$A.zip"
+            mkdir -p "dmg-$A" && ditto "$APP" "dmg-$A/Washi.app" && ln -s /Applications "dmg-$A/Applications"
+            hdiutil create -volname "Washi" -srcfolder "dmg-$A" -ov -format UDZO "out/Washi-$V-$A.dmg"
+          done
+      - name: Sign the update info
+        env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
+        run: |
+          V=$(node -p 'require("./package.json").version')
+          node scripts/release-manifest.js "$V" out "out/Washi-$V-arm64.zip" "out/Washi-$V-x64.zip" "$(git tag -l --format='%(contents:subject)' "$GITHUB_REF_NAME")"
+      - name: Publish to washi-releases
+        env: { GH_TOKEN: '${{ secrets.RELEASES_TOKEN }}', REPO: "${{ vars.RELEASES_REPO || 'ColtonCraig/Washi-releases' }}" }
+        run: |
+          V=$(node -p 'require("./package.json").version')
+          gh release create "v$V" out/* --repo "$REPO" --title "Washi $V" --notes "Download Washi-$V-arm64.dmg for Apple silicon Macs (M1 and newer) or Washi-$V-x64.dmg for Intel Macs."
