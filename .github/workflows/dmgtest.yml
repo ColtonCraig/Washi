@@ -22,7 +22,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/shots"
           M=$(hdiutil attach "$RUNNER_TEMP/Washi-test.dmg" | awk -F'\t' '/Volumes/ {print $NF}'); echo "mounted at $M"
-          python3 -c "import ds_store,sys; d=ds_store.DSStore.open(sys.argv[1]+'/.DS_Store'); [print(e.filename, e.code, (str(e.value)[:300])) for e in d]" "$M" || true
+          ls -la "$M" "$M/.background"
           open "$M"; sleep 6
           screencapture -x "$RUNNER_TEMP/shots/finder.png" || true
           osascript -e 'tell application "Finder" to get bounds of front window' || true
