@@ -8,18 +8,22 @@ struct PageHost: UIViewRepresentable {
     let browser: Browser
     var onTouch: () -> Void
     func makeUIView(context: Context) -> PageContainer { PageContainer() }
-    func updateUIView(_ c: PageContainer, context: Context) { c.onTouch = onTouch; c.show(browser.view(for: id)) }
+    func updateUIView(_ c: PageContainer, context: Context) { c.onTouch = onTouch; c.wantID = id; c.show(browser.view(for: id)) }
     static func dismantleUIView(_ c: PageContainer, coordinator: ()) { c.release() }
 }
 final class PageContainer: UIView, UIGestureRecognizerDelegate {
     private(set) weak var page: WKWebView?
     var onTouch: (() -> Void)?
+    var wantID: String?
+    /* every container on screen, so a page taken by a view that's on its way out (an animation) comes straight back */
+    static let all = NSHashTable<PageContainer>.weakObjects()
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
         let tap = UITapGestureRecognizer(target: self, action: #selector(touched))
         tap.cancelsTouchesInView = false; tap.delegate = self
         addGestureRecognizer(tap)
+        PageContainer.all.add(self)
     }
     required init?(coder: NSCoder) { fatalError() }
     @objc private func touched() { onTouch?() }
@@ -33,7 +37,17 @@ final class PageContainer: UIView, UIGestureRecognizerDelegate {
         v.frame = bounds; v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(v)
     }
-    func release() { if let p = page, p.superview === self { p.removeFromSuperview() } }
+    func release() {
+        PageContainer.all.remove(self)
+        guard let p = page, p.superview === self else { return }
+        p.removeFromSuperview()
+        if let heir = PageContainer.all.allObjects.last(where: { $0.wantID == wantID && $0.window != nil }) { heir.show(p) }
+    }
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil, let p = page, p.superview === self,          // leaving the screen while another holder wants this page
+           let heir = PageContainer.all.allObjects.last(where: { $0 !== self && $0.wantID == wantID && $0.window != nil }) { heir.show(p) }
+    }
 }
 
 /* a page on its paper card, with a thin tape-coloured loading line */

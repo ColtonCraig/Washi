@@ -55,14 +55,16 @@ struct WideLayout: View {
     @Environment(\.theme) private var th
     var size: CGSize
     var body: some View {
-        HStack(spacing: 0) {
-            if store.s.prefs.docked {
-                SidebarView(drawer: false).frame(width: 248).transition(.move(edge: .leading).combined(with: .opacity))
-            }
-            VStack(spacing: 0) {
-                TopBar()
-                if store.s.prefs.bookmarkBar && !store.s.bookmarks.isEmpty { BookmarksBar().transition(.move(edge: .top).combined(with: .opacity)) }
-                Stage().padding(.leading, store.s.prefs.docked ? 2 : 8).padding(.trailing, 8).padding(.bottom, 8).padding(.top, 2)
+        VStack(spacing: 0) {
+            TopBar()
+            HStack(spacing: 0) {
+                if store.s.prefs.docked {
+                    SidebarView(drawer: false).frame(width: size.width < 760 ? 220 : 248).transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                VStack(spacing: 0) {
+                    if store.s.prefs.bookmarkBar && !store.s.bookmarks.isEmpty { BookmarksBar().transition(.move(edge: .top).combined(with: .opacity)) }
+                    Stage().padding(.leading, store.s.prefs.docked ? 2 : 8).padding(.trailing, 8).padding(.bottom, 8).padding(.top, 2)
+                }
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.88), value: store.s.prefs.docked)
@@ -114,7 +116,6 @@ struct Stage: View {
                         .onTapGesture(count: 2) { withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { store.setRatio(0.5) }; store.save() }
                     PageCard(id: p.b, focused: store.focusB, ring: true)
                 }
-                .transition(.opacity)
             } else {
                 PageCard(id: store.current)
             }

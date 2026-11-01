@@ -101,7 +101,7 @@ final class WashiUITests: XCTestCase {
         f.typeText("page one")
         waitFor(el("result:Page one"), "typing finds the bookmark")
         shot("07-command-bar")
-        if el("commandCancel").exists { el("commandCancel").tap() } else { el("commandDim").tap() }
+        if el("commandCancel").exists { el("commandCancel").tap() } else { el("commandDim").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.97)).tap() }
         XCTAssertTrue(gone(f), "the command bar closes")
 
         // a link that opens a new window becomes a new tab
@@ -113,7 +113,7 @@ final class WashiUITests: XCTestCase {
         sidebar()
         let row = el("tab:Test page 2"); waitFor(row, "tab row")
         row.swipeLeft()
-        if app.buttons["Close"].waitForExistence(timeout: 2) { app.buttons["Close"].tap() }
+        if app.buttons["Close"].firstMatch.waitForExistence(timeout: 2), row.exists { app.buttons["Close"].firstMatch.tap() }
         XCTAssertTrue(gone(row), "swiping left closes the tab")
 
         // spaces: Work is empty and has its own tabs
@@ -159,7 +159,7 @@ final class WashiUITests: XCTestCase {
         // split view, and dragging the gap
         app.buttons["splitButton"].tap()
         waitFor(app.webViews.staticTexts["Test page 1"], "split view shows both pages")
-        XCTAssertTrue(app.webViews.staticTexts["Test page 2"].exists)
+        waitFor(app.webViews.staticTexts["Test page 2"], "and the other one")
         XCTAssertEqual(app.webViews.count, 2, "two pages side by side")
         shot("11-split")
         let left0 = app.webViews.element(boundBy: 0).frame.width, right0 = app.webViews.element(boundBy: 1).frame.width
