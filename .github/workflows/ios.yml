@@ -1,4 +1,6 @@
-# Washi for iPhone: builds the app and runs its tests on iPhone simulators (a normal iPhone and the iPhone Duo).
+# Washi for iPhone: builds the app and runs every test on iPhone simulators: a normal iPhone (the Duo folded, and
+# turned on its side for the big-screen layout) and an iPad mini standing in for the Duo opened up.
+# Screenshots from the UI tests are saved as a download on each run.
 name: iPhone
 on:
   push:
@@ -6,7 +8,34 @@ on:
     paths: ['ios/**', '.github/workflows/ios.yml']
   workflow_dispatch:
 jobs:
-  discover:
+  test:
     runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ['iPhone 17', 'iPad mini (A17 Pro)']
     steps:
-      - run: ls /Applications | grep -i xcode; xcodebuild -version; xcrun simctl list runtimes; xcrun simctl list devicetypes | grep -iE "iphone|ipad"
+      - uses: actions/checkout@v4
+      - name: Pages for the tests
+        run: (cd ios/WashiUITests/Pages && nohup python3 -m http.server 8765 >/tmp/pages.log 2>&1 &) ; sleep 1; curl -sf http://localhost:8765/p1.html >/dev/null
+      - name: Build and test
+        run: |
+          mkdir -p "$RUNNER_TEMP/shots"
+          cd ios
+          set -o pipefail
+          TEST_RUNNER_SHOTS="$RUNNER_TEMP/shots" xcodebuild test -project Washi.xcodeproj -scheme Washi \
+            -destination "platform=iOS Simulator,name=${{ matrix.device }},OS=latest" \
+            -resultBundlePath "$RUNNER_TEMP/result.xcresult" CODE_SIGNING_ALLOWED=NO 2>&1 \
+            | tee "$RUNNER_TEMP/xcodebuild.log" \
+            | grep -E "error:|warning: .*/ios/Washi|Test Case .*(passed|failed)|XCTAssert|failed -|\*\* (TEST|BUILD)" || true
+          grep -q "\*\* TEST SUCCEEDED \*\*" "$RUNNER_TEMP/xcodebuild.log"
+      - name: Keep screenshots and the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-${{ strategy.job-index }}
+          path: |
+            ${{ runner.temp }}/shots
+            ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore

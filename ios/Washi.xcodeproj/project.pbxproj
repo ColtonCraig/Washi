@@ -1,0 +1,441 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		AA0000000000000000000101 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000010;
+			remoteInfo = Washi;
+		};
+		AA0000000000000000000102 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000010;
+			remoteInfo = Washi;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AA0000000000000000000020 /* Washi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Washi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000021 /* WashiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WashiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000022 /* WashiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WashiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000023 /* Washi-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Washi-Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AA0000000000000000000035 /* Exceptions for "WashiUITests" folder in "WashiUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Pages/links.html,
+				Pages/p1.html,
+				Pages/p2.html,
+				Pages/p3.html,
+			);
+			target = AA0000000000000000000012 /* WashiUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AA0000000000000000000030 /* Washi */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Washi; sourceTree = "<group>"; };
+		AA0000000000000000000031 /* WashiTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = WashiTests; sourceTree = "<group>"; };
+		AA0000000000000000000032 /* WashiUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (AA0000000000000000000035 /* Exceptions for "WashiUITests" folder in "WashiUITests" target */, ); path = WashiUITests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0000000000000000000040 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000041 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000042 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000030 /* Washi */,
+				AA0000000000000000000033 /* Config */,
+				AA0000000000000000000031 /* WashiTests */,
+				AA0000000000000000000032 /* WashiUITests */,
+				AA0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000020 /* Washi.app */,
+				AA0000000000000000000021 /* WashiTests.xctest */,
+				AA0000000000000000000022 /* WashiUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000033 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000023 /* Washi-Info.plist */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0000000000000000000010 /* Washi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000050 /* Build configuration list for PBXNativeTarget "Washi" */;
+			buildPhases = (
+				AA0000000000000000000060 /* Sources */,
+				AA0000000000000000000040 /* Frameworks */,
+				AA0000000000000000000070 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000030 /* Washi */,
+			);
+			name = Washi;
+			packageProductDependencies = (
+			);
+			productName = Washi;
+			productReference = AA0000000000000000000020 /* Washi.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA0000000000000000000011 /* WashiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000052 /* Build configuration list for PBXNativeTarget "WashiTests" */;
+			buildPhases = (
+				AA0000000000000000000061 /* Sources */,
+				AA0000000000000000000041 /* Frameworks */,
+				AA0000000000000000000071 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000080 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000031 /* WashiTests */,
+			);
+			name = WashiTests;
+			packageProductDependencies = (
+			);
+			productName = WashiTests;
+			productReference = AA0000000000000000000021 /* WashiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AA0000000000000000000012 /* WashiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000053 /* Build configuration list for PBXNativeTarget "WashiUITests" */;
+			buildPhases = (
+				AA0000000000000000000062 /* Sources */,
+				AA0000000000000000000042 /* Frameworks */,
+				AA0000000000000000000072 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000081 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000032 /* WashiUITests */,
+			);
+			name = WashiUITests;
+			packageProductDependencies = (
+			);
+			productName = WashiUITests;
+			productReference = AA0000000000000000000022 /* WashiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AA0000000000000000000010 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					AA0000000000000000000011 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA0000000000000000000010;
+					};
+					AA0000000000000000000012 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA0000000000000000000010;
+					};
+				};
+			};
+			buildConfigurationList = AA0000000000000000000051 /* Build configuration list for PBXProject "Washi" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0000000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AA0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0000000000000000000010 /* Washi */,
+				AA0000000000000000000011 /* WashiTests */,
+				AA0000000000000000000012 /* WashiUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0000000000000000000070 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000071 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000072 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0000000000000000000060 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000061 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000062 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0000000000000000000080 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000010 /* Washi */;
+			targetProxy = AA0000000000000000000101 /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000081 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000010 /* Washi */;
+			targetProxy = AA0000000000000000000102 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA0000000000000000000090 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000091 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA0000000000000000000092 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Washi-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Washi;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000093 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Washi-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Washi;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AA0000000000000000000094 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Washi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Washi";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000095 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Washi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Washi";
+			};
+			name = Release;
+		};
+		AA0000000000000000000096 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Washi;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.coltoncraig.washi.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Washi;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0000000000000000000050 /* Build configuration list for PBXNativeTarget "Washi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000092 /* Debug */,
+				AA0000000000000000000093 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000051 /* Build configuration list for PBXProject "Washi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000090 /* Debug */,
+				AA0000000000000000000091 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000052 /* Build configuration list for PBXNativeTarget "WashiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000094 /* Debug */,
+				AA0000000000000000000095 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000053 /* Build configuration list for PBXNativeTarget "WashiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000096 /* Debug */,
+				AA0000000000000000000097 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA0000000000000000000001 /* Project object */;
+}
