@@ -1,0 +1,20 @@
+# Checks that Washi's own signing certificate works on a Mac (signs a copy of a small app).
+name: Signing check
+on:
+  push:
+    branches: [main]
+    paths: ['scripts/sign-mac.sh', 'scripts/signing-identity.js', 'build/signing.enc', '.github/workflows/signtest.yml']
+  workflow_dispatch:
+jobs:
+  sign:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign a test app twice and compare
+        env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
+        run: |
+          ditto /System/Applications/Calculator.app "$RUNNER_TEMP/A/Washi.app"
+          ditto /System/Applications/Chess.app "$RUNNER_TEMP/B/Washi.app"
+          scripts/sign-mac.sh "$RUNNER_TEMP/A/Washi.app" "$RUNNER_TEMP/B/Washi.app" | tee "$RUNNER_TEMP/dr.txt"
+          [ "$(sort -u "$RUNNER_TEMP/dr.txt" | wc -l | tr -d ' ')" = "1" ] && echo "SAME IDENTITY across different builds"
+          grep -q 'certificate leaf' "$RUNNER_TEMP/dr.txt"
