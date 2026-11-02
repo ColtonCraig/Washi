@@ -17,5 +17,5 @@ const fix = () => {
   if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };
-const dbg = !!process.env.WASHI_DEBUG_EXT;
+let dbg = false; try { dbg = !!(process.env && process.env.WASHI_DEBUG_EXT); } catch {}
 try { if (globalThis.location && location.protocol === 'chrome-extension:') { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); contextBridge.executeInMainWorld({ func: fix }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
