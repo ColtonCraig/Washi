@@ -162,7 +162,21 @@ function dlFly(f) {
   }
   el.animate(K, { duration: 780, easing: 'linear', fill: 'forwards' }).finished.then(() => el.remove(), () => el.remove());
 }
+/* tab peek: a polaroid of the tab you're resting on in the sidebar */
+let tpk = null;
+function tabPeek(f) {
+  if (f.theme) applyTheme(f.theme, f.pal);
+  if (!tpk) { tpk = document.createElement('div'); tpk.id = 'tpk'; tpk.className = 'tpk'; document.body.appendChild(tpk); }
+  const host = hostOf(f.url || '');
+  tpk.innerHTML = `<i class="tp"></i>${f.img ? `<div class="ph"><img alt="" src="${esc(f.img)}"></div>` : `<div class="ph none">${favHTML({ title: f.title, url: f.url, fav: f.fav })}<small>${f.url && /^https?:/.test(f.url) ? 'Sleeping: click to wake it' : ''}</small></div>`}<b>${esc(f.title || host)}</b><span>${esc(host)}</span>`;
+  tpk.style.setProperty('--ay', Math.max(18, Math.min(innerHeight - 18, f.arrowY || 30)) + 'px');
+  tpk.classList.toggle('noimg', !f.img);
+  if (!tpk.classList.contains('on')) { tpk.classList.remove('out'); void tpk.offsetWidth; tpk.classList.add('on'); }
+}
 B.onFx(f => {
+  if (f.type === 'tabpeek') return tabPeek(f);
+  if (f.type === 'tabpeekOff') { if (tpk) { tpk.classList.remove('on'); tpk.classList.add('out'); } return; }
+  if (tpk) tpk.classList.remove('on', 'out');
   if (f.type === 'dlfly') return dlFly(f);
   if (f.type === 'switch') return drawSwitch(f);
   if (f.type === 'switchEnd') { swEl.classList.remove('on'); swEl._key = ''; return; }

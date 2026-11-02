@@ -160,6 +160,17 @@ function highlight(id) {
   sheet.querySelectorAll('.tab.on,.pin.on').forEach(x => x.classList.remove('on'));
   sheet.querySelectorAll(`.tab[data-id="${id}"],.pin[data-id="${id}"]`).forEach(x => x.classList.add('on'));
 }
+/* resting on a tab for a moment shows a polaroid of it beside the sidebar (Settings › Basics can turn it off) */
+let tpkT = 0, peekId = null;
+const peekOff = () => { clearTimeout(tpkT); if (peekId) { peekId = null; B.intent({ type: 'tabpeek', id: null }); } };
+sheet.addEventListener('pointerover', e => {
+  const t = e.target.closest('.tab,.pin'); if (!t || !ST || !t.dataset.id) return;
+  if (peekId === t.dataset.id) return; clearTimeout(tpkT);
+  if (peekId) { peekId = t.dataset.id; const r = t.getBoundingClientRect(); return B.intent({ type: 'tabpeek', id: peekId, y: r.top, h: r.height }); }   // already showing: follow along
+  tpkT = setTimeout(() => { if (dragging || drag || !t.isConnected || !t.matches(':hover')) return; peekId = t.dataset.id; const r = t.getBoundingClientRect(); B.intent({ type: 'tabpeek', id: peekId, y: r.top, h: r.height }); }, 650);
+});
+sheet.addEventListener('pointerout', e => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.tab,.pin')) peekOff(); });
+addEventListener('pointerdown', peekOff, true); tabsEl.addEventListener('scroll', peekOff, { passive: true }); addEventListener('blur', peekOff);
 let warmT = 0;                                       // resting on a sleeping tab starts waking it, so the click feels instant
 sheet.addEventListener('pointerover', e => {
   const t = e.target.closest('.tab,.pin'); clearTimeout(warmT); if (!t || !ST) return;

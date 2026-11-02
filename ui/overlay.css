@@ -74,3 +74,22 @@ html,body{background:transparent}
 .dlslip .tp{position:absolute;top:-6px;left:50%;width:26px;height:11px;margin-left:-13px;background:var(--tape);opacity:.78;transform:rotate(-4deg)}
 .dlslip svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dlslip b{font:700 9px/1 var(--font-ui);letter-spacing:.04em;color:var(--tape)}
+
+/* tab peek: a polaroid beside the sidebar (overlay.js tabPeek) */
+.tpk{position:fixed;inset:6px;display:none;flex-direction:column;gap:3px;padding:9px 9px 10px;border-radius:5px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 12px 30px rgb(var(--sh) / .22);color:var(--ink);transform-origin:0 var(--ay,30px);pointer-events:none}
+.tpk.on{display:flex;animation:tpkin .2s cubic-bezier(.2,.9,.3,1.15) both}
+.tpk.out{display:flex;animation:tpkout .12s ease-in both}
+@keyframes tpkin{from{opacity:0;transform:translateX(-8px) scale(.94) rotate(-1.5deg)}}
+@keyframes tpkout{to{opacity:0;transform:translateX(-6px) scale(.97)}}
+html.motion-off .tpk.on,html.motion-off .tpk.out{animation:none}
+.tpk::before{content:"";position:absolute;left:-6px;top:calc(var(--ay,30px) - 6px - 6px);width:12px;height:12px;background:var(--white);transform:rotate(45deg);box-shadow:-1px 1px 0 rgb(var(--inkc) / .08)}
+.tpk .ph{flex:1;min-height:0;border-radius:2px;overflow:hidden;background:rgb(var(--inkc) / .05)}
+.tpk .ph img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.tpk .ph.none{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.tpk .ph.none .fav{width:34px;height:34px;font-size:16px}
+.tpk .ph.none small{font:500 11px var(--font-ui);color:var(--ink3)}
+.tpk b{font:600 13px/1.25 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.tpk span{font:500 11.5px/1.2 var(--font-ui);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpk .tp{display:none}
+html.scrapbook .tpk{transform:rotate(-1.2deg)}
+html.scrapbook .tpk .tp{display:block;top:-7px;width:46px;height:13px;margin-left:-23px}

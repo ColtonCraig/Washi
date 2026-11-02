@@ -775,6 +775,7 @@ B.onIntent(m => {
     case 'warm': warm(m.id); break;
     case 'today': showToday(); break;
     case 'tidy': tidy(S.cur); break;
+    case 'tabpeek': { const t = m.id && S.tabs[m.id]; if (!t || S.prefs.tabPeek === false || m.id === focusedId()) { B.tabPeek(null); break; } B.tabPeek({ id: m.id, y: (+m.y || 0) + TOP, h: +m.h || 36, title: label(t), url: t.url, fav: t.fav || null, live: !!R.live[m.id], ...look() }); break; }
     case 'rename': if (S.tabs[m.id]) { R.menuTab = m.id; menuClick('rename'); } break;
     case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
     case 'folderLook': folderLook(m.id, m); break;

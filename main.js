@@ -250,7 +250,7 @@ HANDLE('panes:set', (_, p, fp) => {
 });
 ON('tab:close', (_, id) => {
   const t = C.tabs.get(id); if (!t) return;
-  C.tabs.delete(id);
+  C.tabs.delete(id); thumbs.delete(id);
   try { C.win.contentView.removeChildView(t.view); } catch {}
   try { t.wc.close(); } catch {}
 });
@@ -396,7 +396,28 @@ function switchKeys(e, i) {
   if (i.type === 'keyUp' && (i.key === 'Control' || !i.control)) { C.switching = false; toUI('cmd', 'switch:commit'); }
   else if (i.type === 'keyDown' && i.key === 'Escape') { e.preventDefault(); C.switching = false; toUI('cmd', 'switch:cancel'); }
 }
+/* tab peek: a polaroid of a tab beside the sidebar while you rest on it (drawn by the overlay, which never takes focus here) */
+const thumbs = new Map();                                // tab id -> { at, img }
+let peekSeq = 0;
+ON('tab:peek', async (_, d) => {
+  const my = ++peekSeq;
+  if (!d || !d.id) { if (C.tabPeekOn) { C.tabPeekOn = false; if (!C.overlayOpen && !C.dragging && !C.bmShown && Date.now() >= (C.toastUntil || 0)) { toOverlay('overlay:fx', { type: 'tabpeekOff' }); later(() => { if (!C.tabPeekOn && !C.overlayOpen && !C.bmShown && Date.now() >= (C.toastUntil || 0)) C.overlay.setVisible(false); }, 140); } } return; }
+  if (C.overlayOpen || C.dragging || C.bmShown || !C.overlay || Date.now() < (C.toastUntil || 0) || !alive(C.win)) return;
+  const t = C.tabs.get(d.id); let img = null;
+  if (t && !t.wc.isDestroyed() && !t.wc.isLoading()) {
+    const c = thumbs.get(d.id);
+    if (c && Date.now() - c.at < 20000) img = c.img;
+    else { try { const shot = await t.wc.capturePage(); if (!shot.isEmpty()) { img = shot.resize({ width: 520 }).toJPEG(78).toString('base64'); thumbs.set(d.id, { at: Date.now(), img }); } } catch {} }
+  }
+  if (my !== peekSeq) return;                            // you moved on meanwhile
+  const sb = C.sidebar ? C.sidebar.getBounds() : { x: 0, width: 0 }, [W, H] = C.win.getContentSize();
+  const w = 288, h = img ? 252 : 132, x = Math.min(W - w - 8, Math.max(0, sb.x) + sb.width + 6), y = Math.max(TOP + 4, Math.min(H - h - 8, Math.round(d.y + d.h / 2 - 40)));
+  clearTimeout(C.fxTimer); C.tabPeekOn = true;
+  C.overlay.setBounds(rr({ x, y, width: w, height: h })); C.overlay.setVisible(true);
+  toOverlay('overlay:fx', { type: 'tabpeek', img: img ? 'data:image/jpeg;base64,' + img : null, title: String(d.title || '').slice(0, 200), url: String(d.url || '').slice(0, 500), fav: d.fav || null, pal: d.pal, theme: d.theme, arrowY: Math.round(d.y + d.h / 2 - y) });
+});
 function showFx(f) {
+  C.tabPeekOn = false;
   if (f.type === 'switchEnd') { if (!C.overlayOpen && !C.dragging && C.overlay) { toOverlay('overlay:fx', f); C.overlay.setVisible(false); } return; }
   if (C.overlayOpen || C.dragging || !C.overlay || !alive(C && C.win)) return;
   if (C.bmShown) bmHide();
@@ -477,7 +498,7 @@ ON('bm:hover', (_, d) => {
   if (C.bmShown) return;                                           // already showing: never redraw it under the pointer
   clearTimeout(C.fxTimer); clearTimeout(C.bmOffT);
   const r = rr(bmStripRect());
-  C.bmShown = true; C.overlay.setBounds(r); C.overlay.setVisible(true);
+  C.bmShown = true; C.tabPeekOn = false; C.overlay.setBounds(r); C.overlay.setVisible(true);
   toOverlay('overlay:init', { mode: 'bmbar', ...d, w: r.width });
   clearInterval(C.bmPoll); const c = C; let away = 0;
   c.bmPoll = setInterval(() => {
