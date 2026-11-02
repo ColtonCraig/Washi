@@ -184,8 +184,10 @@ function updateChrome() {
   bShield.querySelector('b').textContent = blocked > 99 ? '99+' : blocked || '';
   bShield.classList.toggle('off', S.prefs.blocking === 'off'); bShield.classList.toggle('n', blocked > 0);
   bShield.title = S.prefs.blocking === 'off' ? 'Blocking is off' : `${blocked} ads and trackers blocked on this page`;
-  const act = R.downloads.filter(d => d.state === 'progressing' || d.state === 'paused'), recent = R.downloads.some(d => Date.now() - d.at < 6 * 3600 * 1000);
-  bDl.hidden = !act.length && !recent;
+  const act = R.downloads.filter(d => d.state === 'progressing' || d.state === 'paused');
+  bDl.querySelector('b').textContent = act.length > 1 ? String(act.length) : '';
+  bDl.classList.toggle('new', !act.length && R.downloads.some(d => d.state === 'completed' && d.at > (S.prefs.dlSeen || 0)));
+  bDl.title = act.length ? `Downloading ${act.length === 1 ? act[0].name : act.length + ' files'}` : 'Downloads';
   const tot = act.reduce((a, d) => a + (d.total || 0), 0), got = act.reduce((a, d) => a + (d.received || 0), 0);
   bDl.style.setProperty('--p', act.length && tot ? (got / tot).toFixed(3) : act.length ? .15 : 0); bDl.classList.toggle('busy', !!act.length);
   bBack.disabled = !id || !R.canBack[id]; bFwd.disabled = !id || !R.canFwd[id]; bReload.disabled = !id;
@@ -540,6 +542,7 @@ function openFind() { if (!focusedId()) return; B.panel('find', null, {}); }
 /* history, archived tabs and downloads: paper sheets in the overlay */
 async function openSheet(kind, extra) {
   if (kind === 'bookmarks') { R.bmSheet = true; return B.overlayOpen({ mode: 'sheet', kind, items: S.bookmarks, folders: bmFolders(), favs: bmFavs(true), ...look(), ...(extra || {}) }); }
+  if (kind === 'downloads') { S.prefs.dlSeen = Date.now(); save(); updateChrome(); }
   const items = kind === 'history' ? S.history.slice(0, 3000) : kind === 'archive' ? S.archive : await B.dlList();
   B.overlayOpen({ mode: 'sheet', kind, items, ...look(), ...(extra || {}) });
 }
@@ -1071,7 +1074,24 @@ async function openBoost() {
   const r = bBoost.getBoundingClientRect();
   B.panel('boost', { x: Math.round(Math.max(8, r.right - 340)), y: Math.round(r.bottom + 2), w: 356, h: 414 }, { ...info, ...look() });
 }
-B.onDl(list => { R.downloads = list || []; if (S) updateChrome(); });
+/* a download starting flies into the downloads stamp as a paper slip; finishing stamps a check on it */
+let dlKnown = null;
+function dlFly(d) {
+  const r = bDl.getBoundingClientRect(), L = layout(), P = R.split && R.focus === 'b' && L.b ? L.b : L.a || L.stage;
+  const ext = (String(d.name || '').match(/\.([a-z0-9]{1,4})$/i) || [, ''])[1].toUpperCase();
+  B.fx({ type: 'dlfly', from: { x: P.x + P.w / 2, y: P.y + Math.min(P.h / 2, 260) }, to: { x: r.x + r.width / 2, y: r.y + r.height / 2 }, ext, ...look() });
+  clearTimeout(bDl._land); bDl._land = setTimeout(() => { bDl.classList.remove('land'); void bDl.offsetWidth; bDl.classList.add('land'); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 760);
+}
+function dlSeenList(list) {
+  const was = dlKnown; dlKnown = new Map(list.map(d => [d.id, d.state]));
+  if (!was) return;
+  for (const d of list) {
+    if (!was.has(d.id) && d.state === 'progressing') dlFly(d);
+    else if (d.state === 'completed' && was.get(d.id) && was.get(d.id) !== 'completed') { clearTimeout(bDl._done); bDl.classList.remove('done'); void bDl.offsetWidth; bDl.classList.add('done'); bDl._done = setTimeout(() => bDl.classList.remove('done'), 2600); }
+  }
+}
+bDl.addEventListener('animationend', e => { if (e.animationName === 'dlland') bDl.classList.remove('land'); });
+B.onDl(list => { R.downloads = list || []; dlSeenList(R.downloads); if (S) updateChrome(); });
 urlEl.addEventListener('click', () => openCmd('this'));
 for (const [el, w] of [[pa, 'a'], [pb, 'b']]) el.addEventListener('pointerdown', () => { if (R.split && R.focus !== w) { R.focus = w; commit(true); } });
 
@@ -1139,7 +1159,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   placePanes(); await commit(true); pushState();
   setTimeout(() => stage.classList.remove('instant'), 100);
   for (const [u, bg] of early.splice(0)) openTab(u, { bg });
-  try { R.downloads = await B.dlList(); updateChrome(); } catch {}
+  try { R.downloads = await B.dlList(); dlSeenList(R.downloads); updateChrome(); } catch {}
   setTimeout(archiveTabs, 15000);
   warmRecent();
   setTimeout(() => refreshLive(false), 4000);

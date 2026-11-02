@@ -67,3 +67,10 @@ html,body{background:transparent}
 .swc small{max-width:100%;color:var(--ink3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .swc:hover{background:rgb(var(--inkc) / .05)}
 .swc.on{background:var(--white);box-shadow:0 0 0 2px var(--tape),var(--cut-sm)}
+
+/* the download slip (overlay.js dlFly) */
+.dlslip{position:fixed;left:0;top:0;width:46px;height:58px;border-radius:3px;background:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 8px 22px rgb(var(--sh) / .28);display:grid;place-items:center;align-content:center;gap:2px;color:var(--ink2);pointer-events:none;z-index:50;will-change:transform,opacity}
+.dlslip::before{content:"";position:absolute;right:0;top:0;width:11px;height:11px;border-radius:0 3px 0 3px;background:linear-gradient(225deg,var(--desk) 50%,rgb(var(--inkc) / .16) 50%)}
+.dlslip .tp{position:absolute;top:-6px;left:50%;width:26px;height:11px;margin-left:-13px;background:var(--tape);opacity:.78;transform:rotate(-4deg)}
+.dlslip svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dlslip b{font:700 9px/1 var(--font-ui);letter-spacing:.04em;color:var(--tape)}

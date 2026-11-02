@@ -46,6 +46,21 @@ body{background:var(--desk)}
 .stamp.dl.busy .ring{opacity:1}
 .stamp.dl.busy svg.i{animation:dlbob 1s ease-in-out infinite alternate}
 @keyframes dlbob{to{transform:translateY(2px)}}
+/* how many are downloading: a little tape tab */
+.stamp.dl b{position:absolute;bottom:-5px;right:-7px;min-width:16px;height:16px;padding:0 4px;border-radius:3px;background:var(--tape);color:#fff;font:700 10px/16px var(--font-ui);text-align:center;transform:rotate(6deg);pointer-events:none}
+.stamp.dl b:empty{display:none}
+/* finished, not looked at yet */
+.stamp.dl.done::after{display:none}
+.stamp.dl.new::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--tape);box-shadow:0 0 0 2px var(--desk);pointer-events:none}
+/* the slip landing: a squash and a little wobble */
+.stamp.dl.land{animation:dlland .42s cubic-bezier(.3,1.6,.5,1)}
+@keyframes dlland{0%{transform:scale(1)}30%{transform:scale(1.22,.82) rotate(-4deg)}62%{transform:scale(.94,1.06) rotate(3deg)}100%{transform:none}}
+/* done: an ink check stamped onto it */
+.stamp.dl .ok{position:absolute;inset:3px;display:grid;place-items:center;border-radius:50%;background:#2f9e5b;color:#fff;opacity:0;transform:scale(1.7) rotate(-18deg);pointer-events:none}
+.stamp.dl .ok svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.stamp.dl.done .ok{animation:dlok 2.6s cubic-bezier(.2,.9,.3,1.2) forwards}
+@keyframes dlok{0%{opacity:0;transform:scale(1.7) rotate(-18deg)}12%{opacity:.95;transform:scale(.92) rotate(-8deg)}20%{transform:scale(1) rotate(-10deg)}80%{opacity:.95;transform:scale(1) rotate(-10deg)}100%{opacity:0;transform:scale(.8) rotate(-10deg)}}
+@media (prefers-reduced-motion:reduce){.stamp.dl.land,.stamp.dl.busy svg.i{animation:none}.stamp.dl.done .ok{animation-duration:2.6s;animation-timing-function:steps(1,end)}}
 .label.warn .lk{color:#ffb020}
 .pane.off .empty,.pane.has .empty{display:none}   /* nothing animates behind a page */
 .edge{transition:opacity .15s}.edge.away{opacity:0}

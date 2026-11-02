@@ -104,7 +104,7 @@ function onDownload(_, item) {
   item.on('updated', (__, st) => { d.state = st === 'interrupted' ? 'interrupted' : (item.isPaused() ? 'paused' : 'progressing'); d.received = item.getReceivedBytes(); d.total = item.getTotalBytes(); d.path = item.getSavePath(); const now = Date.now(); if (now - tick > 250) { tick = now; ui.downloads(); } });
   item.once('done', (__, st) => {
     d.state = st; d.received = item.getReceivedBytes(); d.path = item.getSavePath(); d.name = path.basename(d.path || d.name); live.delete(d.id); saveDl(); ui.downloads();
-    if (st === 'completed') { quarantine(d.path, d.url); ui.toast({ text: `Downloaded ${d.name}`, reveal: d.path }); }
+    if (st === 'completed') quarantine(d.path, d.url);            // the downloads stamp shows it finished (a check)
     else if (st === 'interrupted') ui.toast({ text: `Download failed: ${d.name}` });
   });
 }

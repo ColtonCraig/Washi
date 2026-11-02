@@ -144,7 +144,26 @@ function drawSwitch(f) {
   swEl.querySelectorAll('.swc').forEach(c => { const on = +c.dataset.i === f.index; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
   swEl.classList.add('on');
 }
+/* a download: a paper slip pops off the page and arcs into the downloads stamp */
+function dlFly(f) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (f.theme) applyTheme(f.theme, f.pal);
+  const el = document.createElement('div'); el.className = 'dlslip';
+  el.innerHTML = `<i class="tp"></i><svg viewBox="0 0 24 24"><use href="#i-download"/></svg>${f.ext ? `<b>${esc(f.ext)}</b>` : ''}`;
+  document.body.appendChild(el);
+  const a = f.from, z = f.to, c = { x: (a.x + z.x) / 2 + (z.x - a.x) * .18, y: Math.min(a.y, z.y) - 140 }, K = [], N = 14;
+  K.push({ offset: 0, transform: `translate(${a.x}px,${a.y}px) translate(-50%,-50%) scale(.4) rotate(-14deg)`, opacity: 0 });
+  K.push({ offset: .14, transform: `translate(${a.x}px,${a.y - 10}px) translate(-50%,-50%) scale(1.08) rotate(-6deg)`, opacity: 1 });
+  K.push({ offset: .24, transform: `translate(${a.x}px,${a.y - 4}px) translate(-50%,-50%) scale(1) rotate(-8deg)`, opacity: 1 });
+  for (let i = 1; i <= N; i++) {
+    const t = i / N, e = t * t * (3 - 2 * t), u = 1 - e;                       // eased along a curve that rises then drops into the stamp
+    const x = u * u * a.x + 2 * u * e * c.x + e * e * z.x, y = u * u * (a.y - 4) + 2 * u * e * c.y + e * e * z.y;
+    K.push({ offset: .24 + .76 * t, transform: `translate(${x}px,${y}px) translate(-50%,-50%) scale(${1 - .7 * e}) rotate(${-8 + 26 * e}deg)`, opacity: t > .92 ? 1 - (t - .92) / .08 : 1 });
+  }
+  el.animate(K, { duration: 780, easing: 'linear', fill: 'forwards' }).finished.then(() => el.remove(), () => el.remove());
+}
 B.onFx(f => {
+  if (f.type === 'dlfly') return dlFly(f);
   if (f.type === 'switch') return drawSwitch(f);
   if (f.type === 'switchEnd') { swEl.classList.remove('on'); swEl._key = ''; return; }
   if (f.type === 'toast') {

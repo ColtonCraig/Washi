@@ -45,8 +45,9 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   clipping audit of every screen; idle CPU fix
 
 ## Done and tested (0.15)
-- Chrome extensions: "Add to Chrome" works on the Chrome Web Store (Washi asks first, in plain words: what it can see and change); extensions update themselves; their buttons (icon, badge, popup) sit in the top bar; chrome.tabs/windows/action/contextMenus/cookies… work with Washi's tabs; they run in every space (also the ones with their own logins); Settings › Extensions lists them (icon, version, Options) and removes them. Built on electron-chrome-web-store + electron-chrome-extensions (MIT). Checked on GitHub's Mac with the real Chrome Web Store (Dark Reader)
+- Chrome extensions: "Add to Washi" works on the Chrome Web Store (Washi asks first, in plain words: what it can see and change); extensions update themselves; their buttons (icon, badge, popup) sit in the top bar; chrome.tabs/windows/action/contextMenus/cookies… work with Washi's tabs; they run in every space (also the ones with their own logins); Settings › Extensions lists them (icon, version, Options) and removes them. Built on electron-chrome-web-store + electron-chrome-extensions (MIT). Checked on GitHub's Mac with the real Chrome Web Store (Dark Reader)
 - Note: extensions' background workers need Chromium's sandbox (Electron issue 54322) — always on in Washi on a Mac; the Linux test machine runs without it, so those parts are tested on the Mac runner
+- Downloads: the stamp is always in the top bar; a download starting sends a paper slip (with its file type) arcing into it, the ring fills, a tape tab counts several at once, finishing stamps a check and leaves a dot until you look (no more "Downloaded" toast)
 - The hand cursor on everything clickable (not on greyed-out buttons)
 - "Your apps" icons appear by themselves (fetched once, kept on this Mac) instead of only after clicking around
 - A long pasted address no longer pushes the command bar off the side of the window

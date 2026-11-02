@@ -110,6 +110,11 @@ const srv = http.createServer((q, r) => {
     r.setHeader('content-type', 'application/atom+xml');
     return r.end(`<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Atom Log</title><entry><title type="html">First &lt;b&gt;post&lt;/b&gt;</title><link rel="alternate" href="/p3.html?a=1"/><id>urn:1</id></entry><entry><title>Second</title><link href="http://localhost:8765/p3.html?a=2"/><id>urn:2</id></entry></feed>`);
   }
+  if (q.url.startsWith('/dlslow')) {                    // a download that takes ~2.4s, so its progress can be seen
+    const name = (q.url.match(/name=([\w.-]+)/) || [, 'washi-slow.pdf'])[1], chunk = Buffer.alloc(16384, 97), n = 8;
+    r.setHeader('content-disposition', `attachment; filename="${name}"`); r.setHeader('content-type', 'application/octet-stream'); r.setHeader('content-length', String(chunk.length * n));
+    let i = 0; const t = setInterval(() => { r.write(chunk); if (++i === n) { clearInterval(t); r.end(); } }, 300); q.on('close', () => clearInterval(t)); return;
+  }
   if (q.url.startsWith('/updates/mode?')) { updMode = q.url.split('?')[1]; return r.end('ok'); }
   if (q.url.startsWith('/updates/')) {
     const fs = require('fs'), path = require('path'); let name = decodeURIComponent(q.url.slice(9).split('?')[0]);
