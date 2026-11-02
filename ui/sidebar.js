@@ -114,6 +114,9 @@ function apply(s) {
   $('#td').classList.toggle('on', !s.a);                                // the sun lights up while you're on Today
   syncList(pinsEl, s.pins, mkPin, upPin);
   syncList(tabsEl, PLAN.root, mkItem, upItem);
+  const loose = PLAN.root.filter(k => !k.startsWith('f:') && s.tabs[k] && !(s.pairs || []).some(p => p.includes(k))).length, td = $('#tidy');
+  if (td.hidden !== loose < 10) { td.hidden = loose < 10; if (!td.hidden && !document.documentElement.classList.contains('motion-off')) td.animate([{ transform: 'translateY(8px) rotate(-3deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.3,1.4,.5,1)' }); }
+  $('#tidyN').textContent = loose + ' tabs';
   syncList(spacesEl, [...s.spaces.map(x => x.id), '+'], k => {
     const e = document.createElement('button'); e.className = 'sp' + (k === '+' ? ' add' : ''); if (k === '+') { e.id = 'addSp'; e.title = 'New space (⇧⌘N)'; e.innerHTML = ic('plus', 16); } else e.innerHTML = '<span class="nm"></span>'; return e;
   }, (e, k) => {
@@ -170,6 +173,7 @@ sheet.addEventListener('click', e => {
   const x = e.target.closest('[data-x]');
   if (x) { e.stopPropagation(); const el = x.closest('.tab'); crumple(el); setTimeout(() => B.intent({ type: 'close', id: x.dataset.x }), 240); return; }
   if (e.target.closest('#nt')) return B.intent({ type: 'newtab' });
+  if (e.target.closest('#tidy')) return B.intent({ type: 'tidy' });
   const fp = e.target.closest('.fplus'); if (fp) return B.intent({ type: 'folderNew', id: fp.closest('.fold').dataset.fid });
   if (e.target.closest('#nf')) return B.intent({ type: 'nfMenu' });
   if (e.target.closest('#td,#sname')) return B.intent({ type: 'today' });

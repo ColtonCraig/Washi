@@ -165,3 +165,14 @@ body.float .pair{background:rgb(var(--inkc) / .04)}
 .grip:hover::after,body.sizing .grip::after{opacity:1}
 body.float .grip{display:none}
 body.sizing,body.sizing *{cursor:col-resize!important;user-select:none}
+
+/* Tidy up: offered once a space has 10+ loose tabs */
+.tidy{flex:none;display:flex;align-items:center;gap:8px;height:32px;margin:4px 2px 2px;padding:0 10px;border-radius:9px;color:var(--ink2);font:600 13px var(--font-ui);box-shadow:0 0 0 1px rgb(var(--inkc) / .1);background:rgb(var(--whc) / .35);transition:background .12s,color .12s}
+.tidy[hidden]{display:none}
+.tidy:hover{background:rgb(var(--whc) / .7);color:var(--ink)}
+.tidy:hover svg{animation:sweep .5s ease-in-out}
+.tidy span{flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tidy small{flex:none;font:500 11.5px var(--font-ui);color:var(--ink3)}
+@keyframes sweep{30%{transform:rotate(-16deg) translateX(-2px)}65%{transform:rotate(10deg) translateX(2px)}}
+html.motion-off .tidy:hover svg{animation:none}
+html.scrapbook .tidy{transform:rotate(-.6deg)}

@@ -145,6 +145,7 @@ function hook(t) {
   wc.on('did-navigate-in-page', (_, url, isMain) => { if (isMain) { send({ url, ...nav(wc) }); reader.isOn(wc).then(on => { if (!on) later(() => reader.able(wc).then(a => { if (!wc.isDestroyed()) send({ readable: a }); }), 700); }); } });
   wc.on('did-start-navigation', d => { if (d.isMainFrame && !d.isSameDocument) send({ reading: false, readable: false }); });
   wc.on('media-started-playing', () => { t.playing = true; send({ audible: true }); });
+  wc.on('did-navigate', (_, url) => { let h = ''; try { h = new URL(url).host.replace(/^www\./, ''); } catch {} const m = (P.muteSites || []).includes(h); if (m !== t.siteMuted) { t.siteMuted = m; wc.setAudioMuted(m); send({ muted: m }); } });   // "Mute this site" covers every tab on it
   wc.on('media-paused', () => { t.playing = false; send({ audible: false }); });
   wc.on('audio-state-changed', e => send({ audible: !!e.audible }));
   wc.on('found-in-page', (_, r) => { if (C.panelOpen === 'find' && activeTab() === t) toOverlay('find:result', { active: r.activeMatchOrdinal, total: r.matches }); });

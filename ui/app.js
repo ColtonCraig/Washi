@@ -206,7 +206,7 @@ function updateChrome() {
 const render = () => { updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
-const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, keys: p.keys || {} }); refreshKeys(); };
+const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
 
 /* ---------- native page views ---------- */
@@ -522,7 +522,7 @@ function openCmd(mode) {
   const A = (id, label, key) => ({ id, label, hint: keyHint(key || id) });
   const actions = [
     A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen closed tab'),
-    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'),
+    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
     A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('today', 'Show Today'), A('apps', 'Add apps to sign in to', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
@@ -536,7 +536,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -707,13 +707,17 @@ function tabMenu(id) {
     items.push({ label: 'Move to Folder', submenu: [...s.folders.map(f => ({ label: folderPath(s, f), id: 'fo:' + f.id })).sort((a, b) => a.label.localeCompare(b.label)), { label: 'New Folder…', id: 'fo:new' }] });
     if (s.folders.some(f => f.tabs.includes(id))) items.push({ label: 'Remove from Folder', id: 'fo:none' });
   }
+  const host = hostOf(S.tabs[id] && S.tabs[id].url || '');
+  if (host) items.push({ type: 'separator' }, { label: (S.prefs.muteSites || []).includes(host) ? `Unmute ${host}` : `Mute ${host}`, id: 'mutesite' });
   if (pairOf(id)) items.push({ type: 'separator' }, { label: 'Separate Split', id: 'sep' });
   items.push({ type: 'separator' }, { label: pinned ? 'Unload' : 'Close', id: 'close' });
   R.menuTab = id; B.popupMenu(items);
 }
 function spaceMenu(id) {
   R.menuSpace = id;
-  B.popupMenu([{ label: 'Rename…', id: 'sp:rename' }, { label: 'Color', submenu: KEYS.map(k => ({ label: PAL[k].n, id: 'sp:color:' + k })) }, { type: 'separator' }, { label: 'Delete Space', id: 'sp:del', enabled: S.spaces.length > 1 }]);
+  const loose = looseTabs(S.spaces.find(x => x.id === id)).length;
+  B.popupMenu([{ label: 'Tidy Up Tabs', id: 'sp:tidy', enabled: loose > 1 }, { label: `Clear ${loose || ''} Tab${loose === 1 ? '' : 's'} (keeps pins and folders)`.replace('  ', ' '), id: 'sp:clear', enabled: loose > 0 }, { type: 'separator' },
+    { label: 'Rename…', id: 'sp:rename' }, { label: 'Color', submenu: KEYS.map(k => ({ label: PAL[k].n, id: 'sp:color:' + k })) }, { type: 'separator' }, { label: 'Delete Space', id: 'sp:del', enabled: S.spaces.length > 1 }]);
 }
 B.onMenu(id => menuClick(id));
 function menuClick(id) {
@@ -741,6 +745,9 @@ function menuClick(id) {
   else if (id.startsWith('fo:')) moveToFolder(t, id.slice(3));
   else if (id === 'sp:rename') promptFor('Rename this space', S.spaces.find(x => x.id === s).name, n => { S.spaces.find(x => x.id === s).name = n.slice(0, 12); render(); save(); });
   else if (id === 'sp:del') deleteSpace(s);
+  else if (id === 'sp:tidy') tidy(s);
+  else if (id === 'sp:clear') clearTabs(s);
+  else if (id === 'mutesite') muteSite(hostOf(S.tabs[t] && S.tabs[t].url || ''));
   else if (id.startsWith('sp:color:')) { const sc = S.spaces.find(x => x.id === s); sc.h = +id.slice(9); sc.custom = null; if (s === S.cur) theme(); render(); save(); }
 }
 
@@ -765,6 +772,7 @@ B.onIntent(m => {
     case 'mute': B.tabAct(m.id, 'mute'); break;
     case 'warm': warm(m.id); break;
     case 'today': showToday(); break;
+    case 'tidy': tidy(S.cur); break;
     case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
     case 'folderLook': folderLook(m.id, m); break;
     case 'pinOrder': { const ids = Array.isArray(m.ids) ? m.ids.filter(id => S.pins.includes(id)) : []; if (ids.length === S.pins.length && new Set(ids).size === ids.length) { S.pins = ids; render(); save(); } break; }
@@ -804,6 +812,7 @@ B.onCmd(n => {
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
   if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader'].includes(n)) return runAction(n);
+  if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
@@ -1147,6 +1156,61 @@ function sleepTabs() {
   let n = 0;
   for (const id in R.live) if (R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < cutoff) { B.tabClose(id); R.live[id] = false; n++; }
   if (n) render();
+}
+/* ---------- Tidy up (like Dia): loose tabs from the same site go into a folder; ones you haven't opened in half a day
+   go to the Archive. Clear closes the loose tabs (pins and folders stay). Both can be undone from the toast. ---------- */
+/* the site a page belongs to (docs.google.com and drive.google.com are both google.com), and a nice name for it */
+const SLD2 = /\.(co|com|org|net|ac|gov|edu)\.[a-z]{2}$/;
+function siteOf(u) { const h = hostOf(u); if (!h || /^[\d.]+$|:/.test(h) || !h.includes('.')) return h; const p = h.split('.'); return p.slice(SLD2.test(h) ? -3 : -2).join('.'); }
+const NICE = { github: 'GitHub', gitlab: 'GitLab', youtube: 'YouTube', linkedin: 'LinkedIn', okta: 'Okta', atlassian: 'Atlassian', google: 'Google', microsoft: 'Microsoft', office: 'Office', apple: 'Apple', openai: 'OpenAI', chatgpt: 'ChatGPT', reddit: 'Reddit', figma: 'Figma', notion: 'Notion', slack: 'Slack', zoom: 'Zoom', amazon: 'Amazon', nytimes: 'NYTimes', icloud: 'iCloud' };
+const siteName = h => { const k = h.split('.')[0]; return (NICE[k] || k.charAt(0).toUpperCase() + k.slice(1)).slice(0, 20); };
+const looseTabs = s => !s ? [] : s.tabs.filter(k => !k.startsWith('f:') && S.tabs[k] && !pairOf(k));
+let tidySnap = null;
+function snapSpace(s) { const ids = new Set([...s.tabs, ...s.folders.flatMap(f => f.tabs)].filter(k => !k.startsWith('f:'))); return { sid: s.id, tabs: s.tabs.slice(), folders: JSON.parse(JSON.stringify(s.folders)), archive: S.archive.slice(), map: Object.fromEntries([...ids].filter(k => S.tabs[k]).map(k => [k, { ...S.tabs[k] }])) }; }
+function restoreSnap(snap) {
+  const s = S.spaces.find(x => x.id === snap.sid); if (!s) return;
+  for (const [k, t] of Object.entries(snap.map)) if (!S.tabs[k]) { S.tabs[k] = t; R.live[k] = false; }
+  s.tabs = snap.tabs.filter(k => k.startsWith('f:') ? snap.folders.some(f => 'f:' + f.id === k) : S.tabs[k]); s.folders = snap.folders; S.archive = snap.archive;
+  render(); save(); B.fx({ type: 'toast', text: 'Put back the way it was', short: true });
+}
+function tidy(sid) {
+  const s = S.spaces.find(x => x.id === (sid || S.cur)); if (!s) return;
+  const snap = snapSpace(s), shown = new Set([R.a, R.b]), cutoff = Date.now() - 12 * 3600000;
+  let archived = 0, grouped = 0; const made = [];
+  for (const id of looseTabs(s)) {
+    const t = S.tabs[id]; if (shown.has(id) || R.audible[id] || (t.seen || 0) > cutoff) continue;
+    S.archive.unshift({ url: t.url, title: t.title, fav: t.fav || null, space: s.id, at: Date.now() });
+    dropFromLists(id); delete S.tabs[id]; B.tabClose(id); delete R.live[id]; archived++;
+  }
+  const by = new Map(); for (const id of looseTabs(s)) { const h = siteOf(S.tabs[id].url); if (h) by.set(h, [...(by.get(h) || []), id]); }
+  for (const [h, ids] of by) {
+    if (ids.length < 3) continue;
+    const fid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const name = siteName(h);
+    s.folders.push({ id: fid, name, open: false, tabs: ids.slice() });
+    s.tabs = s.tabs.filter(k => !ids.includes(k)); s.tabs.splice(Math.min(...ids.map(k => snap.tabs.indexOf(k)).filter(i => i > -1), s.tabs.length), 0, 'f:' + fid);
+    grouped += ids.length; made.push(name);
+  }
+  if (!archived && !grouped) { B.fx({ type: 'toast', text: 'Already tidy ✨', short: true }); return; }
+  S.archive = S.archive.slice(0, 300); tidySnap = snap; render(); save();
+  const bits = [grouped ? `grouped ${grouped} into ${made.length === 1 ? made[0] : made.length + ' folders'}` : '', archived ? `archived ${archived} you hadn't opened today` : ''].filter(Boolean).join(', ');
+  B.fx({ type: 'toast', text: 'Tidied: ' + bits, action: { label: 'Undo', cmd: 'tidy:undo' } });
+}
+function clearTabs(sid) {
+  const s = S.spaces.find(x => x.id === (sid || S.cur)); if (!s) return;
+  const ids = looseTabs(s); if (!ids.length) return;
+  const snap = snapSpace(s);
+  for (const id of ids) { dropFromLists(id); delete S.tabs[id]; B.tabClose(id); delete R.live[id]; }
+  tidySnap = snap; render(); save();
+  if (s.id === S.cur && !focusedId()) showToday();
+  B.fx({ type: 'toast', text: `Cleared ${ids.length} tab${ids.length > 1 ? 's' : ''}`, action: { label: 'Undo', cmd: 'tidy:undo' } });
+}
+function muteSite(h) {
+  if (!h) return; const L = S.prefs.muteSites = (S.prefs.muteSites || []).slice(), i = L.indexOf(h), on = i < 0;
+  if (on) L.push(h); else L.splice(i, 1);
+  save(); syncMain();
+  for (const [id, t] of Object.entries(S.tabs)) if (hostOf(t.url) === h && R.live[id] && !!R.muted[id] !== on) B.tabAct(id, 'mute');
+  B.fx({ type: 'toast', text: on ? `${h} is muted in every tab` : `${h} can play sound again`, short: true });
 }
 function archiveTabs() {
   const hrs = +S.prefs.archive; if (!hrs) return;
