@@ -20,6 +20,7 @@ async function start({ profile, fresh = true, port = 9222, args = [], sandbox = 
   const ui = find('index.html'), sb = find('sidebar.html'), ov = find('overlay.html');
   for (const [n, p] of [['shell', ui], ['sidebar', sb], ['overlay', ov]]) p.on('pageerror', e => ok(false, `${n} threw: ${e.message}`));
   await sleep(1200);
+  for (let i = 0; i < 60 && !(await ui.evaluate(() => typeof openTab === 'function' && typeof B === 'object').catch(() => false)); i++) await sleep(250);   // slow machines: wait until Washi's window is ready
   const stop = async () => { try { await br.close(); } catch {} app.kill(); await sleep(600); };
   return { br, ui, sb, ov, pages, find, profile, stop, log: () => log };
 }
