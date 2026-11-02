@@ -1013,7 +1013,7 @@ function buildMenu() {
   const item = id => { const a = keys.ACTIONS.find(x => x.id === id), acc = keys.keyFor(id, P.keys); return { label: a.label, accelerator: acc || undefined, click: () => run(id) }; };
   const group = m => keys.ACTIONS.filter(a => a.menu === m).map(a => a.id);
   const tpl = [
-    { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { role: 'quit' }] },
+    { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { label: `Quit ${app.name}`, accelerator: 'CmdOrCtrl+Q', click: (_, __, ev) => askQuit(ev) }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
     { label: 'View', submenu: [item('today'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
@@ -1044,6 +1044,16 @@ app.whenReady().then(async () => {
   later(() => blocker.refresh(false), 60 * 1000);                     // fresh blocklists, quietly, a minute after start
   setInterval(() => blocker.refresh(false), 12 * 3600 * 1000);
 });
+/* ⌘Q twice to quit (a stray ⌘Q, meant for ⌘W or ⌘A, doesn't lose your windows). Quit from the menu with the mouse,
+   the Dock or a restart for an update quits straight away. Settings › Basics can turn it off. */
+let quitAskAt = 0;
+function askQuit(ev) {
+  const byKey = !!(ev && ev.triggeredByAccelerator);
+  if (!byKey || P.confirmQuit === false || !alive(C && C.win)) return app.quit();
+  if (Date.now() - quitAskAt < 1800) { quitAskAt = 0; return app.quit(); }
+  quitAskAt = Date.now();
+  showFx({ type: 'toast', text: `Press ${process.platform === 'darwin' ? '⌘Q' : 'Ctrl+Q'} again to quit`, short: true });
+}
 let quitting = false;
 app.on('before-quit', e => {
   appQuitting = true; if (HIST) { clearTimeout(histT); store.write('history.json', JSON.stringify(HIST)); }

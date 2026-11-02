@@ -113,7 +113,7 @@ const pairOf = id => S.pairs.find(p => p.includes(id)) || null;
 const dissolve = id => { S.pairs = S.pairs.filter(p => !p.includes(id)); };
 const spaceOf = id => S.spaces.find(s => spaceTabs(s).includes(id));
 const focusedId = () => (R.focus === 'b' && R.split && R.b) ? R.b : R.a;
-const label = t => t.title || hostOf(t.url) || 'New tab';
+const label = t => t.name || t.title || hostOf(t.url) || 'New tab';   // a name you gave it wins
 
 function toURL(v) {
   v = v.trim();
@@ -206,7 +206,7 @@ function updateChrome() {
 const render = () => { updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
-const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
+const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
 
 /* ---------- native page views ---------- */
@@ -700,7 +700,7 @@ B.onOverlayCancel(() => { R.promptCb = null; R.intoFolder = null; R.bmSheet = fa
 
 /* ---------- native menus, requested from the sidebar ---------- */
 function tabMenu(id) {
-  const pinned = S.pins.includes(id), s = spaceOf(id) || sp(), items = [{ label: pinned ? 'Unpin' : 'Pin', id: 'pin' }, { label: 'Duplicate', id: 'dup' }, { label: 'Copy Address', id: 'copy' }, { type: 'separator' }];
+  const pinned = S.pins.includes(id), s = spaceOf(id) || sp(), items = [{ label: pinned ? 'Unpin' : 'Pin', id: 'pin' }, { label: 'Rename…', id: 'rename' }, ...(S.tabs[id] && S.tabs[id].name ? [{ label: 'Use the Page\'s Title', id: 'unname' }] : []), { label: 'Duplicate', id: 'dup' }, { label: 'Copy Address', id: 'copy' }, { type: 'separator' }];
   if (!pinned) {
     const others = S.spaces.filter(x => x.id !== s.id);
     if (others.length) items.push({ label: 'Move to Space', submenu: others.map(x => ({ label: x.name, id: 'mv:' + x.id })) });
@@ -736,6 +736,8 @@ function menuClick(id) {
     else if (k === 'unlive') { delete f.live; for (const id of flat(sp(), f.tabs)) if (S.tabs[id]) { delete S.tabs[id].live; delete S.tabs[id].unread; } render(); save(); } }
   else if (id.startsWith('bm:')) bmMenuClick(id.slice(3));
   else if (id === 'nf:plain') newFolder(null); else if (id === 'nf:github') newLiveFolder('github'); else if (id === 'nf:feed') newLiveFolder('feed');
+  else if (id === 'rename') { const tb = S.tabs[t]; if (tb) promptFor(S.pins.includes(t) ? 'Rename this pin' : 'Rename this tab', tb.name || tb.title || '', n => { n = String(n || '').trim().slice(0, 80); tb.name = n && n !== tb.title ? n : undefined; render(); save(); }); }
+  else if (id === 'unname') { const tb = S.tabs[t]; if (tb) { delete tb.name; render(); save(); } }
   else if (id === 'dup') openTab(S.tabs[t].url);
   else if (id === 'copy') B.copy(S.tabs[t].url);
   else if (id === 'close') closeTab(t, { noFx: true });
@@ -773,6 +775,7 @@ B.onIntent(m => {
     case 'warm': warm(m.id); break;
     case 'today': showToday(); break;
     case 'tidy': tidy(S.cur); break;
+    case 'rename': if (S.tabs[m.id]) { R.menuTab = m.id; menuClick('rename'); } break;
     case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
     case 'folderLook': folderLook(m.id, m); break;
     case 'pinOrder': { const ids = Array.isArray(m.ids) ? m.ids.filter(id => S.pins.includes(id)) : []; if (ids.length === S.pins.length && new Set(ids).size === ids.length) { S.pins = ids; render(); save(); } break; }

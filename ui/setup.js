@@ -182,7 +182,8 @@ window.SETUP = (() => {
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
       field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
       field('Little scraps', toggle('Open links from other apps in a little scrap', 'A small window you can glance at and close, or keep with ⌘O. Needs Washi as your default browser.', () => P.scrapLinks, v => setPref({ scrapLinks: v })),
-        'Open one any time with ⌥⌘N.')];
+        'Open one any time with ⌥⌘N.'),
+      field('Quitting', toggle('Press ⌘Q twice to quit', 'So a stray ⌘Q doesn\'t close all your windows. Quitting from the menu with the mouse still quits right away.', () => P.confirmQuit !== false, v => setPref({ confirmQuit: v })))];
   }
   function secDefault() {
     const out = h('div', { class: 'dfb' });

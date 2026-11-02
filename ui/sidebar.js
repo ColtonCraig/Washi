@@ -195,6 +195,7 @@ sheet.addEventListener('contextmenu', e => {
 let drag = null;
 const keysOf = c => [...c.children].map(x => x.dataset.key).filter(Boolean);
 const flipItems = el => [...sheet.querySelectorAll('.tabs .tab,.tabs .pair,.tabs .fold')].filter(c => c !== el && !el.contains(c) && !(c.classList.contains('tab') && c.closest('.pair')));
+sheet.addEventListener('dblclick', e => { const t = e.target.closest('.tab .ttl,.tab .fav,.pin'); if (!t || justDragged) return; const el = t.closest('.tab,.pin'); if (el && el.dataset.id) B.intent({ type: 'rename', id: el.dataset.id }); });   // double-click a tab's name to rename it (like Arc)
 sheet.addEventListener('pointerdown', e => {
   if (e.button || e.target.closest('.x,.fplus,.snd,.fh .fi')) return;
   const fh = e.target.closest('.fh'), el = e.target.closest('.pair') || e.target.closest('.tab,.pin') || (fh && fh.parentElement); if (!el) return;
