@@ -5,9 +5,15 @@
    "We're having trouble launching your app"). */
 const { contextBridge } = require('electron');
 const fix = () => {
+  /* the engine finishes by freezing chrome; whichever of us runs first, fill the constants in just before that (or now, if it already ran) */
+  const C0 = globalThis.chrome;
+  if (!C0 || !C0.tabs || !Object.isFrozen(C0)) { const freeze = Object.freeze; Object.freeze = function (o) { if (o && o === globalThis.chrome) { Object.freeze = freeze; try { apply(); } catch {} } return freeze.call(this, o); }; }
+  apply();
+  function apply() {
   const c = globalThis.chrome; if (!c) return;
   const set = (o, k, v) => { try { if (o && o[k] === undefined) Object.defineProperty(o, k, { value: v, enumerable: true }); } catch {} };
   set(c.tabs, 'TAB_ID_NONE', -1); set(c.tabs, 'TAB_INDEX_NONE', -1); set(c.tabs, 'MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND', 2);
   set(c.windows, 'WINDOW_ID_NONE', -1); set(c.windows, 'WINDOW_ID_CURRENT', -2);
+  }
 };
 try { if (globalThis.location && location.protocol === 'chrome-extension:') contextBridge.executeInMainWorld({ func: fix }); } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }

@@ -42,10 +42,10 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok(!!pop, 'clicking the button opens its popup');
   if (pop) {
     let pw = null; for (let i = 0; i < 20; i++) { pw = await pop.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight })); if (pw.w > 100) break; await sleep(200); }
-    const bx = await ui.evaluate(() => { const r = document.getElementById('exts').shadowRoot.querySelector('button').getBoundingClientRect(); return { r: r.right + screenX, b: r.bottom + screenY }; });
+    const bx = await ui.evaluate(() => { const r = document.getElementById('exts').shadowRoot.querySelector('button').getBoundingClientRect(); return { r: r.right + screenX, b: r.bottom + screenY + (outerHeight - innerHeight) }; });
     console.log('  popup', JSON.stringify(pw), 'button', JSON.stringify(bx));
     const ww = await ui.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }));
-    ok(pw.w > 100 && pw.x >= ww.x && pw.x + pw.w <= ww.x + ww.w + 1 && pw.y >= ww.y, `its popup opens under the button, inside the window like Chrome's (popup ${JSON.stringify(pw)}, window ${JSON.stringify(ww)})`);
+    ok(pw.w > 100 && pw.w < 800 && Math.abs(pw.x + pw.w - bx.r) <= 8 && pw.y >= bx.b && pw.y <= bx.b + 20 && pw.x >= ww.x && pw.x + pw.w <= ww.x + ww.w + 1, `its popup opens under the button, inside the window like Chrome's (popup ${JSON.stringify(pw)}, window ${JSON.stringify(ww)})`);
   }
   if (pop) {
     await pop.waitForSelector('#t', { timeout: 5000 });

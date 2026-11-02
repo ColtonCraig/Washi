@@ -26,18 +26,23 @@ const typeKeys = s => K(s.split('').map(c => SHIFTED[c] ? `down:Shift_L tap:${SH
   const pane = () => ui.evaluate(() => layout().a);
   /* click something in the page with the real pointer */
   const pclick = async (p, sel) => { const a = await pane(); const r = await p.$eval(sel, e => { const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }); ptr(`move ${X0 + a.x + r.x} ${Y0 + a.y + r.y}`); await sleep(60); ptr('down'); ptr('up'); await sleep(350); };
+  /* click a field and make sure it really has focus before typing (the first test on a cold machine can be slow to take input) */
+  const pfocus = async (p, sel) => { for (let i = 0; i < 6; i++) { await pclick(p, sel); if (await p.evaluate(s => document.activeElement === document.querySelector(s), sel).catch(() => false)) return true; await sleep(400); } return false; };
   const vault = () => ov.evaluate(() => { const v = document.getElementById('vault'); return { cls: v.className, text: v.innerText }; });
   const card = async (want, ms = 5000) => { for (let t = 0; t < ms; t += 200) { const v = await vault(); if (v.cls.includes(want)) return v; await sleep(200); } return vault(); };
 
   // ---------- 1. sign in: wrong password first (no offer), then the right one ----------
   const pg = await open('http://localhost:8765/login.html');
   ok(await pg.evaluate(() => typeof window.washi === 'undefined' && typeof require === 'undefined' && typeof process === 'undefined'), 'the page itself gets no way into Washi');
-  await pclick(pg, '#u'); typeKeys('colton'); await pclick(pg, '#p'); typeKeys('wrong'); K('tap:Return'); await sleep(1500);
+  await sleep(800); await pfocus(pg, '#u'); typeKeys('colton'); await pfocus(pg, '#p'); typeKeys('wrong');
+  for (let i = 0; i < 10 && (await pg.$eval('#p', e => e.value).catch(() => '')) !== 'wrong'; i++) await sleep(150);
+  K('tap:Return'); await sleep(1500);
   for (let i = 0; i < 40 && !(await pg.$('#bad').catch(() => null)); i++) await sleep(200);   // the page comes back with an error (slow machines take longer)
   await sleep(1500);                                                                          // and Washi has had time to (not) offer
   ok(await pg.$('#bad') && !(await vault()).cls.includes('on'), 'a wrong password (the form comes back) isn\'t offered for saving');
-  await pclick(pg, '#u'); K('down:Control_L tap:a up:Control_L'); typeKeys('colton'); await pclick(pg, '#p'); typeKeys('hunter2'); await pclick(pg, '#go');
-  let v = await card('save');
+  await pfocus(pg, '#u'); K('down:Control_L tap:a up:Control_L'); typeKeys('colton'); await pfocus(pg, '#p'); typeKeys('hunter2'); await pclick(pg, '#go');
+  let v = await card('save', 8000);
+  if (!v.cls.includes('save')) console.log('  (page now: ' + (await tabPage('localhost:8765/').then(p => p && p.url()).catch(() => '?')) + ', vault: ' + v.cls + ')');
   ok(v.cls.includes('save') && /Save password for localhost:8765\?/.test(v.text) && await ov.evaluate(() => document.getElementById('vuser').value) === 'colton' && !/hunter2/.test(v.text), 'after signing in: "Save password for localhost:8765?" with the username, password as dots: ' + JSON.stringify(v.text.slice(0, 60)));
   await audit(ov, 'save card'); shot('pw-save');
   await ov.click('.vault [data-a=save]'); await sleep(500);

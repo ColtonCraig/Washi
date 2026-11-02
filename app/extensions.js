@@ -67,14 +67,17 @@ function fitPopup(p) {
   const measure = async tries => {
     if (p.isDestroyed() || w.isDestroyed()) return;
     const [cw, ch] = w.getSize();
-    if (cw > 40 && ch > 40 && !p.hidden) { placePopup(p); return; }          // Chromium sized it: just keep it on screen
+    if (cw > 40 && ch > 40 && !p.hidden && !p._washiGuess) { placePopup(p); return; }   // Chromium sized it: just keep it on screen
     try {
-      p.setSize({ width: 800, height: 600 }); await new Promise(r => setTimeout(r, 120));
+      if (p.hidden) { p.setSize({ width: 800, height: 600 }); await new Promise(r => setTimeout(r, 120)); }
       if (p.isDestroyed() || w.isDestroyed()) return;
-      const r = await w.webContents.executeJavaScript(`(() => { const b = document.body, d = document.documentElement; if (!b) return null; const br = b.getBoundingClientRect(), kids = [...b.children].map(e => e.getBoundingClientRect()); const right = Math.max(br.right, ...kids.map(k => k.right)), bottom = Math.max(br.bottom, ...kids.map(k => k.bottom)); const cs = getComputedStyle(b); return { width: Math.ceil(Math.min(right + parseFloat(cs.marginRight || 0), 800)), height: Math.ceil(Math.min(bottom + parseFloat(cs.marginBottom || 0), 600)) }; })()`);
+      const r = await Promise.race([new Promise(res => setTimeout(() => res('slow'), 700)), w.webContents.executeJavaScript(`(() => { const b = document.body, d = document.documentElement; if (!b) return null; const br = b.getBoundingClientRect(), kids = [...b.children].map(e => e.getBoundingClientRect()); const right = Math.max(br.right, ...kids.map(k => k.right)), bottom = Math.max(br.bottom, ...kids.map(k => k.bottom)); const cs = getComputedStyle(b); return { width: Math.ceil(Math.min(right + parseFloat(cs.marginRight || 0), 800)), height: Math.ceil(Math.min(bottom + parseFloat(cs.marginBottom || 0), 600)) }; })()`)]);
       if (p.isDestroyed()) return;
-      if (r && r.width > 30 && r.height > 20) { p.setSize(r); p.updatePosition(); placePopup(p); if (p.hidden) p.show(); }
-      else if (tries > 0) setTimeout(() => measure(tries - 1), 300);
+      if (r && r.width > 30 && r.height > 20) { p._washiGuess = false; p.setSize(r); p.updatePosition(); placePopup(p); if (p.hidden) p.show(); }
+      else {                                                  // a hidden window can be slow to answer: show it at a usual popup size under its button, then measure again
+        if (p.hidden || w.getSize()[0] >= 800) { p._washiGuess = true; p.setSize({ width: 360, height: 420 }); p.updatePosition(); placePopup(p); if (p.hidden) p.show(); }
+        if (tries > 0) setTimeout(() => measure(tries - 1), 300);
+      }
     } catch { if (tries > 0) setTimeout(() => measure(tries - 1), 300); }
   };
   w.webContents.once('did-finish-load', () => setTimeout(() => measure(4), 250));
