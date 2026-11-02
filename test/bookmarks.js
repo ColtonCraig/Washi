@@ -67,12 +67,12 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await ui.evaluate(() => bmStar()); await sleep(600); await ov.evaluate(() => document.querySelector('.bmf').requestSubmit()); await sleep(400);
   await ui.evaluate(() => bmNewFolder(null)); await sleep(700);
   ok(await ov.evaluate(() => document.querySelector('.panel.on.bmedit .ph b').textContent) === 'New folder', 'New Folder opens the editor straight away');
-  await ov.evaluate(() => { const f = document.querySelector('.bmf'); f.name.value = 'Work'; f.querySelector('.emo-b[data-e="💼"]').click(); f.querySelector('.col-b[data-c="#3d63ff"]').click(); });
+  await ov.evaluate(() => { const f = document.querySelector('.bmf'); f.name.value = 'Work'; f.querySelector('.emo-b[data-e="p:case"]').click(); f.querySelector('.col-b[data-c="#3d63ff"]').click(); });
   await audit(ov, 'folder editor');
   shot('bm-folder-editor');
   await ov.evaluate(() => document.querySelector('.bmf').requestSubmit()); await sleep(500);
   let F = await ui.evaluate(() => S.bookmarks.find(n => n.type === 'folder'));
-  ok(F && F.name === 'Work' && F.icon === '💼' && F.color === '#3d63ff', 'the folder keeps its name, emoji and colour');
+  ok(F && F.name === 'Work' && F.icon === 'p:case' && F.color === '#3d63ff', 'the folder keeps its name, paper icon and colour');
   // own emoji typed in
   await ui.evaluate(() => bmEdit(S.bookmarks.find(n => n.type === 'folder'))); await sleep(600);
   await ov.evaluate(() => { const i = document.querySelector('.emo-in'); i.value = '🦊x'; i.dispatchEvent(new Event('input')); document.querySelector('.bmf').requestSubmit(); }); await sleep(400);

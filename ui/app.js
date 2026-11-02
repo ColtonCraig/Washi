@@ -428,7 +428,7 @@ function folderMenu(fid) {
 function folderLook(fid, at) {
   const f = sp().folders.find(x => x.id === fid); if (!f || f.live) return;
   const x = at && Number.isFinite(at.x) ? Math.round(at.x) : (S.dock ? 16 : 24), y = at && Number.isFinite(at.y) ? Math.round(at.y + TOP) : TOP + 120;
-  const h = 336, top = Math.min(y, innerHeight - h - 8);
+  const h = 372, top = Math.min(y, innerHeight - h - 8);
   B.panel('flook', { x: Math.max(4, x - 6), y: Math.max(TOP, top), w: 300, h }, { id: fid, name: f.name, icon: f.icon || null, color: f.color || null, ...look() });
 }
 function removeFolder(fid, closeTabs) {
@@ -874,7 +874,7 @@ function bmOpen(n, bg) {
   openTab(n.url, { bg });
 }
 function bmFolderMenu(f) {
-  const items = f.kids.slice(0, 400).map(k => k.type === 'folder' ? { label: (k.icon ? k.icon + '  ' : '') + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id });
+  const items = f.kids.slice(0, 400).map(k => k.type === 'folder' ? { label: BL.menuIcon(k.icon) + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id });
   const n = f.kids.filter(k => k.type === 'bm').length;
   if (!items.length) return [{ label: 'Empty', id: 'bm:none', enabled: false }];
   if (n > 1) items.push({ type: 'separator' }, { label: `Open All ${n} in New Tabs`, id: 'bm:all:' + f.id });
@@ -884,7 +884,7 @@ function bmAct(m) {
   const x = m.id && bmFind(m.id), n = x && x.node, at = { x: m.x, y: m.y };
   if (m.act === 'open') return bmOpen(n, m.bg);
   if (m.act === 'folder' && n) return B.popupMenu(bmFolderMenu(n), at);
-  if (m.act === 'more') { const hid = S.bookmarks.filter(k => (m.ids || []).includes(k.id)); return B.popupMenu(hid.map(k => k.type === 'folder' ? { label: (k.icon ? k.icon + '  ' : '') + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id }), at); }
+  if (m.act === 'more') { const hid = S.bookmarks.filter(k => (m.ids || []).includes(k.id)); return B.popupMenu(hid.map(k => k.type === 'folder' ? { label: BL.menuIcon(k.icon) + k.name, submenu: bmFolderMenu(k) } : { label: (k.title || hostOf(k.url)).slice(0, 70), id: 'bm:o:' + k.id }), at); }
   if (m.act === 'move') return bmMove(m.id, m.target, m.into, m.before);
   if (m.act === 'ctx') {
     R.bmCtx = n ? n.id : null;

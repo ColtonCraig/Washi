@@ -81,12 +81,26 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok(await ov.evaluate(() => document.querySelector('.panel.on.flook, .panel.flook.on') !== null || document.getElementById('panel').classList.contains('flook')), 'clicking the folder\'s icon opens its icon-and-color card');
   ok(await ui.evaluate(() => sp().folders.find(f => f.id === 'fX').open), 'and doesn\'t fold the folder up');
   await audit(ov, 'folder icon-and-color card'); shot('pol-flook');
-  await ov.click('#femo .emo-b[data-e="🛠️"]'); await ov.click('#fcol .col-b[data-c="#3d63ff"]'); await sleep(400);
+  const picons = await ov.evaluate(() => [...document.querySelectorAll('.flook .emo-b.pib')].map(b => b.getAttribute('aria-label')));
+  ok(picons.length >= 18, `the card offers Washi's own paper icons (${picons.length}: ${picons.slice(0, 6).join(', ')}…)`);
+  ok(await ov.evaluate(() => { const o = document.querySelector('.flook .emo-b.own'); return o.hidden && getComputedStyle(o).display === 'none' && document.querySelectorAll('.flook .emo-b.on').length === 1; }), 'before you pick an emoji there\'s no empty slot, and just one icon is marked');
+  ok(await ov.evaluate(() => [...document.querySelectorAll('.flook .emo-b.pib svg use')].every(u => { const id = u.getAttribute('href').slice(1); return !!document.getElementById(id); })), 'every paper icon is drawn (none missing)');
+  await ov.click('.flook .emo-b[data-e="p:tools"]'); await ov.click('#fcol .col-b[data-c="#3d63ff"]'); await sleep(400);
   let f = await ui.evaluate(() => sp().folders.find(x => x.id === 'fX'));
-  ok(f.icon === '🛠️' && f.color === '#3d63ff', 'picking an emoji and a color sets them');
-  ok(await sb.evaluate(() => { const e = document.querySelector('.fold[data-fid="fX"]'); return e.classList.contains('tinted') && e.querySelector('.fi .emo').textContent === '🛠️' && getComputedStyle(e).getPropertyValue('--fc').trim() === '#3d63ff'; }), 'the sidebar shows the emoji and the folder takes the color, as you pick');
-  await ov.fill('#fein', '🚀'); await sleep(300);
-  ok((await ui.evaluate(() => sp().folders.find(x => x.id === 'fX').icon)) === '🚀', 'any emoji can be typed in');
+  ok(f.icon === 'p:tools' && f.color === '#3d63ff', 'picking a paper icon and a color sets them');
+  ok(await sb.evaluate(() => { const e = document.querySelector('.fold[data-fid="fX"]'); return e.classList.contains('tinted') && !!e.querySelector('.fi svg.pi use[href="#pi-tools"]') && getComputedStyle(e).getPropertyValue('--fc').trim() === '#3d63ff'; }), 'the sidebar folder shows the paper icon on its color');
+  // + : any emoji (the Mac emoji picker types into a hidden field; without one, the field shows)
+  await ov.click('.flook .emo-b.plus'); await sleep(400);
+  ok(await ov.evaluate(() => document.activeElement && document.activeElement.classList.contains('emo-in')), '+ gets ready for an emoji (the picker types into it)');
+  await ov.evaluate(() => { const i = document.querySelector('.flook .emo-in'); i.value = '🚀'; i.dispatchEvent(new Event('input')); }); await sleep(400);
+  ok((await ui.evaluate(() => sp().folders.find(x => x.id === 'fX').icon)) === '🚀' && await ov.evaluate(() => { const o = document.querySelector('.flook .emo-b.own'); return !o.hidden && o.textContent === '🚀' && o.classList.contains('on'); }), 'an emoji from the picker becomes the icon, and shows in the card');
+  ok(await sb.evaluate(() => document.querySelector('.fold[data-fid="fX"] .fi .emo').textContent === '🚀'), 'and in the sidebar');
+  for (const [nm, p] of [['dark', { mode: 'dark' }], ['dark Scrapbook', { wobble: true }], ['light Scrapbook', { mode: 'light' }]]) {
+    await ui.evaluate(p => B.setupMsg({ type: 'prefs', patch: p }), p); await sleep(500);
+    await ov.evaluate(t => { if (window.BL) window.BL.applyTheme(t.theme, t.pal); }, await ui.evaluate(() => look()));
+    await audit(ov, `folder card, ${nm}`); shot('pol-flook-' + nm.replace(/ /g, '-'));
+  }
+  await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { wobble: false } })); await sleep(300);
   await ov.click('#fdone'); await sleep(400);
   ok(!(await ov.evaluate(() => document.getElementById('panel').classList.contains('on'))), 'Done closes it');
   shot('pol-folder');

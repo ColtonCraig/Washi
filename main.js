@@ -225,6 +225,9 @@ function focusPage() {
   if (t) t.wc.focus(); else if (alive(C && C.win)) C.win.webContents.focus();
 }
 
+HANDLE('emoji:panel', () => {                      // the Mac's own emoji picker (types into whatever has focus)
+  try { if (app.isEmojiPanelSupported()) { app.showEmojiPanel(); return true; } } catch {} return false;
+});
 HANDLE('tab:ensure', (_, id, url, space) => { ensureTab(id, url, space); return true; });
 HANDLE('panes:set', (_, p, fp) => {
   const before = activeTab(); C.panes = p; if (p.space) C.curSpace = p.space; applyPanes();

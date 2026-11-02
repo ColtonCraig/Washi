@@ -86,23 +86,23 @@ window.PANELS = (() => {
     const d = data; let icon = d.icon || null, color = d.color || null;
     const send = () => B.setupMsg({ type: 'folderLook', id: d.id, icon, color });
     panel.innerHTML = `<div class="pop flook bmf" role="dialog" aria-label="Folder icon and color"><div class="ph"><span class="fprev" id="fpv"></span><b>${esc(d.name)}</b></div>
-      <div class="bsec"><h6>Icon</h6><div class="emos" id="femo">${['', ...BMK.EMOJI].map(e => `<button class="emo-b" data-e="${esc(e)}" title="${e ? esc(e) : 'Folder'}" aria-label="${e ? esc(e) : 'Plain folder'}">${e ? esc(e) : ic('folder', 15)}</button>`).join('')}<input class="emo-in" id="fein" maxlength="4" placeholder="+" aria-label="Any emoji" title="Type any emoji"></div></div>
+      <div class="bsec"><h6>Icon</h6>${BMK.iconGrid(icon || '')}</div>
       <div class="bsec"><h6>Color</h6><div class="cols" id="fcol">${BMK.COLORS.map(([c, n]) => `<button class="col-b" data-c="${c}" title="${n}" aria-label="${n}"><i style="background:${c || '#f2d58f'}"></i></button>`).join('')}</div></div>
       <div class="fbtns"><span class="fill"></span><button class="btn primary" id="fdone">Done</button></div></div>`;
     const $ = s => panel.querySelector(s);
     const mark = () => {
-      panel.querySelectorAll('.emo-b').forEach(b => b.classList.toggle('on', (b.dataset.e || null) === icon));
       panel.querySelectorAll('.col-b').forEach(b => b.classList.toggle('on', (b.dataset.c || null) === color));
-      $('#fpv').style.setProperty('--fc', color || '#f2d58f'); $('#fpv').innerHTML = icon ? `<span>${esc(icon)}</span>` : ic('folder', 16);
+      $('#fpv').style.setProperty('--fc', color || '#f2d58f'); $('#fpv').innerHTML = window.BL.fIcon(icon, 16);
     };
-    panel.querySelectorAll('.emo-b').forEach(b => b.onclick = () => { icon = b.dataset.e || null; $('#fein').value = ''; mark(); send(); });
+    BMK.wireIcons(panel, icon, v => { icon = v; mark(); send(); });
     panel.querySelectorAll('.col-b').forEach(b => b.onclick = () => { color = b.dataset.c || null; mark(); send(); });
-    $('#fein').addEventListener('input', e => { const v = [...e.target.value.trim()].slice(0, 2).join(''); if (v) { icon = v; mark(); send(); } });
-    $('#fein').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); B.overlayCancel(); } });
     $('#fdone').onclick = () => B.overlayCancel();
     mark();
   }
-  addEventListener('blur', () => { if (kind === 'shield' || kind === 'boost' || kind === 'flook') { kind = null; panel.classList.remove('on'); B.overlayCancel(); } });
+  addEventListener('blur', () => {
+    if (kind === 'flook') { const g = panel.querySelector('.emos'); if (g && Date.now() - (+g.dataset.picking || 0) < 120000) return; }   // the Mac emoji picker took focus: stay open
+    if (kind === 'shield' || kind === 'boost' || kind === 'flook') { kind = null; panel.classList.remove('on'); B.overlayCancel(); }
+  });
 
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);

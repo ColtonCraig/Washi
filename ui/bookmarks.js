@@ -5,12 +5,42 @@
    A bookmark is { id, type:'bm', url, title, fav? }; a folder is { id, type:'folder', name, icon (an emoji or null),
    color (a hex or null), kids:[…] }. The bar gets "light" items: folders carry n (how many inside) instead of kids. */
 window.BMK = (() => {
-  const { esc, ic, favHTML, hostOf } = window.BL;
+  const { esc, ic, favHTML, hostOf, fIcon, PAPER_ICONS } = window.BL;
   const COLORS = [['', 'Paper'], ['#ff6a3d', 'Tangerine'], ['#e89a00', 'Honey'], ['#1f9d57', 'Clover'], ['#0e9f9f', 'Lagoon'], ['#3d63ff', 'Blueberry'], ['#7b46ff', 'Grape'], ['#ff3d8d', 'Bubblegum']];
-  const EMOJI = ['📁', '⭐️', '💼', '🏠', '📚', '🛠️', '🎨', '🎵', '🎮', '🍳', '✈️', '💡', '📰', '💸', '❤️', '🌱'];
   const count = f => (f.kids || []).reduce((n, k) => n + (k.type === 'folder' ? count(k) : 1), 0);
   const okColor = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
-  const folderIcon = (n, size = 15) => n.icon ? `<span class="emo">${esc(n.icon)}</span>` : ic('folder', size);
+  const folderIcon = (n, size = 15) => fIcon(n.icon, size);
+  /* the icon grid: a plain paper folder, Washi's paper icons, and + for any emoji (the Mac's emoji picker) */
+  const isPaper = v => /^p:/.test(v || '');
+  function iconGrid(cur) {
+    const own = cur && !isPaper(cur) ? cur : '';
+    return `<div class="emos" role="radiogroup" aria-label="Icon">
+      <button type="button" class="emo-b${cur ? '' : ' on'}" data-e="" title="Plain folder" aria-label="Plain folder">${ic('folder', 16)}</button>
+      ${PAPER_ICONS.map(([k, nm]) => `<button type="button" class="emo-b pib${cur === 'p:' + k ? ' on' : ''}" data-e="p:${k}" title="${nm}" aria-label="${nm}">${fIcon('p:' + k, 18)}</button>`).join('')}
+      <button type="button" class="emo-b own" data-e="${esc(own)}"${own ? '' : ' hidden'} title="Your emoji" aria-label="Your emoji ${esc(own)}">${esc(own)}</button>
+      <button type="button" class="emo-b plus" title="Any emoji…" aria-label="Pick any emoji">${ic('plus', 15)}</button>
+      <input class="emo-in" tabindex="-1" aria-label="Emoji" autocomplete="off" spellcheck="false"></div>`;
+  }
+  /* wire a grid: onPick(icon or null). + opens the Mac emoji picker into a hidden field; elsewhere it shows the field */
+  function wireIcons(root, cur, onPick) {
+    const grid = root.querySelector('.emos'), inp = grid.querySelector('.emo-in'), own = grid.querySelector('.emo-b.own');
+    const mark = v => grid.querySelectorAll('.emo-b:not(.plus)').forEach(b => b.classList.toggle('on', (b.dataset.e || '') === (v || '') && !(b.classList.contains('own') && !b.dataset.e)));
+    grid.querySelectorAll('.emo-b:not(.plus)').forEach(b => b.onclick = () => { mark(b.dataset.e); onPick(b.dataset.e || null); });
+    grid.querySelector('.emo-b.plus').onclick = async () => {
+      inp.value = ''; inp.classList.remove('show'); inp.focus();
+      grid.dataset.picking = String(Date.now());
+      const ok = await (window.washi && window.washi.emojiPanel ? window.washi.emojiPanel() : false);
+      if (!ok) { inp.classList.add('show'); inp.placeholder = 'Type an emoji'; inp.focus(); }
+    };
+    inp.addEventListener('input', () => {
+      const v = [...new Intl.Segmenter().segment(inp.value.trim())].map(s => s.segment).find(g => /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(g)) || '';
+      if (!v) return;
+      own.dataset.e = v; own.textContent = v; own.hidden = false; own.setAttribute('aria-label', 'Your emoji ' + v);
+      inp.value = ''; inp.classList.remove('show'); mark(v); onPick(v);
+      own.animate([{ transform: 'scale(.4) rotate(-20deg)' }, { transform: 'scale(1.15) rotate(4deg)' }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.3,1.5,.5,1)' });
+    });
+    mark(cur || '');
+  }
 
   function chip(n, favs) {
     if (n.type === 'folder') {
@@ -93,10 +123,7 @@ window.BMK = (() => {
       <label class="fl"><span>Name</span><input class="txt" name="name" value="${esc(isF ? n.name : n.title || '')}" maxlength="${isF ? 40 : 200}" spellcheck="false" placeholder="${isF ? 'Folder name' : esc(hostOf(n.url))}"></label>
       ${isF ? '' : `<label class="fl"><span>Address</span><input class="txt" name="url" value="${esc(n.url)}" spellcheck="false" placeholder="https://"></label>`}
       <label class="fl"><span>In</span><select name="parent">${opts.map(([v, l]) => `<option value="${v}"${v === (d.parent || '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
-      ${isF ? `<div class="fl"><span>Icon</span><div class="emos">
-        <button type="button" class="emo-b${n.icon ? '' : ' on'}" data-e="" title="Paper folder" aria-label="Paper folder">${ic('folder', 16)}</button>
-        ${EMOJI.map(e => `<button type="button" class="emo-b${n.icon === e ? ' on' : ''}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}
-        <input class="emo-in" name="icon" value="${esc(n.icon && !EMOJI.includes(n.icon) ? n.icon : '')}" maxlength="8" placeholder="+" aria-label="Your own emoji" title="Type or paste any emoji (⌃⌘Space opens the emoji picker)"></div></div>
+      ${isF ? `<div class="fl"><span>Icon</span>${iconGrid(n.icon || '')}</div>
       <div class="fl"><span>Color</span><div class="cols">${COLORS.map(([c, nm]) => `<button type="button" class="col-b${(n.color || '') === c ? ' on' : ''}" data-c="${c}" title="${nm}" aria-label="${nm}"><i style="background:${c || 'var(--paper2,#efe6d2)'}"></i></button>`).join('')}</div></div>` : ''}
       <div class="fbtns"><button type="button" class="lnk warn" data-x="del">${isF ? 'Delete folder' : 'Remove'}</button><span class="fill"></span><button type="button" class="btn small plain" data-x="cancel">Cancel</button><button type="submit" class="btn small primary">Done</button></div>
     </form>`;
@@ -105,9 +132,7 @@ window.BMK = (() => {
     const f = el.querySelector('.bmf'), n = d.node, isF = n.type === 'folder';
     let icon = n.icon || '', color = n.color || '';
     const pick = (cls, attr, v) => f.querySelectorAll(cls).forEach(b => b.classList.toggle('on', b.dataset[attr] === v));
-    f.querySelectorAll('.emo-b').forEach(b => b.onclick = () => { icon = b.dataset.e; f.querySelector('.emo-in').value = ''; pick('.emo-b', 'e', icon); });
-    const ein = f.querySelector('.emo-in');
-    if (ein) ein.addEventListener('input', () => { const v = [...new Intl.Segmenter().segment(ein.value.trim())].map(s => s.segment)[0] || ''; if (v) { ein.value = v; icon = v; pick('.emo-b', 'e', '\u0000'); } else { icon = ''; pick('.emo-b', 'e', ''); } });
+    if (isF) wireIcons(f, icon, v => { icon = v || ''; });
     f.querySelectorAll('.col-b').forEach(b => b.onclick = () => { color = b.dataset.c; pick('.col-b', 'c', color); });
     f.addEventListener('submit', e => {
       e.preventDefault();
@@ -143,5 +168,5 @@ window.BMK = (() => {
         <span class="acts"><button data-a="edit">Edit</button><button class="ix" data-a="del" title="Remove" aria-label="Remove">${ic('close', 14)}</button></span></div>`;
     }
   }
-  return { draw, fit, form, wireForm, tree, dragSort, COLORS, EMOJI, count, okColor };
+  return { draw, fit, form, wireForm, tree, dragSort, COLORS, count, okColor, iconGrid, wireIcons };
 })();

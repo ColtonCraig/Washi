@@ -49,8 +49,17 @@
 .bmf .emo-b:hover{background:rgb(var(--inkc) / .07)}
 .bmf .emo-b.on{background:color-mix(in srgb,var(--tape) 16%,transparent);box-shadow:inset 0 0 0 1.5px var(--tape)}
 .bmf .emo-b:active{transform:scale(.9)}
-.bmf .emo-in{width:28px;height:28px;padding:0;border:0;border-radius:7px;text-align:center;font-size:15px;background:rgb(var(--inkc) / .05);color:var(--ink);outline:0}
-.bmf .emo-in:focus{box-shadow:inset 0 0 0 1.5px var(--tape)}
+/* + : the Mac emoji picker types into this field; it stays out of sight unless there's no picker */
+.bmf .emo-in{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.bmf .emo-in.show{position:static;width:96px;height:28px;padding:0 8px;opacity:1;pointer-events:auto;border-radius:7px;font:500 13px var(--font-ui);background:rgb(var(--inkc) / .05);color:var(--ink);outline:0;box-shadow:inset 0 0 0 1.5px var(--tape)}
+.bmf .emos{position:relative}
+.bmf .emo-b[hidden]{display:none}
+.bmf .emo-b.plus{color:var(--ink3);box-shadow:inset 0 0 0 1px rgb(var(--inkc) / .14)}
+.bmf .emo-b.plus:hover{color:var(--tape);box-shadow:inset 0 0 0 1.5px var(--tape)}
+.bmf .emo-b .pi{stroke-width:1.6}
+.bmf .emo-b.pib:hover .pi{transform:rotate(-8deg) scale(1.08);transition:transform .18s var(--ease)}
+.bmf .emo-b.pib .pi{transition:transform .18s var(--ease)}
+html.scrapbook .bmf .emo-b.pib .pi{transform:rotate(calc((var(--i,1) - 2) * 3deg))}
 .bmf .cols{display:flex;gap:5px}
 .bmf .col-b{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;transition:transform .12s var(--ease)}
 .bmf .col-b i{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgb(var(--inkc) / .15)}

@@ -83,7 +83,7 @@ function upFold(e, k) {
   const unread = f.live ? (PLAN.folders[f.id] || []).filter(k => ST.tabs[k] && ST.tabs[k].unread).length : 0, ct = e.querySelector(':scope>.fh .ct');
   ct.textContent = unread ? unread + ' new' : countIn(f.id); ct.classList.toggle('new', !!unread);
   const fi = e.querySelector(':scope>.fh .fi'), kind = f.live ? (f.live.error ? 'warn' : 'live') : f.icon ? 'emo:' + f.icon : 'folder';
-  if (fi.dataset.k !== kind) { fi.dataset.k = kind; fi.innerHTML = kind.startsWith('emo:') ? `<span class="emo">${esc(f.icon)}</span>` : ic(kind, 16); }
+  if (fi.dataset.k !== kind) { fi.dataset.k = kind; fi.innerHTML = kind.startsWith('emo:') ? window.BL.fIcon(f.icon, 16) : ic(kind, 16); }
   fi.title = f.live ? '' : 'Change icon and color';
   const col = !f.live && /^#[0-9a-f]{6}$/i.test(f.color || '') ? f.color : '';
   if (e.dataset.c !== col) { e.dataset.c = col; if (col) e.style.setProperty('--fc', col); else e.style.removeProperty('--fc'); e.classList.toggle('tinted', !!col); }

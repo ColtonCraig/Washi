@@ -78,7 +78,7 @@ window.TODAY = (() => {
     // bookmarks
     const bms = S.bookmarks.slice(0, 12);
     if (bms.length) out.cards.push(['bm', `<section class="tcard"><h2>Bookmarks</h2><div class="tbms">${bms.map(b => b.type === 'folder'
-      ? `<button class="tbm fold" data-a="bm" data-id="${b.id}" ${BMK.okColor(b.color) ? `style="--fc:${b.color}"` : ''}>${b.icon ? `<span class="emo">${esc(b.icon)}</span>` : ic('folder', 14)}<span>${esc(b.name)}</span></button>`
+      ? `<button class="tbm fold" data-a="bm" data-id="${b.id}" ${BMK.okColor(b.color) ? `style="--fc:${b.color}"` : ''}>${window.BL.fIcon(b.icon, 14)}<span>${esc(b.name)}</span></button>`
       : `<button class="tbm" data-a="bm" data-id="${b.id}">${favHTML({ title: b.title, url: b.url, fav: b.fav || null })}<span>${esc(b.title || hostOf(b.url))}</span></button>`).join('')}</div></section>`]);
     if (!out.cards.length && !out.signin) out.cards.push(['tips', `<section class="tcard ttips"><h2>A fresh desk</h2><p class="tnote">Press <kbd>⌘T</kbd> to open your first scrap, or add the apps you use every day.</p><button class="tbtn" data-a="apps">Add apps</button></section>`]);
     return out;
