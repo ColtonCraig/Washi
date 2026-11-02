@@ -63,8 +63,9 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-windows-'));
   K('down:Control_L down:Shift_L tap:w up:Shift_L up:Control_L'); await sleep(1500);
   const left = Object.keys(await byWid());
   ok(left.length === 1, 'closing a window with ⌘⇧W closes just that window: ' + left);
-  const wl = JSON.parse(fs.readFileSync(path.join(profile, 'windows.json'), 'utf8')).order;
-  ok(wl.length === 1 && !fs.existsSync(path.join(profile, `win-${left[0] === 'w1' ? w2id : 'w1'}.json`)), 'and it isn\'t restored next time');
+  const gone = `win-${left[0] === 'w1' ? w2id : 'w1'}.json`; let wl = [];
+  for (let i = 0; i < 30; i++) { try { wl = JSON.parse(fs.readFileSync(path.join(profile, 'windows.json'), 'utf8')).order; } catch {} if (wl.length === 1 && !fs.existsSync(path.join(profile, gone))) break; await sleep(200); }   // saving is batched
+  ok(wl.length === 1 && !fs.existsSync(path.join(profile, gone)), 'and it isn\'t restored next time');
   // 7. closing the last window keeps it
   K('down:Control_L down:Shift_L tap:w up:Shift_L up:Control_L'); await sleep(2500);
   try { await b.stop(); } catch {}
