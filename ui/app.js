@@ -851,13 +851,19 @@ const topbar = $('.topbar'); let hoverT = 0;
 let barAt = null;
 const showBar = () => B.bmHover({ items: light(), favs: bmFavs(), ...look() });
 topbar.addEventListener('pointermove', e => {
-  if (!S || barMode() !== 'hover' || !S.bookmarks.length) return;
+  if (!S || barMode() !== 'hover' || !S.bookmarks.length || window.__macDrag) return;   // (tests: on a Mac the drag area sends nothing)
   const edge = e.clientY >= TOP - 6, calm = !e.target.closest('#url,button,input,a');
   if (barAt && Math.hypot(e.clientX - barAt.x, e.clientY - barAt.y) < 4 && !edge) return;     // still resting: keep the timer
   barAt = { x: e.clientX, y: e.clientY }; clearTimeout(hoverT);
   if (edge || calm) hoverT = setTimeout(showBar, edge ? 80 : 240);
 });
 topbar.addEventListener('pointerleave', () => { clearTimeout(hoverT); barAt = null; });
+/* the bottom edge of the top bar: a strip that isn't part of the window-drag area, so it hears the pointer on a Mac */
+const bmEdge = $('#bmEdge'); let edgeT = 0;
+bmEdge.addEventListener('pointerenter', () => { if (!S || barMode() !== 'hover' || !S.bookmarks.length) return; clearTimeout(edgeT); edgeT = setTimeout(showBar, 70); });
+bmEdge.addEventListener('pointerleave', () => clearTimeout(edgeT));
+bmEdge.addEventListener('pointerdown', () => clearTimeout(edgeT));
+B.onBmEdge(() => { if (S && barMode() === 'hover' && S.bookmarks.length ) showBar(); });   // the pointer left the page upward
 topbar.addEventListener('pointerdown', () => { clearTimeout(hoverT); barAt = null; });
 B.onBmAct(m => { if (S) bmAct(m); });
 

@@ -84,3 +84,6 @@ body.bm-always .bmbar{display:flex}
 #exts::part(action):hover{background-color:rgb(var(--inkc) / .08)}
 #exts::part(action):active{transform:scale(.92)}
 #exts::part(badge){font:700 9px/1 var(--font-ui);border-radius:6px;box-shadow:0 0 0 1.5px var(--desk)}
+
+/* hover mode for the bookmarks bar: the bottom edge of the top bar listens for the pointer (not a drag area) */
+.bmedge{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:3;-webkit-app-region:no-drag}

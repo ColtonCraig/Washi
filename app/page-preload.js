@@ -10,6 +10,9 @@ const { ipcRenderer, contextBridge } = require('electron');
 if (window.top === window && /^https?:$/.test(location.protocol)) {
   const send = (t, d) => { try { ipcRenderer.send('washi-page', t, d || {}); } catch {} };
   /* a sign-in being sent: tell Washi before the page can move on (a message from a page that's already gone is dropped) */
+  /* the pointer leaving the page through its top edge: Washi brings down the bookmarks bar (on a Mac the top bar is
+     a window-drag area, which doesn't report the pointer) */
+  document.addEventListener('mouseout', e => { if (!e.relatedTarget && e.clientY <= 3 && e.clientX > 0 && e.clientX < innerWidth) send('topExit'); }, true);
   const sendNow = (t, d) => { try { ipcRenderer.sendSync('washi-page-now', t, d || {}); } catch {} };
 
   /* ---------- passkeys: ask Washi before the browser handles the request ---------- */

@@ -471,6 +471,15 @@ ON('bm:hover', (_, d) => {
     if ((away += 100) >= 300 || !c.win.isFocused()) bmHide();
   }, 100);
 });
+require('electron').ipcMain.on('washi-page', (e, type) => {   // a page says the pointer left it through the top (page-preload.js)
+  if (type !== 'topExit') return;
+  for (const c of W.values()) for (const t of c.tabs.values()) if (t.wc === e.sender && t.visible && alive(c.win) && c.win.isFocused()) {
+    /* only if the pointer settles just above the page (the lower part of the top bar), not up at the address label you're about to click */
+    clearTimeout(c.bmExitT);
+    c.bmExitT = later(() => { if (!alive(c.win) || !c.win.isFocused()) return; const p = screen.getCursorScreenPoint(), b = c.win.getContentBounds(), y = p.y - b.y, x = p.x - b.x; if (y >= TOP - 14 && y < TOP + 2 && x >= 0 && x < b.width) { C = c; toUI('bm:edge'); } }, 140);
+    return;
+  }
+});
 ON('bm:act', (_, m) => {                               // something was clicked on the strip: the shell knows the bookmarks
   if (!m || typeof m !== 'object') return;
   const r = C.bmShown ? bmStripRect() : { x: 0, y: 0 };
