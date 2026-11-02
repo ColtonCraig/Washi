@@ -1,15 +1,25 @@
+# Every test, split into four groups that run side by side (about 5 minutes instead of 15).
+# Not on the release branch: a release is only ever pushed from a main commit that already passed here.
 name: Test
 on:
   push:
+    branches-ignore: [release]
     paths-ignore: ['ios/**', '.github/workflows/ios.yml']
   pull_request:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4] }
+    name: test (${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install-deps chromium && npm i --no-save playwright@1 && sudo apt-get install -y xvfb imagemagick python3-xlib python3-pil
-      - run: sudo bash test/run.sh
+      - run: sudo SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: 'screenshots-${{ matrix.shard }}', path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }

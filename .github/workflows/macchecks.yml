@@ -26,4 +26,7 @@ jobs:
         run: |
           node test/server.js > server2.log 2>&1 &
           sleep 1
-          node test/mac-extensions.js
+          WASHI_SHOTS=$RUNNER_TEMP node test/mac-extensions.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: mac-screenshots, path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }

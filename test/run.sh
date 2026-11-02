@@ -13,7 +13,11 @@ trap 'kill $SRV 2>/dev/null' EXIT
 sleep 1
 RUN="node"; command -v xvfb-run >/dev/null && RUN="xvfb-run -a -s '-screen 0 ${SCREEN:-1440x900}x24' node"
 fail=0
-for t in ${@:-split layout folders audit preview features security onboarding arc switcher scrap boost live windows bookmarks bar passwords today polish extensions ua speed perf perf-heavy update}; do
+ALL="passwords bookmarks today features split polish preview audit live windows arc bar extensions scrap boost onboarding folders layout switcher security ua speed perf perf-heavy update"
+LIST="${@:-$ALL}"
+# SHARD=2/4 runs a quarter of the files (GitHub runs the four quarters side by side)
+if [ -n "${SHARD:-}" ]; then i=${SHARD%/*}; n=${SHARD#*/}; k=0; L=""; for t in $LIST; do [ $((k % n + 1)) = "$i" ] && L="$L $t"; k=$((k+1)); done; LIST=$L; fi
+for t in $LIST; do
   echo "== $t"
   eval $RUN test/$t.js 2>&1 | grep -v "agent-proxy\|redirector\|Allowed domains\|For details" | grep "nav\|comparison\|  [A-Z][a-z].*: \|PASS\|FAIL\|passed\|Error\|threw" || true
   [ "${PIPESTATUS[0]}" = "0" ] || fail=1

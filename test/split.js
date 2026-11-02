@@ -20,7 +20,8 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   const L = await ui.evaluate(() => layout());
   const left = [60 + L.a.x + L.a.w / 2, 57 + L.a.y + 300], right = [60 + L.stage.x + L.stage.w * .75, 57 + L.a.y + 300];
   for (let i = 0; i < 24 && color(...left) !== 'green'; i++) await sleep(250);    // slow machines take a moment to paint
-  ok(await color(...left) === 'green', 'p1 shows full-window (green)');
+  ok(await color(...left) === 'green', 'p1 shows full-window (green)' + (await color(...left) === 'green' ? '' : ': ' + JSON.stringify([await color(...left), await ui.evaluate(() => [R.a, R.b, R.split, S.tabs[R.a] && S.tabs[R.a].url, S.cur])])));
+  if (await color(...left) !== 'green') shot('split-p1');
   // ---------- SPLIT PAIR ----------
   await dragSb(`.tab[data-id="${ids[2]}"]`, 60 + L.stage.x + L.stage.w * .85, 57 + 450);
   let s = await st();

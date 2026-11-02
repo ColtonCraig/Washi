@@ -27,6 +27,13 @@ const DARK = 'eimadpbcbfnmbkopoojfekhnkhdbieeh';
   for (let i = 0; i < 40; i++) { btnText = await store.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Add to Chrome|Remove from Chrome|Switch to Chrome|Get Chrome/i.test(x.textContent)); return b ? b.textContent.trim() : ''; }).catch(() => ''); if (btnText) break; await sleep(500); }
   ok(/Add to Chrome/i.test(btnText), 'macOS: it offers "Add to Chrome" (it sees a Chrome it can install into): ' + btnText);
   shot('mac-store');
+  if (!/Add to Chrome/i.test(btnText)) {                         // say what the store showed instead, then stop here
+    const D = process.env.WASHI_SHOTS || os.tmpdir();
+    try { await store.screenshot({ path: path.join(D, 'mac-store-page.png') }); } catch {}
+    const info = await store.evaluate(() => ({ url: location.href, ua: navigator.userAgent, uad: navigator.userAgentData && navigator.userAgentData.brands, wsp: typeof (window.chrome && chrome.webstorePrivate), mgmt: typeof (window.chrome && chrome.management), buttons: [...document.querySelectorAll('button,[role=button]')].map(b => b.textContent.trim()).filter(Boolean).slice(0, 25), text: document.body.innerText.replace(/\s+/g, ' ').slice(0, 900) })).catch(e => ({ err: e.message }));
+    console.log('  store page: ' + JSON.stringify(info, null, 1));
+    await b.stop(); done(); return;
+  }
   await store.evaluate(() => [...document.querySelectorAll('button')].find(x => /Add to Chrome/i.test(x.textContent)).click());
   let L = null; for (let i = 0; i < 90; i++) { L = await ui.evaluate(() => B.setupAct({ type: 'ext:list' })); if (L.list.some(e => e.id === 'eimadpbcbfnmbkopoojfekhnkhdbieeh')) break; await sleep(1000); }
   ok(L.list.some(e => e.id === DARK), 'macOS: pressing it installs Dark Reader: ' + L.list.map(e => e.name).join(', '));
