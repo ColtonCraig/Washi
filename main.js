@@ -776,7 +776,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
-  if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reload(); return { ok: true }; }
+  if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reloadIgnoringCache(); return { ok: true }; }   // not from the cache: ads that loaded while blocking was off mustn't come back
   if (a.type === 'blocking:info') { const t = activeTab(); let host = ''; try { host = new URL(t.wc.getURL()).hostname.replace(/^www\./, ''); } catch {} return { host, count: t ? blocker.countFor(t.wc.id) : 0, allowed: blocker.allowedOn(host), mode: blocker.getMode() }; }
   return { ok: false };
 });

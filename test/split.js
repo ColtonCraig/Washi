@@ -19,6 +19,7 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   const ids = await ui.evaluate(() => Object.fromEntries(Object.entries(S.tabs).map(([k, v]) => [v.url.match(/p(\d)\.html/)?.[1] || 'x', k])));
   const L = await ui.evaluate(() => layout());
   const left = [60 + L.a.x + L.a.w / 2, 57 + L.a.y + 300], right = [60 + L.stage.x + L.stage.w * .75, 57 + L.a.y + 300];
+  for (let i = 0; i < 24 && color(...left) !== 'green'; i++) await sleep(250);    // slow machines take a moment to paint
   ok(await color(...left) === 'green', 'p1 shows full-window (green)');
   // ---------- SPLIT PAIR ----------
   await dragSb(`.tab[data-id="${ids[2]}"]`, 60 + L.stage.x + L.stage.w * .85, 57 + 450);
