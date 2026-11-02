@@ -47,6 +47,9 @@ function build() {
   const groups = [];
   const bg = v && BL.bang(v);
   if (v) groups.push({ rows: [{ r: { kind: 'url', value: v, mode: D.mode }, label: bg ? `Search ${bg.name} for “${bg.q}”` : looksLikeUrl(v) ? `Go to ${v}` : `Search for “${v}”`, icon: looksLikeUrl(v) ? 'globe' : 'search', hint: '↵' }] });
+  /* typing a command's name ("import from arc", "new little scrap") puts it right under the search row, above suggestions */
+  const strong = v && lv.length >= 3 && !bg ? D.actions.filter(a => { const l = a.label.toLowerCase(); return l.startsWith(lv) || (words.length >= 2 && has(a.label)); }).slice(0, 3) : [];
+  if (strong.length) groups.push({ name: 'actions', rows: strong.map(a => ({ r: { kind: 'action', id: a.id }, label: a.label, icon: 'bolt', hint: a.hint })) });
   if (v && !bg && !looksLikeUrl(v) && D.suggest) {
     if (suggFor !== v) { clearTimeout(suggT); suggT = setTimeout(async () => { const want = q.value.trim(); if (!D || want !== v) return; const r = await B.suggest(v, D.suggest).catch(() => []); if (!D || q.value.trim() !== v) return; sugg = r; suggFor = v; build(); }, 140); }
     const rows = (suggFor === v ? sugg : []).filter(x => x.toLowerCase() !== lv).slice(0, 4).map(x => ({ r: { kind: 'url', value: x, mode: D.mode }, label: x, icon: 'search', hint: 'search' }));
@@ -55,12 +58,12 @@ function build() {
   const tabs = D.tabs.filter(t => has(t.title + ' ' + t.url)).slice(0, 8).map(t => ({ r: { kind: 'tab', id: t.id }, label: t.title || hostOf(t.url), fav: t, hint: t.space }));
   const open = new Set(D.tabs.map(t => t.url));
   const hist = v ? D.history.filter(h => !open.has(h.url) && has((h.title || '') + ' ' + h.url)).slice(0, 5).map(h => ({ r: { kind: 'url', value: h.url, mode: D.mode }, label: h.title || hostOf(h.url), icon: 'clock', hint: hostOf(h.url) })) : [];
-  const acts = D.actions.filter(a => has(a.label)).slice(0, v ? 4 : 12).map(a => ({ r: { kind: 'action', id: a.id }, label: a.label, icon: 'bolt', hint: a.hint }));
+  const acts = D.actions.filter(a => has(a.label) && !strong.includes(a)).slice(0, v ? 4 : 12).map(a => ({ r: { kind: 'action', id: a.id }, label: a.label, icon: 'bolt', hint: a.hint }));
   groups.push({ name: 'open tabs', rows: tabs });
   if (v) groups.push({ name: 'history', rows: hist });
   if (v && D.bookmarks) { const seen = new Set(hist.map(x => x.r.value)); groups.splice(groups.length - 1, 0, { name: 'bookmarks', rows: D.bookmarks.filter(b => !open.has(b.url) && !seen.has(b.url) && has(b.title + ' ' + b.url + ' ' + b.path)).slice(0, 4).map(b => ({ r: { kind: 'url', value: b.url, mode: D.mode }, label: b.title, icon: 'star', hint: b.path })) }); }
   if (v && D.archive) groups.push({ name: 'archived', rows: D.archive.filter(a => !open.has(a.url) && has((a.title || '') + ' ' + a.url)).slice(0, 3).map(a => ({ r: { kind: 'url', value: a.url, mode: D.mode }, label: a.title || hostOf(a.url), icon: 'clock', hint: 'archived' })) });
-  groups.push({ name: 'actions', rows: acts });
+  groups.push({ name: strong.length ? 'more actions' : 'actions', rows: acts });
   render(groups);
 }
 function render(groups) {

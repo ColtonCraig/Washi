@@ -19,7 +19,8 @@ const BASE = 'http://localhost:8765';
   ok(await ov.evaluate(() => document.querySelector('.pop .big b')?.textContent) === String(blocked), 'shield popover shows the count for this site');
   await ov.click('#sitesw'); await sleep(2500);
   ok(await ui.evaluate(() => (R.blocked[R.a] || 0) === 0), 'turning blocking off for localhost: nothing blocked after reload');
-  await ui.click('#bShield'); await sleep(800); await ov.click('#sitesw'); await sleep(2500);
+  await ui.click('#bShield'); await sleep(800); await ov.click('#sitesw'); await sleep(1500);
+  for (let i = 0; i < 40 && (await ui.evaluate(() => R.blocked[R.a] || 0)) < 3; i++) await sleep(250);   // a slow network (CI) can take a moment
   ok(await ui.evaluate(() => (R.blocked[R.a] || 0) >= 3), 'turning it back on blocks again');
 
   // ---------- popup blocker ----------

@@ -9,7 +9,7 @@ const ok = (c, m) => { if (c) passes++; else fails++; console.log((c ? '  PASS '
 async function start({ profile, fresh = true, port = 9222, args = [] } = {}) {
   profile = profile || fs.mkdtempSync(path.join(os.tmpdir(), 'bloom-test-'));
   const app = spawn(path.join(__dirname, '..', 'node_modules', '.bin', 'electron'), ['--no-sandbox', '--no-proxy-server', `--remote-debugging-port=${port}`, path.join(__dirname, '..'), ...(fresh ? ['--fresh'] : []), ...args],
-    { env: { ...process.env, WASHI_PROFILE: profile }, stdio: ['ignore', 'ignore', 'pipe'] });
+    { env: { WASHI_TEST_SUGGEST: 'http://localhost:8765/sugg?q=%s', ...process.env, WASHI_PROFILE: profile }, stdio: ['ignore', 'ignore', 'pipe'] });
   let log = ''; app.stderr.on('data', d => { log += d; });
   let br;
   for (let i = 0; i < 60 && !br; i++) { await sleep(250); try { br = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch {} }

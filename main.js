@@ -807,6 +807,7 @@ HANDLE('dl:list', () => web.listDownloads());
 ON('dl:act', (_, id, a) => web.dlAct(id, a));
 HANDLE('suggest', async (_, q, tpl) => {                // search suggestions for the command bar
   if (!P.suggest || !q || q.length > 200 || !tpl) return [];
+  if (!app.isPackaged && process.env.WASHI_TEST_SUGGEST) tpl = process.env.WASHI_TEST_SUGGEST;   // tests: the local test server, never the real search engine
   try {
     const ctl = new AbortController(); const tm = later(() => ctl.abort(), 1500);
     const r = await session.defaultSession.fetch(tpl.replace('%s', encodeURIComponent(q)), { signal: ctl.signal, credentials: 'omit' }); clearTimeout(tm);
