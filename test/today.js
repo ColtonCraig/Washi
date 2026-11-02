@@ -48,7 +48,8 @@ const today = ui => ui.evaluate(() => ({ shown: !document.getElementById('today'
   await click(ov, '.bmrow:first-child .btn');
   await ov.waitForSelector('.bmi .okay', { timeout: 8000 });
   let msg = await ov.$eval('.bmi .okay', e => e.textContent);
-  ok(/Brought in 2 bookmarks in 2 folders and 2 pages of history from Safari/.test(msg), 'Safari\'s export comes in (bookmarks and history; failed loads and passwords left out): ' + msg);
+  ok(/Brought in 2 bookmarks in 2 folders, 2 pages of history and 1 password from Safari/.test(msg), 'Safari\'s export comes in: bookmarks, history (failed loads left out) and its passwords, straight into the encrypted store: ' + msg);
+  ok(await ui.evaluate(() => B.setupAct({ type: 'pw:list' }).then(l => l.logins.length === 1 && l.logins[0].host === 'x.example' && l.logins[0].user === 'u')), 'the password from Safari is saved (and Settings never sees it in plain text)');
   ok(await ui.evaluate(() => S.history.some(h => h.title === 'Safari visited one') && S.history.some(h => h.title === 'Safari work page') && !S.history.some(h => /broken/.test(h.url))), 'history from both Safari profiles joined Washi\'s');
   ok(await ui.evaluate(() => S.bookmarks.some(n => n.title === 'Safari fav')), 'Safari\'s Favorites joined the bookmarks bar');
   // ---------- 3. leaving the step adds the apps ----------

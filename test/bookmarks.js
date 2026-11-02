@@ -84,7 +84,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   // 3. always shown: a slim bar above the pages
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'always' } })); await sleep(900);
   let L = await ui.evaluate(() => ({ y: layout().stage.y, bar: !!document.querySelector('#bmbar .bm'), shown: getComputedStyle(document.getElementById('bmbar')).display }));
-  ok(L.y === 44 + 32 && L.bar && L.shown === 'flex', 'Always: the pages move down 32px and the bar is drawn above them');
+  ok(L.y === 44 + 40 && L.bar && L.shown === 'flex', 'Always: the pages move down 40px and the bar is drawn above them');
   const ph = await b.pages().find(p => p.url().endsWith('/p1.html')).evaluate(() => innerHeight);
   ok(Math.abs(ph - await ui.evaluate(() => layout().a.h)) <= 1, `the page itself is resized to fit under the bar (${ph}px)`);
   ok(await ui.evaluate(() => { const c = document.querySelector('#bmbar .bm.fold'); return c.querySelector('.emo').textContent === '🦊' && getComputedStyle(c).getPropertyValue('--fc').trim() === '#3d63ff'; }), 'the folder chip shows its emoji and colour');
@@ -234,7 +234,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await w2.evaluate(() => { S.bookmarks.push({ id: 'fromw2', type: 'bm', url: 'http://localhost:8765/p2.html?w2', title: 'From window two' }); bmChanged(); }); await sleep(2000);
   ok(await ui.evaluate(() => S.bookmarks.some(n => n.id === 'fromw2')), 'a bookmark added in one window shows up in the other');
   await w2.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'always' } })); await sleep(2000);
-  ok(await ui.evaluate(() => document.body.classList.contains('bm-always') && layout().stage.y === 76), 'switching the bar to Always in one window applies to both');
+  ok(await ui.evaluate(() => document.body.classList.contains('bm-always') && layout().stage.y === 84), 'switching the bar to Always in one window applies to both');
   await w2.evaluate(() => window.close && 0);
   const finalCount = await ui.evaluate(() => [...bmWalk()].length);
   await sleep(1500);
@@ -243,7 +243,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await b.stop(); b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(1500);
   ok(await ui.evaluate(() => [...bmWalk()].length) === finalCount, `bookmarks are still there after quitting (${finalCount})`);
   ok(await ui.evaluate(() => { const f = S.bookmarks.find(n => n.type === 'folder' && n.icon === '🦊'); return f && f.color === '#3d63ff'; }), 'folders keep their emoji and colour');
-  ok(await ui.evaluate(() => S.prefs.bookmarkBar === 'always' && layout().stage.y === 76 && !!document.querySelector('#bmbar .bm')), 'and the bar is still always shown');
+  ok(await ui.evaluate(() => S.prefs.bookmarkBar === 'always' && layout().stage.y === 84 && !!document.querySelector('#bmbar .bm')), 'and the bar is still always shown');
   await audit(ui, 'after restart');
   await b.stop(); done();
 })().catch(e => { console.error(e); process.exit(1); });
