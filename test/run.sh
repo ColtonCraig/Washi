@@ -8,6 +8,7 @@ if [ -w /etc/hosts ]; then
 fi
 export UPD_DIR=$(mktemp -d)
 [ -n "${WASHI_TEST_RELEASE_KEY:-}" ] || { export WASHI_TEST_RELEASE_KEY=$(mktemp); cp "$(dirname "$PWD")/washi-release-key.pem" "$WASHI_TEST_RELEASE_KEY" 2>/dev/null || true; }
+pkill -f '^node test/server.js' 2>/dev/null; sleep 0.3          # an old test server would serve the wrong files
 node test/server.js >/tmp/washi-test-server.log 2>&1 & SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 sleep 1
