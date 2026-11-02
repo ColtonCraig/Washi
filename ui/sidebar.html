@@ -9,11 +9,12 @@
 </head>
 <body class="docked">
 <div class="sheet grain" id="sheet">
-  <h1 class="sname" id="sname"></h1>
-  <div class="toprow"><button class="scrap" id="nt"><span class="plus">+</span><span class="hand">new scrap</span><kbd>⌘T</kbd></button><button class="nfold" id="nf" title="New folder" aria-label="New folder"><svg class="i" viewBox="0 0 24 24"><use href="#i-folder"/></svg></button></div>
+  <h1 class="sname" id="sname" role="button" tabindex="0" title="Today (⇧⌘H)"></h1>
+  <div class="toprow"><button class="scrap" id="nt"><span class="plus">+</span><span class="hand">new scrap</span><kbd>⌘T</kbd></button><button class="nfold" id="td" title="Today (⇧⌘H)" aria-label="Today"><svg class="i" viewBox="0 0 24 24"><use href="#i-sun"/></svg></button><button class="nfold" id="nf" title="New folder" aria-label="New folder"><svg class="i" viewBox="0 0 24 24"><use href="#i-folder"/></svg></button></div>
   <div class="pins" id="pins"></div>
   <div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div>
   <div class="spaces" id="spaces"></div>
+  <div class="grip" id="grip" title="Drag to resize · double-click to reset" aria-hidden="true"></div>
 </div>
 <script src="shared.js"></script>
 <script src="sidebar.js"></script>

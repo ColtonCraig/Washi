@@ -154,6 +154,7 @@ function setup(ses) {
   for (const ev of ['select-hid-device', 'select-serial-port', 'select-usb-device']) ses.on(ev, (e, _d, cb) => { e.preventDefault(); try { cb(''); } catch { try { cb(); } catch {} } });
   pipeline(ses);
   ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, 'page-preload.js') });   // saved passwords and passkeys (top frames only)
+  if (ses !== session.defaultSession) require('./extensions').enable(ses).catch(() => {});   // spaces with their own logins get your extensions too (the shared session is set up at start)
   ses.on('will-download', onDownload);
   blocker.cosmetics(require('electron').ipcMain, ses);
   return ses;

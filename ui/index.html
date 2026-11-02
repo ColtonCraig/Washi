@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Washi</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http: crx:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
 <link rel="stylesheet" href="paper.css">
 <link rel="stylesheet" href="shell.css">
 <link rel="stylesheet" href="bookmarks.css">
@@ -21,6 +21,7 @@
   <button class="stamp" id="bFwd" title="Forward (⌘])" aria-label="Forward"><svg class="i" viewBox="0 0 24 24"><use href="#i-fwd"/></svg></button>
   <button class="stamp" id="bReload" title="Reload (⌘R)" aria-label="Reload"><svg class="i" viewBox="0 0 24 24"><use href="#i-reload"/></svg></button>
   <button class="label" id="url" title="Go to address (⌘L)"><span class="lk" id="lk"></span><span class="txt" id="urlTxt"></span><i class="stitch"></i></button>
+  <browser-action-list id="exts" partition="washi-pages" alignment="bottom right" aria-label="Extensions"></browser-action-list>
   <button class="stamp star" id="bStar" title="Bookmark this page (⇧⌘D)" aria-label="Bookmark this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-star"/></svg></button>
   <button class="stamp boost" id="bBoost" title="Boost this site: colors, font, hide things" aria-label="Boost this site"><svg class="i" viewBox="0 0 24 24"><use href="#i-bolt"/></svg></button>
   <button class="stamp shield" id="bShield" title="Ads and trackers blocked" aria-label="Blocking on this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-shield"/></svg><b></b></button>

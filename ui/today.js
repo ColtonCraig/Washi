@@ -114,5 +114,5 @@ window.TODAY = (() => {
   });
   addEventListener('focus', () => { if (visible()) { checkStatus(); loadGitHub(); } });
   clearInterval(timer); timer = setInterval(() => { if (visible()) { key = ''; draw(); } }, 60e3);   // the greeting keeps up with the time of day
-  return { draw, refresh: () => { statusAt = 0; gh = null; key = ''; draw(); }, state: () => ({ status, gh }) };
+  return { draw, redraw: () => { key = ''; draw(); }, refresh: () => { statusAt = 0; gh = null; key = ''; draw(); }, state: () => ({ status, gh }) };
 })();

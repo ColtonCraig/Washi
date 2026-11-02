@@ -26,8 +26,9 @@ const keys = require('./app/shortcuts');
 const updater = require('./app/updater');
 const vault = require('./app/vault');
 const autofill = require('./app/autofill');
+const exts = require('./app/extensions');
 
-const EDGE = 12, TOP = 44, SB_W = 232, SB_PAD = 16;
+const EDGE = 12, TOP = 38, SB_W = 232, SB_PAD = 16;
 const P = { search: 'https://www.google.com/search?q=%s', mode: 'light', autoPip: true, keys: {}, suggest: true };
 let uiSes = null, recording = false;
 const alive = w => w && !w.isDestroyed();
@@ -96,6 +97,7 @@ blocker.onStats((id, n) => { for (const c of W.values()) { const t = [...c.tabs.
 const PIP_ON = `(() => { const v = [...document.querySelectorAll('video')].filter(v => !v.paused && v.readyState > 2 && !v.disablePictureInPicture).sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
   if (!v) return false; if (document.pictureInPictureElement === v) return true; return v.requestPictureInPicture().then(() => true, () => false); })()`;
 const PIP_OFF = `(document.pictureInPictureElement ? document.exitPictureInPicture().then(() => true, () => false) : false)`;
+const tabWaiters = [];
 function ensureTab(id, url, space) {
   if (C.tabs.has(id)) return C.tabs.get(id);
   const ses = web.pageSession(space);                        // the tab's own space decides its login jar (null = the shared one)
@@ -106,10 +108,12 @@ function ensureTab(id, url, space) {
   view.setVisible(false);
   C.win.contentView.addChildView(view, 0);
   hook(t);
+  exts.addTab(t.wc, C.win);
+  const w = tabWaiters.shift(); if (w) w(t);                      // an extension asked for this tab (chrome.tabs.create)
   if (url) go(t.wc, url).catch(() => {});
   return t;
 }
-const OK_SCHEMES = new Set(['http:', 'https:', 'about:', 'data:', 'blob:', 'file:', 'view-source:', 'chrome:', 'devtools:']);
+const OK_SCHEMES = new Set(['http:', 'https:', 'about:', 'data:', 'blob:', 'file:', 'view-source:', 'chrome:', 'devtools:', 'chrome-extension:']);
 const askedApps = new Map();
 async function external(url, wc) {             // links to other apps (mailto:, zoommtg:, slack:…) ask before leaving the browser
   let u; try { u = new URL(url); } catch { return; }
@@ -182,6 +186,7 @@ function hook(t) {
       const s = p.selectionText.trim().replace(/\s+/g, ' ');
       m.push({ role: 'copy' }, { label: `Search for “${s.length > 24 ? s.slice(0, 24) + '…' : s}”`, click: () => open(searchURL(s)) }, { type: 'separator' });
     }
+    const xm = exts.menuItems(wc, p); if (xm.length) m.push(...xm, { type: 'separator' });   // extensions' own menu items
     const n = nav(wc);
     m.push({ label: 'Back', enabled: n.canBack, click: () => goBack(wc) }, { label: 'Forward', enabled: n.canFwd, click: () => goFwd(wc) }, { label: 'Reload', click: () => reloadTab(t) }, { type: 'separator' },
       { label: 'Print…', click: () => wc.print({}, () => {}) }, { label: 'View Page Source', click: () => open('view-source:' + wc.getURL()) }, { label: 'Inspect Element', click: () => wc.inspectElement(p.x, p.y) });
@@ -225,6 +230,7 @@ HANDLE('panes:set', (_, p, fp) => {
   const before = activeTab(); C.panes = p; if (p.space) C.curSpace = p.space; applyPanes();
   if (C.panelOpen === 'find' && activeTab() !== before) closeOverlay();
   vaultFollow();
+  const at = activeTab(); if (at) exts.selectTab(at.wc);
   if (fp) focusPage(); return true;
 });
 ON('tab:close', (_, id) => {
@@ -310,11 +316,12 @@ ON('menu:popup', (_, tpl, pos) => {
 /* Floating: the sidebar view always sits in place, slid off to the left so only a thin strip of it stays over the
    desk edge. Moving a view never repaints it, so the sheet is ready to slide in the instant the pointer touches the strip.
    The C.sidebar page itself reports pointer enter/leave (no polling). */
-const SB_FW = SB_W + SB_PAD;
+const sbW = () => Math.max(200, Math.min(380, Math.round(C.sbW || SB_W)));   // you can drag the docked sidebar wider or narrower
+const sbFW = () => sbW() + SB_PAD;
 function sbBounds() {
   const [, h] = C.win.getContentSize(), H = Math.max(0, h - TOP);
-  if (C.sbDocked) return { x: 0, y: TOP, width: SB_W, height: H };
-  return { x: C.sbShown || C.sbClosing ? 0 : EDGE - SB_FW, y: TOP, width: SB_FW, height: H };
+  if (C.sbDocked) return { x: 0, y: TOP, width: sbW(), height: H };
+  return { x: C.sbShown || C.sbClosing ? 0 : EDGE - sbFW(), y: TOP, width: sbFW(), height: H };
 }
 function applySidebar() { if (!alive(C && C.win) || !C.sidebar) return; C.sidebar.setBounds(sbBounds()); C.sidebar.setVisible(true); }
 function sbMode() { toSide('sb:mode', { docked: C.sbDocked, open: C.sbDocked || C.sbShown }); toUI('cmd', C.sbShown ? 'edge:off' : 'edge:on'); }
@@ -329,15 +336,19 @@ function hideSb() {
 function pointerInSb() {
   if (!alive(C && C.win)) return false;
   const p = screen.getCursorScreenPoint(), b = C.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y;
-  return x >= -2 && x < SB_FW && y >= TOP - 4 && y < b.height + 2;
+  return x >= -2 && x < sbFW() && y >= TOP - 4 && y < b.height + 2;
 }
 function sbLeaveSoon(ms = 200) { clearTimeout(C.sbHideT); C.sbHideT = later(() => { if (!C.dragging && !C.menuOpen && !pointerInSb()) hideSb(); }, ms); }
 ON('sb:hover', (_, inside) => {
   if (C.sbDocked) return;
-  if (inside) { if (C.sbShown || C.win.isFocused()) showSb(); }
+  if (inside) { if (C.sbShown || C.win.isFocused()) showSb(); else sbMode(); }   // not now: the sidebar takes back its head start
   else if (C.sbShown && !C.dragging && !C.menuOpen) sbLeaveSoon();
 });
-HANDLE('side:set', (_, m) => { C.sbDocked = !!m.docked; C.sbShown = false; applySidebar(); sbMode(); return true; });
+HANDLE('side:set', (_, m) => {
+  if (Number.isFinite(m.w)) C.sbW = m.w;
+  if (m.resize) { applySidebar(); return true; }                     // just the width, while you drag its edge
+  C.sbDocked = !!m.docked; C.sbShown = false; applySidebar(); sbMode(); return true;
+});
 ON('sb:state', (_, s) => { C.lastLook = { theme: s.theme, pal: s.pal }; toSide('sb:state', s); });
 ON('sb:fx', (_, f) => toSide('sb:fx', f));
 ON('sb:ready', () => { sbMode(); toUI('sb:ready'); });
@@ -440,16 +451,19 @@ function pointerNearBar() {
 }
 function bmHide(keepOverlay) {
   if (!C.bmShown) return; C.bmShown = false; clearInterval(C.bmPoll); C.bmPoll = null;
-  if (!keepOverlay && !C.overlayOpen && !C.dragging && C.overlay) C.overlay.setVisible(false);
   toOverlay('bm:hide');
+  clearTimeout(C.bmOffT);
+  if (!keepOverlay && !C.overlayOpen && !C.dragging && C.overlay) C.bmOffT = later(() => { if (!C.bmShown && !C.overlayOpen && !C.dragging && Date.now() >= (C.toastUntil || 0)) C.overlay.setVisible(false); }, 130);   // after it slides away
 }
 ON('bm:hover', (_, d) => {
   if (!d) return bmHide();
   if (C.overlayOpen || C.dragging || !C.overlay || !alive(C.win) || !C.win.isFocused() || C.menuOpen) return;
   if (Date.now() < (C.toastUntil || 0)) return;                    // a toast (e.g. "Removed the bookmark · Undo") is using the overlay
-  clearTimeout(C.fxTimer);
-  C.bmShown = true; C.overlay.setBounds(rr(bmStripRect())); C.overlay.setVisible(true);
-  toOverlay('overlay:init', { mode: 'bmbar', ...d });
+  if (C.bmShown) return;                                           // already showing: never redraw it under the pointer
+  clearTimeout(C.fxTimer); clearTimeout(C.bmOffT);
+  const r = rr(bmStripRect());
+  C.bmShown = true; C.overlay.setBounds(r); C.overlay.setVisible(true);
+  toOverlay('overlay:init', { mode: 'bmbar', ...d, w: r.width });
   clearInterval(C.bmPoll); const c = C; let away = 0;
   c.bmPoll = setInterval(() => {
     C = c; if (!c.bmShown || !alive(c.win)) { clearInterval(c.bmPoll); return; }
@@ -464,6 +478,35 @@ ON('bm:act', (_, m) => {                               // something was clicked 
   toUI('bm:act', { ...m, x: (+m.x || 0) + r.x, y: (+m.y || 0) + r.y });
 });
 
+/* app icons for "Your apps": fetched once from the site (via Google's icon service) and kept on this Mac, so the tiles
+   show at once next time. Returned as data: URLs. */
+const ICONS = store.readJSON('app-icons.json', {});
+async function iconOf(x) {
+  const okURL = u => { try { const p = new URL(u); return p.protocol === 'https:' || (!app.isPackaged && /^http:\/\/(localhost|127\.0\.0\.1):/.test(u)); } catch { return false; } };
+  let host = ''; try { host = new URL(x.url).hostname; } catch { return null; }
+  const tries = [x.icon, 'https://www.google.com/s2/favicons?sz=64&domain=' + host, 'https://' + host + '/favicon.ico'].filter(u => u && okURL(u));
+  for (const u of tries) {
+    try {
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 4000);
+      const r = await session.defaultSession.fetch(u, { signal: ctl.signal, credentials: 'omit' }); clearTimeout(tm);
+      const type = (r.headers.get('content-type') || '').split(';')[0].trim();
+      if (!r.ok || !/^image\/(png|x-icon|vnd\.microsoft\.icon|svg\+xml|jpeg|webp|gif)$/.test(type)) continue;
+      const buf = Buffer.from(await r.arrayBuffer()); if (!buf.length || buf.length > 200000) continue;
+      return `data:${type === 'image/vnd.microsoft.icon' ? 'image/x-icon' : type};base64,${buf.toString('base64')}`;
+    } catch {}
+  }
+  return null;
+}
+async function appIcons(list) {
+  const out = {}, now = Date.now(); let changed = false;
+  await Promise.all(list.filter(x => x && typeof x.id === 'string' && typeof x.url === 'string').map(async x => {
+    const c = ICONS[x.id];
+    if (c && c.u === (x.icon || x.url) && now - c.at < 30 * 864e5) { out[x.id] = c.d; return; }
+    const d = await iconOf(x); if (d) { out[x.id] = d; ICONS[x.id] = { u: x.icon || x.url, d, at: now }; changed = true; } else if (c) out[x.id] = c.d;
+  }));
+  if (changed) store.writeSoon('app-icons.json', JSON.stringify(ICONS));
+  return out;
+}
 const pwUndo = new Map(), pkUndo = new Map();
 /* Touch ID before showing, copying or exporting a password (Macs without Touch ID: Washi's own Settings click is the check) */
 async function vaultGate(reason) {
@@ -471,6 +514,31 @@ async function vaultGate(reason) {
   if (process.platform !== 'darwin') return true;
   try { if (!systemPreferences.canPromptTouchID()) return true; await systemPreferences.promptTouchID(reason); return true; } catch { return false; }
 }
+/* ---------- Chrome extensions (app/extensions.js does the work; these connect it to Washi's tabs and windows) ---------- */
+const PERM_WORDS = { tabs: 'see your open tabs', history: 'read your browsing history', bookmarks: 'read and change your bookmarks', cookies: 'read and change cookies', downloads: 'manage your downloads', clipboardRead: 'read what you copy', clipboardWrite: 'change what you copy', geolocation: 'know your location', notifications: 'show notifications', nativeMessaging: 'talk to apps on your Mac', webRequest: 'see what pages load', declarativeNetRequest: 'block or change what pages load', management: 'manage your other extensions', privacy: 'change privacy settings', proxy: 'change how you connect to the internet', debugger: 'take control of pages' };
+exts.bind({
+  createTab: (d, ses) => new Promise(res => {
+    useMain(); const url = typeof d.url === 'string' && d.url ? d.url : 'about:blank';
+    const fn = t => { clearTimeout(tm); res([t.wc, C.win]); };
+    const tm = setTimeout(() => { const i = tabWaiters.indexOf(fn); if (i > -1) tabWaiters.splice(i, 1); res(null); }, 4000);
+    tabWaiters.push(fn); toUI('tab:openRequest', { url, bg: d.active === false }); void ses;
+  }),
+  selectTab: wc => { for (const c of W.values()) for (const [id, t] of c.tabs) if (t.wc === wc) { C = c; toUI('sb:intent', { type: 'select', id }); return; } },
+  removeTab: wc => { for (const c of W.values()) for (const [id, t] of c.tabs) if (t.wc === wc) { C = c; toUI('sb:intent', { type: 'close', id }); return; } },
+  confirm: async d => {
+    if (!app.isPackaged && process.env.WASHI_TEST_EXT_ALLOW === '1') return { action: 'allow' };   // tests can't press a native dialog's button
+    useMain(); const m = d.manifest || {}, name = d.localizedName || m.name || 'this extension';
+    const perms = [...new Set([...(m.permissions || []), ...(m.optional_permissions || [])].map(p => PERM_WORDS[p]).filter(Boolean))];
+    const hosts = [...(m.host_permissions || []), ...((m.content_scripts || []).flatMap(c => c.matches || []))];
+    const everywhere = hosts.some(h => /<all_urls>|^\*:\/\/\*\/|^https?:\/\/\*\//.test(h));
+    const what = [everywhere ? 'read and change everything on the websites you visit' : hosts.length ? `read and change pages on ${[...new Set(hosts.map(h => h.replace(/^\*?:?\/\/|\/\*$/g, '').replace(/^\*\./, '')))].slice(0, 3).join(', ')}` : null, ...perms].filter(Boolean);
+    const r = await dialog.showMessageBox(C.win, { type: 'question', message: `Add “${name}” to Washi?`, detail: (what.length ? 'It will be able to:\n• ' + what.join('\n• ') : 'It doesn\'t ask for any special access.') + '\n\nOnly add extensions you trust. You can remove it any time in Settings › Extensions.', buttons: ['Add Extension', 'Cancel'], defaultId: 0, cancelId: 1, icon: d.icon && !d.icon.isEmpty && !d.icon.isEmpty() ? d.icon : undefined });
+    if (r.response === 0) later(() => showFx({ type: 'toast', text: `Added ${name}`, short: true }), 600);
+    return { action: r.response === 0 ? 'allow' : 'deny' };
+  },
+  changed: () => { for (const c of W.values()) if (alive(c.win)) { c.win.webContents.send('ext:changed', exts.list()); if (c.overlay) c.overlay.webContents.send('ext:changed', exts.list()); } }
+});
+
 /* ---------- saved passwords and passkeys: the account menu, the "Save password?" card and the passkey card ----------
    app/autofill.js decides what to show; these place it in the overlay. The menu never takes focus from the page, so you
    can keep typing; the passkey card does (it's a question that needs an answer). */
@@ -736,6 +804,11 @@ HANDLE('setup:act', async (_, a) => {
       return { ok: true, name, ...got, pw };
     } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
   }
+  if (a.type === 'apps:icons') return appIcons(Array.isArray(a.list) ? a.list.slice(0, 40) : []);
+  if (a.type === 'ext:list') return { ok: exts.available(), list: exts.list() };
+  if (a.type === 'ext:remove') return { ok: await exts.remove(String(a.id || '')) };
+  if (a.type === 'ext:store') { toUI('tab:openRequest', { url: 'https://chromewebstore.google.com/' }); return { ok: true }; }
+  if (a.type === 'ext:options') { const e = exts.list().find(x => x.id === a.id); if (e && e.options) toUI('tab:openRequest', { url: e.options }); return { ok: !!(e && e.options) }; }
   /* ---------- Settings › Passwords ---------- */
   if (a.type === 'pw:list') return vault.list();
   if (a.type === 'pw:reveal' || a.type === 'pw:copy') {
@@ -833,7 +906,7 @@ function createWindow(wid, o = {}) {
   const c = newCtx(wid); W.set(wid, c); C = c; lastMain = c;
   c.win = new BrowserWindow({
     width: b.width || 1320, height: b.height || 840, x: b.x, y: b.y, minWidth: 760, minHeight: 500,
-    titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 15 }, backgroundColor: '#fdd3ae', show: false,
+    titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 12 }, backgroundColor: '#fdd3ae', show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, session: uiSes, spellcheck: false, additionalArguments: ['--washi-window=' + wid] }
   });
   pin(c, c.win); pin(c, c.win.webContents);
@@ -868,9 +941,10 @@ function setupUISession() {
   uiSes = session.fromPartition('washi-ui');
   proto.serve(uiSes);
   uiSes.webRequest.onBeforeRequest((d, cb) => {
-    if (/^(washi|data|devtools):/.test(d.url) || (d.resourceType === 'image' && /^https?:/.test(d.url))) return cb({});
+    if (/^(washi|data|devtools|crx):/.test(d.url) || (d.resourceType === 'image' && /^https?:/.test(d.url))) return cb({});
     cb({ cancel: true });
   });
+  exts.handleUI(uiSes);                                            // extension icons in the top bar (crx://)
   uiSes.setPermissionRequestHandler((_, __, cb) => cb(false));
   uiSes.setPermissionCheckHandler(() => false);
 }
@@ -935,6 +1009,7 @@ app.whenReady().then(async () => {
   setupUISession();
   autofill.init();
   web.setup(session.defaultSession);
+  await Promise.race([exts.enable(session.defaultSession, { primary: true }), new Promise(r => setTimeout(r, 2500))]);   // extensions load before the first pages
   blocker.init();
   if (process.platform === 'darwin' && !app.isPackaged) try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}   // the built app gets it from icon.icns
   buildMenu();

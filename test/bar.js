@@ -45,11 +45,11 @@ const NAMES = ['Apple', 'Google', 'Connections: Group Policies and Devices', 'Hu
   ptr('resize 1320 840'); await sleep(1000);
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'hover' } })); await sleep(900);
   await ui.evaluate(() => openTab('http://localhost:8765/p3.html')); await sleep(1500);
-  const urlr = await ui.evaluate(() => { const r = document.getElementById('url').getBoundingClientRect(); return { x: r.x + 40, y: r.y + r.height / 2 }; });
+  const urlr = await ui.evaluate(() => { const r = document.getElementById('url').getBoundingClientRect(); return { x: r.x + 40, y: 36 }; });   // the top bar's bottom edge, just above the page
   for (const [w, h] of [[1320, 840], [1040, 760], [780, 600]]) {
     ptr(`resize ${w} ${h}`); await sleep(1100);
     ptr(`move ${X0 + 400} ${Y0 + 500}`); await sleep(500);
-    const u = await ui.evaluate(() => { const r = document.getElementById('url').getBoundingClientRect(); return { x: r.x + 30, y: r.y + r.height / 2 }; });
+    const u = await ui.evaluate(() => { const r = document.getElementById('url').getBoundingClientRect(); return { x: r.x + 30, y: 36 }; });
     ptr(`move ${X0 + u.x} ${Y0 + u.y}`); await sleep(1000);
     ok(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on')), `on hover, ${w}px: resting on the top bar shows the bar`);
     await sleep(500);                                             // fonts, sizes settle
@@ -65,7 +65,7 @@ const NAMES = ['Apple', 'Google', 'Connections: Group Policies and Devices', 'Hu
   ptr(`move ${X0 + urlr.x} ${Y0 + urlr.y}`); await sleep(1000);
   const c = await ov.evaluate(() => { const r = document.querySelector('#bmin .bm[data-id="b1"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   const stage = await ui.evaluate(() => layout().stage);
-  ptr(`move ${X0 + stage.x + c.x} ${Y0 + 44 + c.y}`); await sleep(500);
+  ptr(`move ${X0 + stage.x + c.x} ${Y0 + 38 + c.y}`); await sleep(500);
   ok(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on')), 'pointer resting on a chip of the hover bar');
   await ui.evaluate(() => bmDelete('b1')); await sleep(300);              // what "Delete" in the chip's menu does
   for (const t of [300, 900, 1800]) {

@@ -6,9 +6,9 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let fails = 0, passes = 0;
 const ok = (c, m) => { if (c) passes++; else fails++; console.log((c ? '  PASS ' : '  FAIL ') + m); return c; };
-async function start({ profile, fresh = true, port = 9222, args = [] } = {}) {
+async function start({ profile, fresh = true, port = 9222, args = [], sandbox = false } = {}) {
   profile = profile || fs.mkdtempSync(path.join(os.tmpdir(), 'bloom-test-'));
-  const app = spawn(path.join(__dirname, '..', 'node_modules', '.bin', 'electron'), ['--no-sandbox', '--no-proxy-server', `--remote-debugging-port=${port}`, path.join(__dirname, '..'), ...(fresh ? ['--fresh'] : []), ...args],
+  const app = spawn(path.join(__dirname, '..', 'node_modules', '.bin', 'electron'), [...(sandbox ? [] : ['--no-sandbox']), '--no-proxy-server', `--remote-debugging-port=${port}`, path.join(__dirname, '..'), ...(fresh ? ['--fresh'] : []), ...args],
     { env: { WASHI_TEST_SUGGEST: 'http://localhost:8765/sugg?q=%s', ...process.env, WASHI_PROFILE: profile }, stdio: ['ignore', 'ignore', 'pipe'] });
   let log = ''; app.stderr.on('data', d => { log += d; });
   let br;

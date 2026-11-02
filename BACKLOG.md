@@ -44,6 +44,21 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.15)
+- Chrome extensions: "Add to Chrome" works on the Chrome Web Store (Washi asks first, in plain words: what it can see and change); extensions update themselves; their buttons (icon, badge, popup) sit in the top bar; chrome.tabs/windows/action/contextMenus/cookies… work with Washi's tabs; they run in every space (also the ones with their own logins); Settings › Extensions lists them (icon, version, Options) and removes them. Built on electron-chrome-web-store + electron-chrome-extensions (MIT). Checked on GitHub's Mac with the real Chrome Web Store (Dark Reader)
+- Note: extensions' background workers need Chromium's sandbox (Electron issue 54322) — always on in Washi on a Mac; the Linux test machine runs without it, so those parts are tested on the Mac runner
+- The hand cursor on everything clickable (not on greyed-out buttons)
+- "Your apps" icons appear by themselves (fetched once, kept on this Mac) instead of only after clicking around
+- A long pasted address no longer pushes the command bar off the side of the window
+- Bookmarks bar on hover: measured against its real width (the » is consistent), never redrawn under the pointer (no flicker), slides away instead of vanishing; opens when you rest on an empty part of the top bar or touch its bottom edge, not when you pass over the address field
+- Thinner top bar (38px, was 44)
+- Today any time: ☀ button in the sidebar (lights up while you're on it), or click the space's name; ⇧⌘H still works
+- Drag pins to reorder them
+- Sidebar folders: click the folder icon for an emoji and a color (or "Icon and Color…" in its menu)
+- Drag the docked sidebar's edge to resize it (200–380px, double-click to reset); kept after quitting
+- Floating sidebar starts sliding the moment the pointer touches the edge
+- Quick-start drawing matches the real sidebar (folder with chevron, emoji, count and tabs inside; the ☀ and folder buttons)
+
 ## Done and tested (0.14.1)
 - Turning blocking back on for a site reloads without the cache, so ads that loaded while it was off can't come back
 - Typing a command's name ("import from arc") puts it at the top of the command bar, above search suggestions

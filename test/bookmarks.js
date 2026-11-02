@@ -84,7 +84,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   // 3. always shown: a slim bar above the pages
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'always' } })); await sleep(900);
   let L = await ui.evaluate(() => ({ y: layout().stage.y, bar: !!document.querySelector('#bmbar .bm'), shown: getComputedStyle(document.getElementById('bmbar')).display }));
-  ok(L.y === 44 + 40 && L.bar && L.shown === 'flex', 'Always: the pages move down 40px and the bar is drawn above them');
+  ok(L.y === 38 + 40 && L.bar && L.shown === 'flex', 'Always: the pages move down 40px and the bar is drawn above them');
   const ph = await b.pages().find(p => p.url().endsWith('/p1.html')).evaluate(() => innerHeight);
   ok(Math.abs(ph - await ui.evaluate(() => layout().a.h)) <= 1, `the page itself is resized to fit under the bar (${ph}px)`);
   ok(await ui.evaluate(() => { const c = document.querySelector('#bmbar .bm.fold'); return c.querySelector('.emo').textContent === '🦊' && getComputedStyle(c).getPropertyValue('--fc').trim() === '#3d63ff'; }), 'the folder chip shows its emoji and colour');
@@ -122,9 +122,13 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
 
   // 4. on hover: point at the top bar with the real pointer
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'hover' } })); await sleep(900);
-  ok(await ui.evaluate(() => layout().stage.y) === 44, 'On hover: the pages go back up to the top bar');
-  const urlr = await ui.evaluate(() => { const r = document.getElementById('url').getBoundingClientRect(); return { x: r.x + 40, y: r.y + r.height / 2 }; });
-  ptr(`move ${X0 + urlr.x} ${Y0 + urlr.y}`); await sleep(120);
+  ok(await ui.evaluate(() => layout().stage.y) === 38, 'On hover: the pages go back up to the top bar');
+  const spots = await ui.evaluate(() => { const u = document.getElementById('url').getBoundingClientRect(), tb = document.querySelector('.topbar'); let empty = null; for (let x = u.left - 8; x > 100; x -= 6) { if (document.elementFromPoint(x, 19) === tb) { empty = { x, y: 19 }; break; } } return { url: { x: u.x + 40, y: u.y + u.height / 2 }, empty, edge: { x: u.x + 40, y: 36 } }; });
+  const urlr = spots.edge;
+  ptr(`move ${X0 + spots.url.x} ${Y0 + spots.url.y}`); await sleep(900);
+  ok(!(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on'))), 'resting on the address field doesn\'t open it (you\'re about to click it)');
+  ok(!!spots.empty, 'there is empty top bar to rest on');
+  ptr(`move ${X0 + spots.empty.x} ${Y0 + spots.empty.y}`); await sleep(120);
   ok(!(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on'))), 'passing over the top bar quickly doesn\'t pop it open');
   await sleep(600);
   ok(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on') && document.querySelectorAll('#bmin .bm:not(.more)').length === 2), 'resting on the top bar shows the bar over the page');
@@ -133,7 +137,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   // move down onto the strip: it stays; click the bookmark there
   const sc = await ov.evaluate(() => { const r = document.querySelector('#bmin .bm:not(.fold)').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   const stage = await ui.evaluate(() => layout().stage);
-  ptr(`move ${X0 + stage.x + sc.x} ${Y0 + 44 + sc.y}`); await sleep(700);
+  ptr(`move ${X0 + stage.x + sc.x} ${Y0 + 38 + sc.y}`); await sleep(700);
   ok(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on')), 'moving onto the strip keeps it open');
   await ui.evaluate(() => selectTab(spaceTabs(sp()).find(id => S.tabs[id].url.endsWith('/p2.html')))); await sleep(400);
   ptr('down'); ptr('up'); await sleep(900);
@@ -153,7 +157,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   // 5. hidden: nothing appears
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'hidden' } })); await sleep(500);
   ptr(`move ${X0 + urlr.x} ${Y0 + urlr.y}`); await sleep(900);
-  ok(!(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on'))) && await ui.evaluate(() => layout().stage.y) === 44, 'Hidden: no bar, even on hover');
+  ok(!(await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on'))) && await ui.evaluate(() => layout().stage.y) === 38, 'Hidden: no bar, even on hover');
   ptr(`move ${X0 + 700} ${Y0 + 500}`);
   // ⇧⌘B (real keys) flips to always and back
   K('down:Control_L down:Shift_L tap:b up:Shift_L up:Control_L'); await sleep(700);
@@ -234,7 +238,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await w2.evaluate(() => { S.bookmarks.push({ id: 'fromw2', type: 'bm', url: 'http://localhost:8765/p2.html?w2', title: 'From window two' }); bmChanged(); }); await sleep(2000);
   ok(await ui.evaluate(() => S.bookmarks.some(n => n.id === 'fromw2')), 'a bookmark added in one window shows up in the other');
   await w2.evaluate(() => B.setupMsg({ type: 'prefs', patch: { bookmarkBar: 'always' } })); await sleep(2000);
-  ok(await ui.evaluate(() => document.body.classList.contains('bm-always') && layout().stage.y === 84), 'switching the bar to Always in one window applies to both');
+  ok(await ui.evaluate(() => document.body.classList.contains('bm-always') && layout().stage.y === 78), 'switching the bar to Always in one window applies to both');
   await w2.evaluate(() => window.close && 0);
   const finalCount = await ui.evaluate(() => [...bmWalk()].length);
   await sleep(1500);
@@ -243,7 +247,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await b.stop(); b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(1500);
   ok(await ui.evaluate(() => [...bmWalk()].length) === finalCount, `bookmarks are still there after quitting (${finalCount})`);
   ok(await ui.evaluate(() => { const f = S.bookmarks.find(n => n.type === 'folder' && n.icon === '🦊'); return f && f.color === '#3d63ff'; }), 'folders keep their emoji and colour');
-  ok(await ui.evaluate(() => S.prefs.bookmarkBar === 'always' && layout().stage.y === 84 && !!document.querySelector('#bmbar .bm')), 'and the bar is still always shown');
+  ok(await ui.evaluate(() => S.prefs.bookmarkBar === 'always' && layout().stage.y === 78 && !!document.querySelector('#bmbar .bm')), 'and the bar is still always shown');
   await audit(ui, 'after restart');
   await b.stop(); done();
 })().catch(e => { console.error(e); process.exit(1); });

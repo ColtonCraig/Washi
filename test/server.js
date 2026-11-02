@@ -74,6 +74,10 @@ const srv = http.createServer((q, r) => {
   if (q.url.startsWith('/live/set?')) { const u = new URL(q.url, 'http://x'); if (u.searchParams.has('prs')) LIVE.prs = u.searchParams.get('prs').split(',').filter(Boolean).map(Number); if (u.searchParams.has('items')) LIVE.items = u.searchParams.get('items').split(',').filter(Boolean); return r.end('ok'); }
   if (q.url === '/live/auth') return r.end(LIVE.auth);
   /* pretend apps for test/today.js: /app/<name> is "signed out" until /app/<name>?login=1 sets its cookie */
+  if (q.url.startsWith('/icon/')) {                          // app icons for the setup test (a tiny red PNG), a little slow like the real web
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGP4z8DwnwGIGBgYGBgAGSkC/pbbXXsAAAAASUVORK5CYII=', 'base64');
+    return setTimeout(() => { r.setHeader('content-type', 'image/png'); r.end(png); }, 400);
+  }
   if (q.url.startsWith('/app/')) {
     const u = new URL(q.url, 'http://x'), name = u.pathname.split('/')[2] || 'x', ck = (q.headers.cookie || '').includes('test_' + name + '=');
     if (u.searchParams.get('login') === '1') r.setHeader('set-cookie', 'test_' + name + '=yes; Path=/; Max-Age=86400');

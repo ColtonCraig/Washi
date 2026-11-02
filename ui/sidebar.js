@@ -4,7 +4,7 @@ const { esc, ic, favHTML, rot, PAL, palOf, applyTheme } = window.BL;
 BL.setup();
 const $ = (s, r = document) => r.querySelector(s);
 const body = document.body, sheet = $('#sheet'), tabsEl = $('#tabs'), pinsEl = $('#pins'), spacesEl = $('#spaces'), sname = $('#sname');
-const SB_W = 232, TOP = 44;
+const SB_W = 232, TOP = 38;
 let ST = null, pending = null, dragging = false, hold = false, justDragged = false, swapping = true, slapId = null;
 setTimeout(() => { swapping = false; }, 900);
 let peekT;
@@ -82,8 +82,11 @@ function upFold(e, k) {
   e.querySelector('.fn').textContent = f.name;
   const unread = f.live ? (PLAN.folders[f.id] || []).filter(k => ST.tabs[k] && ST.tabs[k].unread).length : 0, ct = e.querySelector(':scope>.fh .ct');
   ct.textContent = unread ? unread + ' new' : countIn(f.id); ct.classList.toggle('new', !!unread);
-  const fi = e.querySelector(':scope>.fh .fi'), kind = f.live ? (f.live.error ? 'warn' : 'live') : 'folder';
-  if (fi.dataset.k !== kind) { fi.dataset.k = kind; fi.innerHTML = ic(kind, 16); }
+  const fi = e.querySelector(':scope>.fh .fi'), kind = f.live ? (f.live.error ? 'warn' : 'live') : f.icon ? 'emo:' + f.icon : 'folder';
+  if (fi.dataset.k !== kind) { fi.dataset.k = kind; fi.innerHTML = kind.startsWith('emo:') ? `<span class="emo">${esc(f.icon)}</span>` : ic(kind, 16); }
+  fi.title = f.live ? '' : 'Change icon and color';
+  const col = !f.live && /^#[0-9a-f]{6}$/i.test(f.color || '') ? f.color : '';
+  if (e.dataset.c !== col) { e.dataset.c = col; if (col) e.style.setProperty('--fc', col); else e.style.removeProperty('--fc'); e.classList.toggle('tinted', !!col); }
   e.classList.toggle('live', !!f.live); e.classList.toggle('err', !!(f.live && f.live.error));
   e.querySelector(':scope>.fh').title = f.live ? (f.live.error ? `Couldn't update: ${f.live.error}` : `Live: ${f.live.kind === 'github' ? 'pull requests in ' + f.live.src : f.live.src}`) : '';
   syncList(e.querySelector(':scope>.fb>.fl'), keys, mkItem, upItem);
@@ -108,6 +111,7 @@ function plan(s) {
 function apply(s) {
   ST = s; applyTheme(s.theme, s.pal); PLAN = plan(s);
   if (sname.textContent !== s.name) sname.textContent = s.name;
+  $('#td').classList.toggle('on', !s.a);                                // the sun lights up while you're on Today
   syncList(pinsEl, s.pins, mkPin, upPin);
   syncList(tabsEl, PLAN.root, mkItem, upItem);
   syncList(spacesEl, [...s.spaces.map(x => x.id), '+'], k => {
@@ -127,7 +131,14 @@ B.onSbMode(m => {
 });
 /* floating: tell the main process when the pointer arrives at the strip or leaves the sheet (no polling) */
 let inside = false;
-const hover = v => { if (v !== inside || v) { inside = v; if (body.classList.contains('float')) B.sbHover(v); } };
+const hover = v => {
+  if (v !== inside || v) {
+    inside = v;
+    if (!body.classList.contains('float')) return;
+    if (v && !body.classList.contains('open')) body.classList.add('open');   // start sliding now; Washi moves the view under it a moment later
+    B.sbHover(v);
+  }
+};
 document.documentElement.addEventListener('pointerenter', () => hover(true));
 addEventListener('pointermove', () => { if (!inside) hover(true); }, { passive: true });
 document.documentElement.addEventListener('pointerleave', () => { if (!dragging) hover(false); });
@@ -161,12 +172,14 @@ sheet.addEventListener('click', e => {
   if (e.target.closest('#nt')) return B.intent({ type: 'newtab' });
   const fp = e.target.closest('.fplus'); if (fp) return B.intent({ type: 'folderNew', id: fp.closest('.fold').dataset.fid });
   if (e.target.closest('#nf')) return B.intent({ type: 'nfMenu' });
+  if (e.target.closest('#td,#sname')) return B.intent({ type: 'today' });
+  const fi = e.target.closest('.fh .fi'); if (fi && !fi.closest('.fold').classList.contains('live')) { const r = fi.getBoundingClientRect(); return B.intent({ type: 'folderLook', id: fi.closest('.fold').dataset.fid, x: r.left, y: r.bottom + 6 }); }
   const fh = e.target.closest('.fh'); if (fh) return B.intent({ type: 'folder', id: fh.parentElement.dataset.fid });
   const t = e.target.closest('.tab,.pin'); if (t) { highlight(t.dataset.id); return B.intent({ type: 'select', id: t.dataset.id }); }
   const s = e.target.closest('.sp');
   if (s) { if (s.id === 'addSp') B.intent({ type: 'addspace' }); else B.intent({ type: 'space', id: s.dataset.id }); }
 });
-sheet.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('tab')) { e.preventDefault(); B.intent({ type: 'select', id: e.target.dataset.id }); } });
+sheet.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'sname') { e.preventDefault(); return B.intent({ type: 'today' }); } if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('tab')) { e.preventDefault(); B.intent({ type: 'select', id: e.target.dataset.id }); } });
 sheet.addEventListener('contextmenu', e => {
   e.preventDefault();
   const t = e.target.closest('.tab,.pin'); if (t) return B.intent({ type: 'ctxTab', id: t.dataset.id });
@@ -179,14 +192,18 @@ let drag = null;
 const keysOf = c => [...c.children].map(x => x.dataset.key).filter(Boolean);
 const flipItems = el => [...sheet.querySelectorAll('.tabs .tab,.tabs .pair,.tabs .fold')].filter(c => c !== el && !el.contains(c) && !(c.classList.contains('tab') && c.closest('.pair')));
 sheet.addEventListener('pointerdown', e => {
-  if (e.button || e.target.closest('.x,.fplus,.snd')) return;
+  if (e.button || e.target.closest('.x,.fplus,.snd,.fh .fi')) return;
   const fh = e.target.closest('.fh'), el = e.target.closest('.pair') || e.target.closest('.tab,.pin') || (fh && fh.parentElement); if (!el) return;
   const kind = el.classList.contains('pair') ? 'pair' : el.classList.contains('fold') ? 'fold' : el.classList.contains('pin') ? 'pin' : 'tab';
   drag = { el, kind, x0: e.clientX, y0: e.clientY, y: e.clientY, pid: e.pointerId, on: false, split: false, id: el.dataset.id, cont: null, idx: -1 };
 });
 function place(d) {
   const el = d.el, dy = d.y - d.y0;
-  if (d.kind === 'pin') { el.style.transform = `translate(${d.x - d.x0}px,${dy}px) rotate(4deg)`; return; }
+  if (d.kind === 'pin') {                                             // follows the pointer from wherever the grid has put it
+    const r = el.getBoundingClientRect(), nx = r.left - (d.tx || 0), ny = r.top - (d.ty || 0);
+    d.tx = d.sx + (d.x - d.x0) - nx; d.ty = d.sy + dy - ny;
+    el.style.transform = `translate(${d.tx}px,${d.ty}px) rotate(4deg) scale(1.06)`; return;
+  }
   const natural = el.getBoundingClientRect().top - (d.ty || 0);          // one read: where the row sits without our nudge
   d.ty = d.start + dy - natural;
   el.style.transform = `translateY(${d.ty}px) rotate(-1.5deg)`;
@@ -231,7 +248,7 @@ addEventListener('pointermove', e => {
   const el = d.el;
   if (!d.on) {
     if (Math.hypot(dx, dy) < 6) return;
-    d.on = true; dragging = true; d.start = el.getBoundingClientRect().top; el.classList.add('drag'); try { el.setPointerCapture(d.pid); } catch {}
+    d.on = true; dragging = true; const r0 = el.getBoundingClientRect(); d.start = r0.top; d.sx = r0.left; d.sy = r0.top; el.classList.add('drag'); try { el.setPointerCapture(d.pid); } catch {}
     if (d.kind === 'fold') el.classList.add('lifting');
     d.ty = 0;
     if (d.kind !== 'pin') { const edge = () => {                            // keeps scrolling while the pointer rests near the top or bottom
@@ -240,15 +257,26 @@ addEventListener('pointermove', e => {
       if (d.y < r.top + 28 && tabsEl.scrollTop > 0) { tabsEl.scrollTop -= 7; frame(d); } else if (d.y > r.bottom - 28 && tabsEl.scrollTop < tabsEl.scrollHeight - tabsEl.clientHeight) { tabsEl.scrollTop += 7; frame(d); }
     }; d.timer = requestAnimationFrame(edge); }
   }
-  const canSplit = d.kind === 'tab' || d.kind === 'pin', outside = canSplit && e.clientX > SB_W + 26;
+  const canSplit = d.kind === 'tab' || d.kind === 'pin', outside = canSplit && e.clientX > sheet.getBoundingClientRect().right + 18;
   if (outside && !d.split) {
-    d.split = true; el.style.transform = ''; el.classList.add('lifted');
+    d.split = true; el.style.transform = ''; d.tx = d.ty = 0; el.classList.add('lifted');
     const t = ST.tabs[d.id]; B.drag({ type: 'start', id: d.id, tab: { title: t.title, url: t.url, fav: t.fav }, pal: ST.pal, theme: ST.theme });
   } else if (!outside && d.split) { d.split = false; el.classList.remove('lifted'); B.drag({ type: 'end', id: d.id, x: 0, y: 0, cancel: true }); }
   if (d.split) { d.mx = e.clientX; d.my = e.clientY + TOP; if (!d.q) d.q = requestAnimationFrame(() => { d.q = 0; if (drag === d && d.split) B.drag({ type: 'move', x: d.mx, y: d.my }); }); return; }
   if (!d.raf) d.raf = requestAnimationFrame(() => { d.raf = 0; if (drag === d && !d.split) frame(d); });   // at most once per frame, however fast the mouse reports
 });
-function frame(d) { if (d.kind !== 'pin') reorder(d); place(d); }
+function frame(d) { if (d.kind !== 'pin') reorder(d); else reorderPin(d); place(d); }
+/* pins: drop on the left half of another pin to go before it, the right half to go after */
+function reorderPin(d) {
+  const el = d.el, kids = [...pinsEl.children].filter(c => c !== el);
+  const over = kids.find(c => { const r = c.getBoundingClientRect(); return d.x >= r.left - 3 && d.x < r.right + 3 && d.y >= r.top - 3 && d.y < r.bottom + 3; });
+  if (!over) return;
+  const r = over.getBoundingClientRect(), ref = d.x < r.left + r.width / 2 ? over : over.nextElementSibling;
+  if (ref === el || el.nextElementSibling === ref) return;
+  const first = new Map(kids.map(c => [c, c.getBoundingClientRect()]));
+  pinsEl.insertBefore(el, ref); d.moved = true;
+  for (const c of kids) { const a = first.get(c), b = c.getBoundingClientRect(), mx = a.left - b.left, my = a.top - b.top; if (Math.abs(mx) + Math.abs(my) > 1) c.animate([{ transform: `translate(${mx}px,${my}px)` }, { transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+}
 function sendLayout() {
   const folders = {}; for (const f of tabsEl.querySelectorAll('.fold')) folders[f.dataset.fid] = keysOf(f.querySelector(':scope>.fb>.fl'));
   B.intent({ type: 'layout', root: keysOf(tabsEl), folders });
@@ -263,12 +291,24 @@ function endDrag(e, cancel) {
   } else {
     const tr = el.style.transform; el.style.transform = ''; el.classList.remove('drag');
     el.animate([{ transform: tr }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    if (d.kind !== 'pin') sendLayout();
+    if (d.kind !== 'pin') sendLayout(); else if (d.moved) B.intent({ type: 'pinOrder', ids: [...pinsEl.children].map(c => c.dataset.id).filter(Boolean) });
   }
   justDragged = true; setTimeout(() => { justDragged = false; }, 0);
   hold = true; setTimeout(() => { hold = false; if (pending) { apply(pending); pending = null; } }, 180);   // let the app's answer to the drop arrive before redrawing
 }
 addEventListener('pointerup', e => endDrag(e, false));
 addEventListener('pointercancel', e => endDrag(e, true));
+
+/* resize the docked sidebar */
+const grip = $('#grip');
+let sz = null;
+grip.addEventListener('pointerdown', e => { if (e.button) return; e.preventDefault(); e.stopPropagation(); sz = { x0: e.screenX, w0: innerWidth, pid: e.pointerId, raf: 0, w: innerWidth }; grip.setPointerCapture(e.pointerId); body.classList.add('sizing'); });
+grip.addEventListener('pointermove', e => {
+  if (!sz) return; sz.w = Math.max(200, Math.min(380, Math.round(sz.w0 + e.screenX - sz.x0)));
+  if (!sz.raf) sz.raf = requestAnimationFrame(() => { if (!sz) return; sz.raf = 0; B.intent({ type: 'sbw', w: sz.w }); });
+});
+const sizeEnd = () => { if (!sz) return; const w = sz.w; cancelAnimationFrame(sz.raf); sz = null; body.classList.remove('sizing'); B.intent({ type: 'sbw', w, done: true }); };
+grip.addEventListener('pointerup', sizeEnd); grip.addEventListener('pointercancel', sizeEnd);
+grip.addEventListener('dblclick', () => B.intent({ type: 'sbw', w: SB_W, done: true }));
 
 B.sbReady();

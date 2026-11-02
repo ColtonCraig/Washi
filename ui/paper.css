@@ -21,7 +21,10 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font-family:var(--font-ui);font-size:14px;color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none;cursor:default}
-button{font:inherit;color:inherit;border:0;background:none;cursor:default;padding:0}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+/* the hand on everything you can click, like the rest of the Mac's web; not on disabled things */
+:is(a[href],[role=button],[role=tab],[role=switch],[role=option],summary,select,label:has(input[type=checkbox],input[type=radio]),.tab,.pin,.fh,.bm,.r,.sp,.chip,.tile,.vi,.tpin,.trow,.tbm,.tapp,.apptile,.sg){cursor:pointer}
+:is(button,[role=button]):disabled,[aria-disabled=true]{cursor:default}
 button:focus-visible,.tab:focus-visible,.r:focus-visible,input:focus-visible{outline:2px solid color-mix(in srgb,var(--tape) 70%,transparent);outline-offset:2px}
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 kbd{font:700 11px var(--font-ui);padding:2px 6px;border-radius:5px;background:var(--white);color:var(--ink2);box-shadow:0 0 0 1px rgb(var(--sh) / .16)}

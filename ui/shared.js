@@ -28,6 +28,7 @@
 <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></symbol>
 <symbol id="i-split" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/></symbol>
 <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
 <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/></symbol>
 <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
 <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
@@ -181,8 +182,12 @@
     { id: 'notion', n: 'Notes', url: base + '/app/notes', c: '#37352f', work: true, cookie: { url: base, name: 'test_notes' } },
     { id: 'github', n: 'Code', url: base + '/app/code', c: '#24292f', work: true, cookie: { url: base, name: 'test_code' } },
     { id: 'linear', n: 'Tasks', url: base + '/app/tasks', c: '#5e6ad2', work: true, login: /\/app\/tasks\/login/ }
-  ];
+  ].map(a => ({ ...a, icon: base + '/icon/' + a.id + '.png' }));
   const appsFor = info => info && info.appsTest ? TEST_APPS(info.appsTest) : APPS;
-  const appIcon = a => a.icon || (/^https:/.test(a.url) ? 'https://www.google.com/s2/favicons?sz=64&domain=' + new URL(a.url).hostname : null);
-  window.BL = { appsFor, appIcon, PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
+  /* app icons: fetched once by the main process and kept on this Mac (BL.icons, id -> data: URL); until then, the web address */
+  const icons = {};
+  const appIcon = a => icons[a.id] || a.icon || (/^https:/.test(a.url) ? 'https://www.google.com/s2/favicons?sz=64&domain=' + new URL(a.url).hostname : null);
+  const loadIcons = (B, list) => B.setupAct({ type: 'apps:icons', list: list.map(a => ({ id: a.id, url: a.url, icon: a.icon || null })) }).then(r => { if (r && typeof r === 'object') for (const k in r) if (typeof r[k] === 'string' && r[k].startsWith('data:image/')) icons[k] = r[k]; return icons; }).catch(() => icons);
+  try { for (const w of ['500', '600', '700']) document.fonts.load(`${w} 14px Figtree`); document.fonts.load('700 20px Caveat'); } catch {}
+  window.BL = { appsFor, appIcon, icons, loadIcons, PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
 })();

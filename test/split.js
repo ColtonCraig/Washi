@@ -11,7 +11,7 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   await skipSetup(bb);
   const st = () => ui.evaluate(() => ({ split: R.split, a: R.a, b: R.b, focus: R.focus, pairs: S.pairs, root: sp().tabs, folders: sp().folders.map(f => ({ id: f.id, tabs: f.tabs, open: f.open })) }));
   const rectOf = sel => sb.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
-  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 44 + r.y + r.h * fy];
+  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 38 + r.y + r.h * fy];
   const dragSb = async (sel, tx, ty, hold = .3) => { const [x, y] = scr(await rectOf(sel)); ptr(`drag ${x} ${y} ${tx} ${ty} ${hold}`); ptr('up'); await sleep(900); };
   // three tabs: p1 green, p2 blue, p3 pink
   await ui.evaluate(() => { openTab('http://localhost:8765/p3.html', { bg: true }); openTab('http://localhost:8765/p2.html', { bg: true }); openTab('http://localhost:8765/p1.html'); });
@@ -27,7 +27,7 @@ const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`py
   ok(s.split && s.a === ids[1] && s.b === ids[2] && s.pairs.length === 1, 'dragging p2 to the right zone made a pair next to p1: ' + JSON.stringify([s.a, s.b, s.pairs]));
   ok(await sb.$$eval('.tabs>.pair', e => e.length) === 1 && await sb.$$eval('.tabs>.pair>.tab', e => e.length) === 2, 'sidebar shows ONE combined card with both tabs');
   ok(await sb.$$eval('.tabs>.tab', e => e.length) === 1, 'the unrelated tab is left outside the card');
-  const L2 = await ui.evaluate(() => layout()); const l2 = [60 + L2.a.x + L2.a.w / 2, 57 + 400], r2 = [60 + L2.b.x + L2.b.w / 2, 57 + 400];
+  const L2 = await ui.evaluate(() => layout()); const l2 = [60 + L2.a.x + L2.a.w / 2, 57 + 600], r2 = [60 + L2.b.x + L2.b.w / 2, 57 + 600];   // blank page, below the test page's text
   ok(await color(...l2) === 'green' && await color(...r2) === 'blue', 'left pane green, right pane blue (both have content)');
   shot('g1');
   // clicking either half must not blank anything

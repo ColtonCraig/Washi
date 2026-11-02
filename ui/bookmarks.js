@@ -51,7 +51,8 @@ window.BMK = (() => {
   }
 
   /* the bar: items that don't fit go behind a » button */
-  function draw(el, items, favs, send) {
+  function draw(el, items, favs, send, width) {
+    el._w = width || 0;
     el.innerHTML = items.length ? items.map(n => chip(n, favs)).join('') + `<button class="bm more" hidden title="More bookmarks" aria-label="More bookmarks">${ic('more', 14)}</button>`
       : '<span class="bmhint">Bookmarks go here. Click ☆ next to the address, or press ⇧⌘D.</span>';
     fit(el);
@@ -74,7 +75,7 @@ window.BMK = (() => {
     const more = el.querySelector('.more'), chips = [...el.querySelectorAll('.bm:not(.more)')];
     if (!more) { el._hidden = []; return; }
     chips.forEach(c => { c.hidden = false; }); more.hidden = true;
-    const max = el.clientWidth, hidden = [];
+    const max = el._w || el.clientWidth, hidden = [];
     if (max && el.scrollWidth > max + 1) {
       more.hidden = false;
       for (let i = chips.length - 1; i >= 0 && el.scrollWidth > max + 1; i--) { chips[i].hidden = true; hidden.unshift(chips[i].dataset.id); }

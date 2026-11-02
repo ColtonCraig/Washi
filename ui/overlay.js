@@ -12,10 +12,10 @@ let D = null, items = [], sel = 0, sugg = [], suggFor = '', suggT = 0;
 const strip = $('#bmstrip'), stripIn = $('#bmin');
 function showStrip(d) {
   toast.classList.remove('on'); clearTimeout(toastT);             // never both in the same small window
-  BMK.draw(stripIn, d.items || [], d.favs || {}, m => B.bmAct(m));
+  BMK.draw(stripIn, d.items || [], d.favs || {}, m => B.bmAct(m), d.w ? d.w - 6 : 0);   // measured against the strip's real width, not whatever size the overlay had a moment ago
   strip.classList.remove('out'); strip.classList.add('on');
 }
-function hideStrip() { strip.classList.remove('on'); }
+function hideStrip() { if (strip.classList.contains('on')) { strip.classList.add('out'); setTimeout(() => { if (strip.classList.contains('out')) strip.classList.remove('on', 'out'); }, 120); } }
 B.onBmHide(hideStrip);
 B.onOverlayInit(d => {
   applyTheme(d.theme, d.pal);

@@ -7,7 +7,8 @@ const { pathToFileURL } = require('url');
 
 const SCHEME = 'washi';
 const ROOT = path.join(__dirname, '..', 'ui');
-protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } }]);
+protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } },
+  { scheme: 'crx', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);   // extension icons in the top bar and Settings
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json' };
 function serve(ses) {

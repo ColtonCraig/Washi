@@ -8,7 +8,7 @@ const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a);
   for (const p of ['p1', 'p2', 'p3']) { await ui.evaluate(u => openTab('http://localhost:8765/' + u + '.html'), p); await sleep(700); }
   // 1. the frame is slimmer and every button is still there
   const top = await ui.evaluate(() => document.querySelector('.topbar').getBoundingClientRect().height);
-  ok(top === 44, `top bar is 44px (was 52): ${top}`);
+  ok(top === 38, `top bar is 38px (was 44): ${top}`);
   ok(await ui.evaluate(() => ['bSide', 'bBack', 'bFwd', 'bReload', 'bBoost', 'bShield', 'bSplit'].every(id => { const r = document.getElementById(id).getBoundingClientRect(); return r.width >= 28 && r.height >= 28; })), 'all the top-bar buttons are still there at full size');
   const L0 = await ui.evaluate(() => ({ ...layout(), iw: innerWidth }));
   ok(L0.stage.x === 236 && L0.iw - (L0.stage.x + L0.stage.w) === 8, `the page gets more room (starts at ${L0.stage.x}px, 8px margin on the right)`);

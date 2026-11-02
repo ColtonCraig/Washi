@@ -5,6 +5,7 @@ window.SETUP = (() => {
   const B = window.washi, BL = window.BL;
   const { esc, PAL, KEYS, palFor, palOf, applyTheme, PRESETS, ENGINES, isDark, prefsOf } = BL;
   const root = document.getElementById('setup');
+  let extHook = null; if (B.onExtChanged) B.onExtChanged(list => extHook && extHook(list));   // Settings › Extensions redraws when one is added or removed
   let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null, HAVE = [], appsCommit = null;
 
   const hooks = { perms: null, update: null, arc: null, bm: null };
@@ -361,6 +362,29 @@ window.SETUP = (() => {
     return [bar, importBox(false)];
   }
 
+  /* ---------- Settings › Extensions: Chrome extensions from the Chrome Web Store ---------- */
+  function secExtensions() {
+    const box = h('div', { class: 'xbox' }); let L = { ok: true, list: [] }, msg = null;
+    const load = async () => { try { L = (await B.setupAct({ type: 'ext:list' })) || L; } catch {} draw(); };
+    function draw() {
+      box.innerHTML = '';
+      if (!L.ok) { box.append(h('p', { class: 'err' }, 'Extensions couldn\'t start on this Mac.')); return; }
+      if (msg) box.append(h('p', { class: msg.ok ? 'okay' : 'err' }, (msg.ok ? '✓ ' : '') + msg.text));
+      const list = h('div', { class: 'pwlist', role: 'list' });
+      if (!L.list.length) list.append(h('p', { class: 'hint pwempty' }, 'No extensions yet. Open the Chrome Web Store, pick one and press “Add to Chrome”: Washi asks before adding it.'));
+      for (const e of L.list) list.append(h('div', { class: 'pwrow xrow', role: 'listitem', 'data-id': e.id },
+        h('img', { class: 'xicon', src: `crx://extension-icon/${e.id}/32/2?partition=washi-pages`, alt: '', onerror: function () { this.replaceWith(h('span', { class: 'pwfav', html: BL.favHTML({ title: e.name, url: 'https://' + e.id }) })); } }),
+        h('span', { class: 'pwt' }, h('b', {}, e.name), h('small', {}, [e.version && 'Version ' + e.version, e.description].filter(Boolean).join(' · '))),
+        h('span', { class: 'pwacts' },
+          e.options ? h('button', { class: 'btn small plain', onclick: () => { B.setupAct({ type: 'ext:options', id: e.id }); finish(); } }, 'Options') : null,
+          h('button', { class: 'ib warn', title: 'Remove', 'aria-label': 'Remove ' + e.name, 'data-a': 'remove', html: BL.ic('trash', 16), onclick: async () => { const r = await B.setupAct({ type: 'ext:remove', id: e.id }); msg = r && r.ok ? { ok: true, text: `Removed ${e.name}.` } : { ok: false, text: `Couldn't remove ${e.name}.` }; load(); } }))));
+      box.append(h('div', { class: 'sbtns' }, h('button', { class: 'btn small primary', onclick: () => { B.setupAct({ type: 'ext:store' }); finish(); } }, 'Get extensions from the Chrome Web Store')), list);
+    }
+    extHook = list => { L = { ok: true, list }; draw(); };
+    load();
+    return field('Extensions', box, 'Chrome extensions work in Washi: their buttons sit in the top bar, next to ☆. They run in every space. Extensions that need a desktop app on your Mac to talk to (some password managers) may only partly work.');
+  }
+
   /* ---------- Settings › Passwords: saved logins and passkeys, kept encrypted on this Mac ---------- */
   function secPasswords() {
     const box = h('div', { class: 'pwbox' }), pkbox = h('div', { class: 'pwbox' }), nvbox = h('div', {});
@@ -442,7 +466,7 @@ window.SETUP = (() => {
   /* ---------- your apps: pick the ones you use; they're pinned (or go in a space that keeps its own logins) ---------- */
   const workSpace = () => SPACES.find(x => x.id === 'work') || SPACES.find(x => /work/i.test(x.name));
   function appPicker(o = {}) {
-    const cat = BL.appsFor(INFO), picks = new Map(), wrap = h('div', { class: 'apppick' });
+    const cat = BL.appsFor(INFO), picks = new Map(), wrap = h('div', { class: 'apppick' }); let iconsDone = false;
     const homes = () => [{ v: '', label: 'Pinned' }, ...SPACES.filter(x => x.isolated).map(x => ({ v: x.id, label: x.name + ' logins' }))];
     const dflt = a => { const w = workSpace(); return a.work && w && w.isolated ? w.id : ''; };
     const grid = h('div', { class: 'appgrid', role: 'group', 'aria-label': 'Apps' });
@@ -450,7 +474,7 @@ window.SETUP = (() => {
       grid.innerHTML = '';
       for (const a of cat) {
         const have = HAVE.includes(a.id), on = picks.has(a.id), dest = homes().find(x => x.v === picks.get(a.id)) || homes()[0];
-        const icon = h('span', { class: 'aicon', html: BL.favHTML({ title: a.n, url: a.url, fav: BL.appIcon(a) }) });
+        const icon = h('span', { class: 'aicon', 'data-icon': a.id, html: BL.icons[a.id] || iconsDone ? BL.favHTML({ title: a.n, url: a.url, fav: BL.icons[a.id] || null }) : '<span class="fav wait"></span>' });
         const tag = on ? h('span', { class: 'atag' + (homes().length > 1 ? ' can' : ''), role: homes().length > 1 ? 'button' : null, tabindex: homes().length > 1 ? '0' : null, title: homes().length > 1 ? 'Where it goes: tap to change' : null,
           onclick: e => { e.stopPropagation(); const hs = homes(); if (hs.length < 2) return; const i = hs.findIndex(x => x.v === picks.get(a.id)); picks.set(a.id, hs[(i + 1) % hs.length].v); draw(); } }, dest.label) : null;
         grid.append(h('button', { class: 'apptile' + (on ? ' on' : '') + (have ? ' have' : ''), 'data-app': a.id, 'aria-pressed': String(on), disabled: have, title: have ? 'Already in Washi' : a.n,
@@ -464,6 +488,9 @@ window.SETUP = (() => {
       send({ type: 'apps', picks: list }); HAVE = [...HAVE, ...list.map(x => x.id)]; picks.clear(); draw(); return list.length;
     };
     wrap.append(grid); draw();
+    /* icons: from the Mac's cache at once, or fetched in the background; each tile fills in by itself (no redraw needed) */
+    const fill = () => grid.querySelectorAll('[data-icon]').forEach(sp => { const a = cat.find(x => x.id === sp.dataset.icon); if (a && sp.querySelector('.wait')) sp.innerHTML = BL.favHTML({ title: a.n, url: a.url, fav: BL.icons[a.id] || null }); });
+    BL.loadIcons(B, cat).then(() => { iconsDone = true; fill(); });
     return { el: wrap, commit, redraw: draw, count: () => picks.size };
   }
   function workToggle(onChange) {
@@ -543,12 +570,12 @@ window.SETUP = (() => {
         <span class="lb" data-t="url"><em></em>washi.paper/hello</span><i class="st sp" data-t="split"></i></div>
       <div class="mb-side" data-t="sidebar">
         <b class="nm">Home</b>
-        <span class="sc" data-t="scrap"><i>+</i>new scrap</span>
+        <span class="sr"><span class="sc" data-t="scrap"><i>+</i>new scrap</span><b class="sq"></b><b class="sq"></b></span>
         <span class="pn" data-t="pins"><i style="--c:#ff6a3d"></i><i style="--c:#3d63ff"></i><i style="--c:#1f9d57"></i><i style="--c:#7b46ff"></i></span>
         <span class="tb on" data-t="tabs"><i style="background:#3d63ff"></i>Recipes</span>
         <span class="tb"><i style="background:#1f9d57"></i>Weather</span>
-        <span class="fd" data-t="folder">Trip ideas</span>
-        <span class="tb in"><i style="background:#e89a00"></i>Flights</span>
+        <span class="fdw" data-t="folder"><span class="fd"><em class="chv"></em><em class="fic">✈️</em>Trip ideas<small>2</small></span>
+          <span class="fdl"><span class="tb"><i style="background:#e89a00"></i>Flights</span><span class="tb"><i style="background:#0e9f9f"></i>Hotels</span></span></span>
         <span class="pr" data-t="pair"><span class="tb"><i style="background:#ff3d8d"></i>Notes</span><span class="tb"><i style="background:#7b46ff"></i>Docs</span></span>
         <span class="sps" data-t="spaces"><i class="on">Home</i><i></i><i></i><i></i></span>
       </div>
@@ -565,7 +592,7 @@ window.SETUP = (() => {
     ['split', 'Split view', '⌘\\', 'Or drag any tab onto the page.', 'top', [690, 4, 236], [477, 23]],
     ['scrap', 'New scrap', '⌘T', 'Search, open a site, or find a tab.', 'left', [0, 160, 228], [14, 94]],
     ['pins', 'Pins', '⌘D', 'Favorites that stay put.', 'left', [0, 228, 228], [14, 125]],
-    ['folder', 'Folders', '', 'Drag tabs in to group them.', 'left', [0, 298, 228], [14, 210]],
+    ['folder', 'Folders', '', 'Drag tabs in. Click its icon for an emoji and color.', 'left', [0, 298, 228], [14, 210]],
     ['pair', 'Split cards', '', 'Split tabs stay together here.', 'left', [0, 368, 228], [14, 277]],
     ['spaces', 'Spaces', '⌃1–5', 'A desk for each part of your life.', 'left', [0, 450, 228], [14, 379]],
     ['page', 'Your page', '', 'Every tab is a real web page.', 'right', [772, 286, 228], [490, 200]],
@@ -692,6 +719,7 @@ window.SETUP = (() => {
       ['privacy', 'Privacy & security', () => [secBlocking(), ...secSecurity(), secPerms(), secData()]],
       ['apps', 'Apps', () => secApps()],
       ['passwords', 'Passwords', () => secPasswords()],
+      ['extensions', 'Extensions', () => secExtensions()],
       ['bookmarks', 'Bookmarks', () => secBookmarks()],
       ['keys', 'Shortcuts', () => secKeys()],
       ['import', 'Import', () => secImport()],

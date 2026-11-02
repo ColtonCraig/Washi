@@ -2,15 +2,15 @@
 body{background:var(--desk)}
 .desk{position:fixed;inset:0;background-color:var(--desk);background-image:var(--grain);overflow:hidden}
 
-.topbar{position:fixed;left:0;right:0;top:0;height:44px;z-index:2;display:flex;align-items:center;gap:4px;padding:0 8px 0 0;-webkit-app-region:drag}
+.topbar{position:fixed;left:0;right:0;top:0;height:38px;z-index:2;display:flex;align-items:center;gap:4px;padding:0 8px 0 0;-webkit-app-region:drag}
 .topbar button,.topbar .lk{-webkit-app-region:no-drag}
-.lights{width:78px;flex:none}
-.stamp{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:transparent;color:var(--ink2);transition:background .15s,color .15s,transform .12s var(--ease)}
+.lights{width:74px;flex:none}
+.stamp{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:transparent;color:var(--ink2);transition:background .15s,color .15s,transform .12s var(--ease)}
 .stamp:hover{background:rgb(var(--inkc) / .08);color:var(--ink)}
 .stamp:active{transform:scale(.92)}
 .stamp:disabled{opacity:.35;pointer-events:none}
 .stamp.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}
-.label{position:relative;flex:1;min-width:0;max-width:640px;margin:0 auto;height:30px;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;background:rgb(var(--whc) / .72);color:var(--ink);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .07);transition:background .15s,box-shadow .15s}
+.label{position:relative;flex:1;min-width:0;max-width:640px;margin:0 auto;height:27px;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;background:rgb(var(--whc) / .72);color:var(--ink);text-align:left;box-shadow:0 0 0 1px rgb(var(--inkc) / .07);transition:background .15s,box-shadow .15s}
 .label:hover{background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),var(--cut-sm)}
 .label:active{transform:scale(.995)}
 .label .lk{display:grid;color:var(--ink3)}
@@ -62,3 +62,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 /* bookmarks bar (when it's set to always show) */
 .bmbar{position:fixed;z-index:2;height:38px;display:none;align-items:center;gap:3px;overflow:hidden;-webkit-app-region:no-drag}
 body.bm-always .bmbar{display:flex}
+
+/* extension buttons (from Chrome extensions you add), drawn like the other stamps */
+#exts{display:flex;align-items:center;gap:2px;-webkit-app-region:no-drag}
+#exts::part(action){width:28px;height:28px;border-radius:7px;background-color:transparent;background-size:18px;transition:background-color .15s,transform .12s var(--ease)}
+#exts::part(action):hover{background-color:rgb(var(--inkc) / .08)}
+#exts::part(action):active{transform:scale(.92)}
+#exts::part(badge){font:700 9px/1 var(--font-ui);border-radius:6px;box-shadow:0 0 0 1.5px var(--desk)}

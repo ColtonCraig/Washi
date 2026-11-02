@@ -27,6 +27,8 @@
 .bmstrip.on{display:block}
 .bmin{position:absolute;left:3px;right:3px;top:2px;height:40px;display:flex;align-items:center;gap:3px;padding:0 4px;overflow:hidden;border-radius:10px;background-color:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 3px 6px rgb(var(--sh) / .14);pointer-events:auto;animation:bmdrop .16s var(--ease) both}
 @keyframes bmdrop{from{opacity:0;transform:translateY(-8px)}}
+.bmstrip.out .bmin{animation:bmlift .12s ease-in both}
+@keyframes bmlift{to{opacity:0;transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){.bmin{animation:none}}
 .motion-off .bmin,.motion-off .bmedit-in{animation:none}
 
@@ -80,5 +82,5 @@
 .sheet.bookmarks .sbar #bnewf{margin-left:auto}
 
 /* Settings › Bookmarks */
-.bmi .bmrow{display:flex;align-items:center;gap:12px;cursor:default}
+.bmi .bmrow{display:flex;align-items:center;gap:12px}
 .bmi .bmrow .an{flex:1}

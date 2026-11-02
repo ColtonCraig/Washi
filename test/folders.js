@@ -9,7 +9,7 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-folders-'));
   const b = await start({ profile }); const { ui, sb } = b; await skipSetup(b);
   const st = () => ui.evaluate(() => ({ root: sp().tabs, F: Object.fromEntries(sp().folders.map(f => [f.id, f.tabs])), open: Object.fromEntries(sp().folders.map(f => [f.id, f.open])), a: R.a }));
   const rectOf = sel => sb.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
-  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 44 + r.y + r.h * fy];
+  const scr = (r, fx = .5, fy = .5) => [60 + r.x + r.w * fx, 57 + 38 + r.y + r.h * fy];
   const drag = async (sel, to, hold = .35) => { const [x, y] = scr(await rectOf(sel)); ptr(`drag ${x} ${y} ${to[0]} ${to[1]} ${hold}`); ptr('up'); await sleep(900); };
   for (const p of ['p1', 'p2', 'p3', 'trackers', 'links']) await ui.evaluate(u => openTab('http://localhost:8765/' + u + '.html', { bg: true }), p);
   await ui.evaluate(() => { const s = sp(); for (const [id, n] of [['fA', 'Projects'], ['fB', 'Clients'], ['fC', 'Archive']]) { s.folders.push({ id, name: n, open: true, tabs: [] }); s.tabs.push('f:' + id); } render(); save(); });
@@ -27,10 +27,10 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-folders-'));
   s = await st();
   ok(s.F.fB.includes(T[0]), 'a tab dropped on the inner folder goes into the inner folder');
   // and one into the outer folder's body, below the inner folder
-  const inner = await rectOf('.fold[data-fid="fB"]'); await drag(`.tabs>.tab[data-id="${T[1]}"]`, [scr(inner)[0], 57 + 44 + inner.y + inner.h - 3]);
+  const inner = await rectOf('.fold[data-fid="fB"]'); await drag(`.tabs>.tab[data-id="${T[1]}"]`, [scr(inner)[0], 57 + 38 + inner.y + inner.h - 3]);
   s = await st();
   ok(s.F.fA.includes(T[1]) && !s.F.fB.includes(T[1]), 'a tab dropped on the inner folder\'s bottom edge lands after it, in the outer folder: ' + JSON.stringify(s.F));
-  const outer = await rectOf('.fold[data-fid="fA"]'); await drag(`.tabs>.tab[data-id="${T[3]}"]`, [scr(outer)[0], 57 + 44 + outer.y + outer.h - 2]);
+  const outer = await rectOf('.fold[data-fid="fA"]'); await drag(`.tabs>.tab[data-id="${T[3]}"]`, [scr(outer)[0], 57 + 38 + outer.y + outer.h - 2]);
   s = await st(); ok(s.root.indexOf(T[3]) === s.root.indexOf('f:fA') + 1, 'and on the outer folder\'s bottom edge it lands after the outer folder');
 
   // 3. folder C into B (3 levels: A > B > C) works; nothing deeper is allowed

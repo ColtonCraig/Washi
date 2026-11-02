@@ -5,7 +5,8 @@ BL.setup();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const RMQ = matchMedia('(prefers-reduced-motion: reduce)').matches, calm = () => RMQ || BL.motion.off;
 const uid = p => p + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
-const TOP = 44, M = 8, SB_W = 232, GAP = 8, MIN_PANE = 300, BMH = 40;
+const TOP = 38, M = 8, SB_W = 232, GAP = 8, MIN_PANE = 300, BMH = 40;
+const sbW = () => Math.max(200, Math.min(380, Math.round((S && S.prefs.sbW) || SB_W)));
 
 /* ---------- state ---------- */
 let S;                                    // persisted
@@ -132,7 +133,7 @@ const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#
 /* Layout is plain math, shared by the card frames here and the page views in the main process. */
 function layout() {
   const W = innerWidth, H = innerHeight;
-  const x = S.dock ? SB_W + 4 : M + 4, y = TOP + (barAlways() ? BMH : 0), w = W - x - M, h = H - y - M;
+  const x = S.dock ? sbW() + 4 : M + 4, y = TOP + (barAlways() ? BMH : 0), w = W - x - M, h = H - y - M;
   const L = { stage: { x, y, w, h }, split: R.split };
   if (R.split) { const room = w - GAP, r = Math.min(Math.max(R.ratio || .5, MIN_PANE / room), 1 - MIN_PANE / room), pa = Math.round(room * r); L.a = { x, y, w: pa, h }; L.b = { x: x + pa + GAP, y, w: room - pa, h }; L.gap = { x: x + pa, y, w: GAP, h }; }
   else { L.a = { x, y, w, h }; L.b = { x: x + w, y, w: 0, h }; }
@@ -161,7 +162,10 @@ function pushState() {
     B.sbState({ h: s.h, pal: palFor(s), theme: S.prefs, cur: S.cur, name: s.name, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, pal: palFor(x) })), pins: S.pins, order: s.tabs, pairs: S.pairs.filter(p => spaceOf(p[0]) === s), folders: s.folders, tabs, a: R.a, b: R.split ? R.b : null, focus: R.focus, split: R.split, docked: S.dock });
   });
 }
+/* the extension buttons talk to the session of the space you're in */
+const extPart = () => { const s = sp(); return s && s.isolated ? 'persist:space-' + s.id : 'washi-pages'; };
 function updateChrome() {
+  const xl = document.getElementById('exts'); if (xl && S && xl.getAttribute('partition') !== extPart()) xl.setAttribute('partition', extPart());
   const id = focusedId(), t = id && S.tabs[id];
   if (!t) { urlTxt.innerHTML = '<span class="ph">Type an address or search</span>'; $('#lk').innerHTML = ic('search', 15); }
   else {
@@ -328,7 +332,7 @@ function separate(id) {
   dissolve(id); if (keep) { unsplit(keep); placePanes(); commit(true); } else render(); save();
 }
 function toggleSide() {
-  S.dock = !S.dock; B.sbMode({ docked: S.dock });
+  S.dock = !S.dock; B.sbMode({ docked: S.dock, w: sbW() });
   placePanes(); commit(false, true, true); save();
 }
 
@@ -415,8 +419,15 @@ function folderMenu(fid) {
   R.menuFolder = fid;
   const s = sp(), inner = depthOf(s, f) < MAX_DEPTH, nested = !!parentOf(s, 'f:' + fid);
   const liveItems = f.live ? [{ label: 'Refresh Now', id: 'fm:refresh' }, { label: 'Mark All as Read', id: 'fm:read' }, { label: 'Stop Updating (keep tabs)', id: 'fm:unlive' }, { type: 'separator' }] : [];
-  B.popupMenu([...liveItems, { label: 'New Tab in Folder', id: 'fm:new' }, { label: 'New Folder Inside…', id: 'fm:sub', enabled: inner }, { label: f.open ? 'Collapse' : 'Expand', id: 'fm:toggle' }, { label: 'Rename…', id: 'fm:rename' },
+  B.popupMenu([...liveItems, { label: 'New Tab in Folder', id: 'fm:new' }, { label: 'New Folder Inside…', id: 'fm:sub', enabled: inner }, { label: f.open ? 'Collapse' : 'Expand', id: 'fm:toggle' }, { label: 'Rename…', id: 'fm:rename' }, ...(f.live ? [] : [{ label: 'Icon and Color…', id: 'fm:look' }]),
     ...(nested ? [{ label: 'Move Out of Folder', id: 'fm:out' }] : []), { type: 'separator' }, { label: 'Ungroup (keep tabs)', id: 'fm:ungroup' }, { label: 'Delete Folder and Close Tabs', id: 'fm:delete' }]);
+}
+/* a sidebar folder's emoji and color, picked in a small paper card next to it; changes show as you pick */
+function folderLook(fid, at) {
+  const f = sp().folders.find(x => x.id === fid); if (!f || f.live) return;
+  const x = at && Number.isFinite(at.x) ? Math.round(at.x) : (S.dock ? 16 : 24), y = at && Number.isFinite(at.y) ? Math.round(at.y + TOP) : TOP + 120;
+  const h = 336, top = Math.min(y, innerHeight - h - 8);
+  B.panel('flook', { x: Math.max(4, x - 6), y: Math.max(TOP, top), w: 300, h }, { id: fid, name: f.name, icon: f.icon || null, color: f.color || null, ...look() });
 }
 function removeFolder(fid, closeTabs) {
   const s = sp(), f = s.folders.find(x => x.id === fid); if (!f) return;
@@ -557,6 +568,7 @@ B.onSetupMsg(m => {
   } else if (m.type === 'sheet') sheetAct(m);
   else if (m.type === 'arcImport') importArc(m).then(r => B.setupReply({ type: 'arcDone', ...r }));
   else if (m.type === 'peekAdopt') adoptPeek();
+  else if (m.type === 'folderLook') { const f = S.spaces.flatMap(x => x.folders).find(x => x.id === m.id); if (f && !f.live) { if (m.icon !== undefined) f.icon = m.icon ? String(m.icon).slice(0, 16) : null; if (m.color !== undefined) f.color = BMK.okColor(m.color) ? m.color : null; render(); save(); } }
   else if (m.type === 'bm') bmMsg(m);
   else if (m.type === 'apps') addApps(m.picks || []);
   else if (m.type === 'openUrl' && /^https:\/\//.test(m.url || '')) { B.overlayCancel(); openTab(m.url); }
@@ -680,6 +692,7 @@ function menuClick(id) {
   else if (id.startsWith('fm:')) { const fid = R.menuFolder, f = sp().folders.find(x => x.id === fid); if (!f) return; const k = id.slice(3);
     if (k === 'new') { R.intoFolder = fid; openCmd('new'); } else if (k === 'toggle') { f.open = !f.open; render(); save(); }
     else if (k === 'rename') promptFor('Rename this folder', f.name, n => { f.name = n.slice(0, 20); render(); save(); })
+    else if (k === 'look') folderLook(fid, null)
     else if (k === 'ungroup') removeFolder(fid, false); else if (k === 'delete') removeFolder(fid, true);
     else if (k === 'sub') newFolder(null, fid); else if (k === 'out') folderOut(fid);
     else if (k === 'refresh') refreshLive(true, fid);
@@ -719,9 +732,13 @@ B.onIntent(m => {
     case 'dropTab': handleDrop(m); break;
     case 'mute': B.tabAct(m.id, 'mute'); break;
     case 'warm': warm(m.id); break;
+    case 'today': showToday(); break;
+    case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); placePanes(); } if (m.done) { save(); syncMain(); } break; }
+    case 'folderLook': folderLook(m.id, m); break;
+    case 'pinOrder': { const ids = Array.isArray(m.ids) ? m.ids.filter(id => S.pins.includes(id)) : []; if (ids.length === S.pins.length && new Set(ids).size === ids.length) { S.pins = ids; render(); save(); } break; }
   }
 });
-B.onSbReady(() => { if (!S) return; B.sbMode({ docked: S.dock }); pushState(); });   // before boot finishes, boot pushes the first state itself
+B.onSbReady(() => { if (!S) return; B.sbMode({ docked: S.dock, w: sbW() }); pushState(); });   // before boot finishes, boot pushes the first state itself
 /* ---------- Ctrl-Tab: recent tabs as a row of cards. A quick tap flips back to the last tab without showing anything. ---------- */
 let SW = null;
 function switcher(d) {
@@ -826,9 +843,19 @@ function bmChanged() {
 window.BOOKMARKS = { refresh: () => { barKey = ''; placePanes(); updateChrome(); if (R.bmSheet) B.setupReply({ type: 'bmTree', items: S.bookmarks, folders: bmFolders(), favs: bmFavs(true) }); } };
 /* hover mode: resting on the top bar for a moment shows the bar over the top of the page */
 const topbar = $('.topbar'); let hoverT = 0;
-topbar.addEventListener('pointerenter', () => { if (!S || barMode() !== 'hover' || !S.bookmarks.length) return; clearTimeout(hoverT); hoverT = setTimeout(() => B.bmHover({ items: light(), favs: bmFavs(), ...look() }), 260); });
-topbar.addEventListener('pointerleave', () => clearTimeout(hoverT));
-topbar.addEventListener('pointerdown', () => clearTimeout(hoverT));
+/* On hover: rest the pointer on an empty part of the top bar (not the address or a button), or touch its bottom edge
+   just above the page. Passing through on the way to the menu bar or a button doesn't open it. */
+let barAt = null;
+const showBar = () => B.bmHover({ items: light(), favs: bmFavs(), ...look() });
+topbar.addEventListener('pointermove', e => {
+  if (!S || barMode() !== 'hover' || !S.bookmarks.length) return;
+  const edge = e.clientY >= TOP - 6, calm = !e.target.closest('#url,button,input,a');
+  if (barAt && Math.hypot(e.clientX - barAt.x, e.clientY - barAt.y) < 4 && !edge) return;     // still resting: keep the timer
+  barAt = { x: e.clientX, y: e.clientY }; clearTimeout(hoverT);
+  if (edge || calm) hoverT = setTimeout(showBar, edge ? 80 : 240);
+});
+topbar.addEventListener('pointerleave', () => { clearTimeout(hoverT); barAt = null; });
+topbar.addEventListener('pointerdown', () => { clearTimeout(hoverT); barAt = null; });
 B.onBmAct(m => { if (S) bmAct(m); });
 
 function bmOpen(n, bg) {
@@ -1087,6 +1114,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
 (async () => {
   let raw = {}; try { raw = (await B.stateLoad()) || {}; } catch {}
   try { R.info = (await B.setupInfo()) || {}; } catch { R.info = {}; }
+  BL.loadIcons(B, BL.appsFor(R.info)).then(() => window.TODAY && TODAY.redraw());   // app icons from this Mac's cache (Today, new pins)
   window.WID = raw.wid || 'w1';
   const J = x => { try { return x ? JSON.parse(x) : null; } catch { return null; } };
   const sh = J(raw.shared), mine = J(raw.win) || {}, legacy = J(raw.legacy);
@@ -1103,7 +1131,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   if (!(Array.isArray(H) && H.length) && S.history.length) B.histOp({ t: 'set', list: S.history });
   if (!sh) save();                                      // write the new split files right away
   theme(); syncMain();
-  await B.sbMode({ docked: S.dock });
+  await B.sbMode({ docked: S.dock, w: sbW() });
   stage.classList.add('instant'); placePanes();
   const s = sp(), list = spaceTabs(s);
   const want = (s.act && list.includes(s.act) ? s.act : list[0]) || null;

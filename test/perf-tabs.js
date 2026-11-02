@@ -30,7 +30,7 @@ const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a.replace(/\d+\.
   // drag a tab down through the list with a real mouse, counting slow frames in the sidebar
   await sb.evaluate(() => { window.__fr = []; let last = performance.now(); const loop = t => { window.__fr.push(t - last); last = t; if (window.__fr.length < 2000) requestAnimationFrame(loop); }; requestAnimationFrame(loop); window.__mv = 0; window.__mvt = 0; addEventListener('pointermove', () => { const t = performance.now(); queueMicrotask(() => { window.__mvt += performance.now() - t; window.__mv++; }); }, true); });
   const r0 = await sb.$eval('#tabs .tab:nth-child(2)', e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-  const W = await ui.evaluate(() => [screenX, screenY]); const X = v => W[0] + v * DSF, Y = v => W[1] + (44 + v) * DSF + (DSF > 1 ? 0 : 27);
+  const W = await ui.evaluate(() => [screenX, screenY]); const X = v => W[0] + v * DSF, Y = v => W[1] + (38 + v) * DSF + (DSF > 1 ? 0 : 27);
   ptr(`move ${X(r0.x)} ${Y(r0.y)}`); await sleep(100); ptr('down');
   for (let i = 0; i < 90; i++) { ptr(`move ${X(r0.x) + (i % 2)} ${Y(r0.y + i * 4)}`); }
   ptr('up'); await sleep(800);

@@ -2,7 +2,7 @@ html,body{background:transparent}
 .tp{position:absolute;left:50%;top:-10px;width:64px;height:18px;margin-left:-32px;transform:rotate(-3deg);background:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px);opacity:.92;box-shadow:0 1px 0 rgb(var(--sh) / .15)}
 
 /* command bar:an index card */
-.cmd{position:fixed;inset:0;display:grid;justify-items:center;align-content:start;padding:13vh 16px 0;background:rgb(var(--inkc) / .16);visibility:hidden;opacity:0;transition:opacity .16s,visibility 0s .16s}
+.cmd{position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;align-content:start;padding:13vh 16px 0;background:rgb(var(--inkc) / .16);visibility:hidden;opacity:0;transition:opacity .16s,visibility 0s .16s}
 .cmd.on{visibility:visible;opacity:1;transition:opacity .16s}
 .box{position:relative;width:min(640px,100%);border-radius:14px;background-color:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .08),0 24px 60px rgb(var(--sh) / .22);transform:translateY(-10px) scale(.98);opacity:.6;transition:transform .26s cubic-bezier(.2,.9,.3,1.04),opacity .16s}
 .cmd.on .box{transform:none;opacity:1}
