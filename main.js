@@ -511,9 +511,7 @@ autofill.bind({
     C = s.c; const c = C; let tries = 0;
     const show = () => {
       C = c; if (!alive(C.win) || s.wc.isDestroyed()) return;
-      if (process.env.WASHI_DEBUG_PW) console.error('pw-dbg show', C.overlayOpen, C.panelOpen, s.t.visible, s.t.id, JSON.stringify({ a: C.panes.a && C.panes.a.id, b: C.panes.b && C.panes.b.id }), [...C.tabs.values()].map(t => t.id + ':' + t.visible + ':' + t.wc.getURL()).join(' '), W.size);
-      if (C.overlayOpen && C.panelOpen !== 'pwmenu' && C.panelOpen !== 'pwsave') { if (++tries < 30) later(show, 1000); return; }   // wait for the command bar etc. to close
-      if (!s.t.visible) return;
+      if ((C.overlayOpen && C.panelOpen !== 'pwmenu' && C.panelOpen !== 'pwsave') || !s.t.visible) { if (++tries < 60) later(show, 1000); return; }   // wait for the command bar to close, or for you to come back to that tab
       vaultYield(); bmHide(true);
       C.overlayOpen = true; C.panelOpen = 'pwsave'; C.pwSave = { wc: s.wc, token: d.token }; clearTimeout(C.fxTimer); C.toastUntil = 0;
       placeSave(); C.overlay.setVisible(true);
