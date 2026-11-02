@@ -5,9 +5,10 @@ on:
   workflow_dispatch:
     inputs:
       ext: { description: 'Chrome Web Store extension id', required: true, default: 'glnpjglilkicbckjpbgcfkogebgllemb' }
+      runner: { description: 'macos-latest (Apple silicon) or macos-15-intel (often free sooner)', required: true, default: 'macos-15-intel' }
 jobs:
   diag:
-    runs-on: macos-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
