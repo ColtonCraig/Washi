@@ -5,7 +5,7 @@ BL.setup();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const RMQ = matchMedia('(prefers-reduced-motion: reduce)').matches, calm = () => RMQ || BL.motion.off;
 const uid = p => p + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
-const TOP = 44, M = 8, SB_W = 232, GAP = 8, MIN_PANE = 300, BMH = 32;
+const TOP = 44, M = 8, SB_W = 232, GAP = 8, MIN_PANE = 300, BMH = 40;
 
 /* ---------- state ---------- */
 let S;                                    // persisted
@@ -639,7 +639,7 @@ async function adoptPeek() {                     // the peeked page becomes a re
 }
 B.onOverlayResult(r => {
   if (!S) return;
-  if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); return; }
+  if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); else if (r.cmd === 'settings:passwords') openSetup('settings', 'passwords'); return; }
   if (r.kind === 'setup') {
     const first = !S.prefs.done; S.prefs.done = true; save();
     B.setupInfo().then(i => { R.info = i; render(); }).catch(() => {});            // a GitHub token may have been added
@@ -983,8 +983,10 @@ function bmImport(data, name) {
   merge(data.bar, S.bookmarks, 0);
   if (data.other.length) merge([{ type: 'folder', name: data.bar.length ? `More from ${name}` : `From ${name}`, kids: data.other }], S.bookmarks, 0);
   bmChanged();
-  if (!n.bm && !newPages) return { ok: true, n: 0, pages: 0, text: `Everything from ${name} was already here.` };
-  const parts = [n.bm && `${n.bm} bookmark${n.bm > 1 ? 's' : ''}${n.f ? ` in ${n.f} folder${n.f > 1 ? 's' : ''}` : ''}`, newPages && `${newPages.toLocaleString()} page${newPages > 1 ? 's' : ''} of history`].filter(Boolean);
+  const pw = data.pw && (+data.pw.added || 0) + (+data.pw.updated || 0);
+  if (!n.bm && !newPages && !pw) return { ok: true, n: 0, pages: 0, text: `Everything from ${name} was already here.` };
+  const parts = [n.bm && `${n.bm} bookmark${n.bm > 1 ? 's' : ''}${n.f ? ` in ${n.f} folder${n.f > 1 ? 's' : ''}` : ''}`, newPages && `${newPages.toLocaleString()} page${newPages > 1 ? 's' : ''} of history`, pw && `${pw} password${pw > 1 ? 's' : ''}`].filter(Boolean);
+  if (parts.length > 2) parts.splice(0, parts.length - 1, parts.slice(0, -1).join(', '));
   return { ok: true, n: n.bm, pages: newPages, text: `Brought in ${parts.join(' and ')} from ${name}.` };
 }
 bStar.addEventListener('click', bmStar);

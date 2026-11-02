@@ -1,7 +1,7 @@
 'use strict';
 /* Washi: main process. Owns the window, the native page views, and the three interface views
    (shell = desk + top bar, C.sidebar, C.overlay = command bar / sheets / panels / effects). */
-const { app, BrowserWindow, WebContentsView, Menu, session, shell, dialog, nativeTheme, clipboard, screen } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, session, shell, dialog, nativeTheme, clipboard, screen, systemPreferences } = require('electron');
 
 if (!process.argv.includes('--no-sandbox')) app.enableSandbox();   // every renderer runs sandboxed (the flag only exists for the Linux test container, which runs as root)
 app.setName('Washi');
@@ -24,6 +24,8 @@ const os = require('os');
 const pages = require('./app/pages');
 const keys = require('./app/shortcuts');
 const updater = require('./app/updater');
+const vault = require('./app/vault');
+const autofill = require('./app/autofill');
 
 const EDGE = 12, TOP = 44, SB_W = 232, SB_PAD = 16;
 const P = { search: 'https://www.google.com/search?q=%s', mode: 'light', autoPip: true, keys: {}, suggest: true };
@@ -222,6 +224,7 @@ HANDLE('tab:ensure', (_, id, url, space) => { ensureTab(id, url, space); return 
 HANDLE('panes:set', (_, p, fp) => {
   const before = activeTab(); C.panes = p; if (p.space) C.curSpace = p.space; applyPanes();
   if (C.panelOpen === 'find' && activeTab() !== before) closeOverlay();
+  vaultFollow();
   if (fp) focusPage(); return true;
 });
 ON('tab:close', (_, id) => {
@@ -344,7 +347,7 @@ ON('layout:info', (_, l) => { C.lastLayout = l; if (C.panelOpen === 'find') plac
 /* ---------- drag a tab out of the sidebar to split ---------- */
 ON('drag:msg', (_, m) => {
   if (!C.overlay || C.overlayOpen) return;
-  if (m.type === 'start') { bmHide(true); C.dragging = true; clearTimeout(C.fxTimer); fitOverlay(); C.overlay.setVisible(true); toOverlay('overlay:drag', { ...m, layout: C.lastLayout }); }
+  if (m.type === 'start') { vaultYield(); bmHide(true); C.dragging = true; clearTimeout(C.fxTimer); fitOverlay(); C.overlay.setVisible(true); toOverlay('overlay:drag', { ...m, layout: C.lastLayout }); }
   else if (m.type === 'move') toOverlay('overlay:drag', m);
   else if (m.type === 'end') {
     C.dragging = false; toOverlay('overlay:drag', { type: 'end' }); if (C.sbShown) sbLeaveSoon(350);
@@ -377,16 +380,22 @@ function showFx(f) {
   toOverlay('overlay:fx', f);
   clearTimeout(C.fxTimer);
   if (f.type === 'switch') return;                          // stays up until Ctrl is let go
-  C.fxTimer = later(() => { if (!C.overlayOpen && !C.dragging) C.overlay.setVisible(false); }, f.type === 'toast' ? (f.short ? 1600 : f.action || f.reveal ? 6000 : 4200) : 1000);
+  const ms = f.type === 'toast' ? (f.short ? 1600 : f.action || f.reveal ? 6000 : 4200) : 1000;
+  C.toastUntil = f.type === 'toast' ? Date.now() + ms : 0;
+  C.fxTimer = later(() => { C.toastUntil = 0; if (!C.overlayOpen && !C.dragging) C.overlay.setVisible(false); }, ms);
 }
-ON('toast:act', (_, a) => { clearTimeout(C.fxTimer); C.overlay.setVisible(false); if (a && a.cmd === 'openUrl' && /^https?:/.test(a.url)) toUI('tab:openRequest', { url: a.url }); else if (a && a.cmd === 'update:install') updater.install(); else if (a && a.cmd === 'reveal' && a.path && fs.existsSync(a.path)) shell.showItemInFolder(a.path); else if (a && typeof a.cmd === 'string') toUI('cmd', a.cmd); });
+ON('toast:act', (_, a) => { clearTimeout(C.fxTimer); C.toastUntil = 0; C.overlay.setVisible(false); if (a && a.cmd === 'openUrl' && /^https?:/.test(a.url)) toUI('tab:openRequest', { url: a.url }); else if (a && a.cmd === 'update:install') updater.install(); else if (a && a.cmd === 'reveal' && a.path && fs.existsSync(a.path)) shell.showItemInFolder(a.path); else if (a && typeof a.cmd === 'string') toUI('cmd', a.cmd); });
 function closeOverlay() {
   if (C.panelOpen === 'find') { const t = activeTab(); if (t) t.wc.stopFindInPage('keepSelection'); }
+  const pw = C.panelOpen === 'pwmenu' ? C.pwWc : null, pk = C.pkResolve; C.pkResolve = null; C.pwSave = null;
+  if (pk) pk({ act: 'cancel' });
+  if (pw) { C.panelOpen = null; if (!pw.isDestroyed()) autofill.hideMenu(pw); }
   if (C.peek) closePeek(true);
   C.overlayOpen = false; C.panelOpen = null; C.overlay.setVisible(false); toOverlay('overlay:closed'); focusPage();
 }
 ON('fx', (_, f) => showFx(f));
 HANDLE('overlay:open', (_, payload) => {
+  vaultYield();
   if (C.peek) closePeek(true); bmHide(true);
   C.overlayOpen = true; C.panelOpen = null; clearTimeout(C.fxTimer);
   fitOverlay(); C.overlay.setVisible(true); C.overlay.webContents.focus();
@@ -396,6 +405,7 @@ HANDLE('overlay:open', (_, payload) => {
 /* small panels that sit over part of the window (find bar, blocking popover), so the page stays usable */
 HANDLE('overlay:panel', (_, kind, rect, data) => {
   if (C.dragging) return false;
+  vaultYield();
   if (C.peek) closePeek(true); bmHide(true);
   C.overlayOpen = true; C.panelOpen = kind; clearTimeout(C.fxTimer);
   if (kind === 'find') placeFind(); else C.overlay.setBounds(rr({ x: rect.x, y: rect.y, width: rect.w, height: rect.h }));
@@ -418,7 +428,7 @@ ON('overlay:cancel', () => { closeOverlay(); toUI('overlay:cancel'); });
 
 /* ---------- bookmarks bar "on hover": a strip in the overlay, just under the top bar, while the pointer is near ----------
    The shell asks for it after the pointer rests on the top bar; it goes away shortly after the pointer leaves both. */
-const BM_H = 40;
+const BM_H = 50;                                  // the 40px strip plus room for its shadow
 function bmStripRect() {
   const s = C.lastLayout ? C.lastLayout.stage : (() => { const [w] = C.win.getContentSize(); return { x: 12, w: w - 24 }; })();
   return { x: s.x, y: TOP, width: s.w, height: BM_H };
@@ -426,7 +436,7 @@ function bmStripRect() {
 function pointerNearBar() {
   if (!alive(C && C.win)) return false;
   const p = screen.getCursorScreenPoint(), b = C.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y, r = bmStripRect();
-  return (y >= -2 && y < TOP && x >= 0 && x < b.width) || (x >= r.x && x < r.x + r.width && y >= TOP - 2 && y < TOP + 36);
+  return (y >= -2 && y < TOP && x >= 0 && x < b.width) || (x >= r.x && x < r.x + r.width && y >= TOP - 2 && y < TOP + BM_H - 4);
 }
 function bmHide(keepOverlay) {
   if (!C.bmShown) return; C.bmShown = false; clearInterval(C.bmPoll); C.bmPoll = null;
@@ -436,6 +446,7 @@ function bmHide(keepOverlay) {
 ON('bm:hover', (_, d) => {
   if (!d) return bmHide();
   if (C.overlayOpen || C.dragging || !C.overlay || !alive(C.win) || !C.win.isFocused() || C.menuOpen) return;
+  if (Date.now() < (C.toastUntil || 0)) return;                    // a toast (e.g. "Removed the bookmark · Undo") is using the overlay
   clearTimeout(C.fxTimer);
   C.bmShown = true; C.overlay.setBounds(rr(bmStripRect())); C.overlay.setVisible(true);
   toOverlay('overlay:init', { mode: 'bmbar', ...d });
@@ -452,6 +463,80 @@ ON('bm:act', (_, m) => {                               // something was clicked 
   if (m.act === 'open' || m.act === 'move') { if (m.act === 'open') bmHide(); }
   toUI('bm:act', { ...m, x: (+m.x || 0) + r.x, y: (+m.y || 0) + r.y });
 });
+
+const pwUndo = new Map(), pkUndo = new Map();
+/* Touch ID before showing, copying or exporting a password (Macs without Touch ID: Washi's own Settings click is the check) */
+async function vaultGate(reason) {
+  if (!app.isPackaged && process.env.WASHI_TEST_UV === '1') return process.env.WASHI_TEST_GATE !== 'deny';
+  if (process.platform !== 'darwin') return true;
+  try { if (!systemPreferences.canPromptTouchID()) return true; await systemPreferences.promptTouchID(reason); return true; } catch { return false; }
+}
+/* ---------- saved passwords and passkeys: the account menu, the "Save password?" card and the passkey card ----------
+   app/autofill.js decides what to show; these place it in the overlay. The menu never takes focus from the page, so you
+   can keep typing; the passkey card does (it's a question that needs an answer). */
+const findTab = wc => { for (const c of W.values()) { if (!alive(c.win)) continue; for (const t of c.tabs.values()) if (t.wc === wc) return { c, t }; } return null; };
+const rectKey = t => t && t.rect ? [t.rect.x, t.rect.y, t.rect.width, t.rect.height].join() : '';
+function vaultYield() {                                   // something else wants the overlay: put the menu or card away
+  if (C.panelOpen === 'pwmenu') { const w = C.pwWc; C.panelOpen = null; C.overlayOpen = false; if (w && !w.isDestroyed()) autofill.hideMenu(w); }
+  else if (C.panelOpen === 'pwsave') { C.panelOpen = null; C.overlayOpen = false; C.pwSave = null; }
+  else if (C.panelOpen === 'pk' && C.pkResolve) { const r = C.pkResolve; C.pkResolve = null; C.panelOpen = null; C.overlayOpen = false; r({ act: 'cancel' }); }
+}
+function vaultFollow() {                                  // the layout changed: the menu goes away, the save card moves along
+  if (C.panelOpen === 'pwmenu') { const f = C.pwWc && findTab(C.pwWc); if (!f || !f.t.visible || rectKey(f.t) !== C.pwRect) closeOverlay(); }
+  else if (C.panelOpen === 'pwsave' && C.pwSave) { const f = findTab(C.pwSave.wc); if (!f || !f.t.visible) closeOverlay(); else placeSave(); }
+}
+function placeSave() {
+  const s = C.lastLayout ? C.lastLayout.stage : (() => { const [w, h] = C.win.getContentSize(); return { x: 12, y: TOP, w: w - 24, h: h - TOP - 12 }; })();
+  C.overlay.setBounds(rr({ x: s.x + s.w - 372, y: s.y + 6, width: 366, height: 236 }));
+}
+autofill.bind({
+  tab: findTab,
+  focus: s => { C = s.c; if (!s.wc.isDestroyed()) s.wc.focus(); },
+  menu(s, d) {
+    C = s.c; const t = s.t;
+    if (!alive(C.win) || !t.visible || !t.rect || C.dragging || (C.overlayOpen && C.panelOpen !== 'pwmenu')) return;
+    bmHide(true);
+    const z = t.wc.getZoomFactor(), n = d.items.length, r = d.rect;
+    const w = 312, h = 64 + Math.min(n, 5) * 48;                   // items, the footer, room for the shadow
+    const fx = t.rect.x + r.x * z, fy = t.rect.y + r.y * z, fh = r.h * z, [W0, H0] = C.win.getContentSize();
+    let y = fy + fh + 2; if (y + h > H0 - 6) y = Math.max(6, fy - h - 2);
+    const x = Math.max(6, Math.min(W0 - w - 6, fx - 6));
+    C.overlayOpen = true; C.panelOpen = 'pwmenu'; C.pwWc = t.wc; C.pwRect = rectKey(t); clearTimeout(C.fxTimer); C.toastUntil = 0;
+    C.overlay.setBounds(rr({ x, y, width: w, height: h })); C.overlay.setVisible(true);
+    toOverlay('overlay:init', { ...(C.lastLook || {}), ...d, what: d.kind, mode: 'vault', kind: 'menu' });
+  },
+  menuKey(s, key) { C = s.c; if (C.panelOpen === 'pwmenu' && C.pwWc === s.wc) toOverlay('vault:key', key); },
+  hideMenu(wc) { const f = findTab(wc); if (!f) return; C = f.c; if (C.panelOpen === 'pwmenu' && C.pwWc === wc) { C.panelOpen = null; C.overlayOpen = false; C.overlay.setVisible(false); toOverlay('overlay:closed'); } },
+  save(s, d) {
+    C = s.c; const c = C; let tries = 0;
+    const show = () => {
+      C = c; if (!alive(C.win) || s.wc.isDestroyed()) return;
+      if (C.overlayOpen && C.panelOpen !== 'pwmenu' && C.panelOpen !== 'pwsave') { if (++tries < 30) later(show, 1000); return; }   // wait for the command bar etc. to close
+      if (!s.t.visible) return;
+      vaultYield(); bmHide(true);
+      C.overlayOpen = true; C.panelOpen = 'pwsave'; C.pwSave = { wc: s.wc, token: d.token }; clearTimeout(C.fxTimer); C.toastUntil = 0;
+      placeSave(); C.overlay.setVisible(true);
+      toOverlay('overlay:init', { ...(C.lastLook || {}), ...d, what: d.kind, mode: 'vault', kind: 'save' });
+      const tok = d.token; later(() => { if (C.panelOpen === 'pwsave' && C.pwSave && C.pwSave.token === tok) closeOverlay(); }, 45000);
+    };
+    show();
+  },
+  passkey(s, d) {
+    return new Promise(res => {
+      C = s.c; if (!alive(C.win)) return res({ act: 'cancel' });
+      if (C.overlayOpen) { if (C.panelOpen === 'pwmenu' || C.panelOpen === 'pwsave' || C.panelOpen === 'pk') vaultYield(); else { closeOverlay(); toUI('overlay:cancel'); } }
+      if (C.peek) closePeek(true); bmHide(true);
+      C.overlayOpen = true; C.panelOpen = 'pk'; C.pkResolve = res; C.pkWc = s.wc; clearTimeout(C.fxTimer); C.toastUntil = 0;
+      fitOverlay(); C.overlay.setVisible(true); C.overlay.webContents.focus();
+      const st = C.lastLayout ? C.lastLayout.stage : null;
+      toOverlay('overlay:init', { ...(C.lastLook || {}), ...d, what: d.kind, mode: 'vault', kind: 'pk', host: new URL(s.origin).host, stage: st, touch: process.platform === 'darwin' && (() => { try { return systemPreferences.canPromptTouchID(); } catch { return false; } })() });
+    });
+  }
+});
+ON('vault:pick', (_, ch) => { if (C.panelOpen !== 'pwmenu' || !C.pwWc || C.pwWc.isDestroyed()) return; const wc = C.pwWc; C.panelOpen = null; C.overlayOpen = false; C.overlay.setVisible(false); wc.focus(); autofill.pick(wc, ch && typeof ch === 'object' ? { id: typeof ch.id === 'string' ? ch.id : null, gen: !!ch.gen } : null); });
+ON('vault:sel', (_, sel) => { if (C.panelOpen === 'pwmenu' && C.pwWc) autofill.menuSel(C.pwWc, +sel); });
+ON('vault:pk', (_, a) => { const r = C.pkResolve; if (!r) return; C.pkResolve = null; C.panelOpen = null; closeOverlay(); if (C.pkWc && !C.pkWc.isDestroyed()) C.pkWc.focus(); r(a && typeof a === 'object' ? { act: String(a.act), id: typeof a.id === 'string' ? a.id : null } : { act: 'cancel' }); });
+HANDLE('vault:save', (_, a) => { const r = autofill.answer(a); if (C.panelOpen === 'pwsave') closeOverlay(); return r; });
 
 /* peek: look at a link in a floating paper card without opening a tab */
 function peekRect() {
@@ -572,6 +657,7 @@ ON('prefs:sync', (_, p) => {
   Object.assign(P, p);
   try { nativeTheme.themeSource = P.mode === 'auto' ? 'system' : P.mode === 'dark' ? 'dark' : 'light'; } catch {}   // sites that support dark mode follow along
   web.configure({ gpc: p.gpc, askDownload: p.askDownload, httpsFirst: p.httpsFirst, safety: p.safety, blocking: p.blocking, clearOnExit: p.clearOnExit, dns: p.dns });
+  autofill.configure({ save: p.pwSave !== false, fill: p.pwFill !== false, passkeys: p.passkeys !== false });
   const k = JSON.stringify(P.keys || {}); if (k !== menuKeys && !recording) { menuKeys = k; buildMenu(); }
 });
 ON('keys:recording', (_, on) => {                        // while a shortcut is being recorded, the menu mustn't grab the keys
@@ -645,7 +731,48 @@ HANDLE('setup:act', async (_, a) => {
         : { title: 'Choose a bookmarks file', message: 'Pick Safari\'s export (.zip) or a bookmarks file from another browser (.html)', defaultPath: app.getPath('downloads'), properties: ['openFile'], filters: [{ name: 'Bookmarks', extensions: ['zip', 'html', 'htm', 'json'] }] });
     if (r.canceled || !r.filePaths[0]) return null;
     const f = r.filePaths[0], name = /\.zip$/i.test(f) ? 'Safari' : path.basename(f).replace(/\.[^.]+$/, '').slice(0, 30);
-    try { return { ok: true, name, ...bmimport.readFile(f) }; } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
+    try {
+      const { passwordsCSV, ...got } = bmimport.readFile(f);
+      let pw = null; if (passwordsCSV) { const x = vault.importCSV(passwordsCSV); if (x.ok) pw = { added: x.added, updated: x.updated }; }   // passwords go straight into the encrypted store, never to the interface
+      return { ok: true, name, ...got, pw };
+    } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
+  }
+  /* ---------- Settings › Passwords ---------- */
+  if (a.type === 'pw:list') return vault.list();
+  if (a.type === 'pw:reveal' || a.type === 'pw:copy') {
+    const l = vault.get(String(a.id || '')); if (!l) return { ok: false };
+    if (!(await vaultGate('see a saved password'))) return { ok: false, denied: true };
+    if (a.type === 'pw:reveal') return { ok: true, pass: l.pass };
+    clipboard.writeText(l.pass); const was = l.pass;
+    setTimeout(() => { try { if (clipboard.readText() === was) clipboard.writeText(''); } catch {} }, 60000);   // don't leave it on the clipboard
+    return { ok: true };
+  }
+  if (a.type === 'pw:edit') return { ok: vault.edit(String(a.id || ''), { user: typeof a.user === 'string' ? a.user : undefined, pass: typeof a.pass === 'string' ? a.pass : undefined, origin: typeof a.site === 'string' ? a.site : undefined }) };
+  if (a.type === 'pw:add') { const o = vault.normOrigin(a.site); if (!o) return { ok: false, error: 'That doesn\'t look like a website address.' }; if (!a.pass) return { ok: false, error: 'Type the password.' }; return { ok: !!vault.upsert(o, String(a.user || ''), String(a.pass)) }; }
+  if (a.type === 'pw:delete') { const l = vault.remove(String(a.id || '')); if (!l) return { ok: false }; const tok = token(); pwUndo.set(tok, l); setTimeout(() => pwUndo.delete(tok), 120000); return { ok: true, undo: tok }; }
+  if (a.type === 'pw:undo') { const l = pwUndo.get(String(a.undo || '')); if (l) { pwUndo.delete(a.undo); vault.restore(l); } return { ok: !!l }; }
+  if (a.type === 'pw:never') { vault.never(String(a.origin || ''), false); return { ok: true }; }
+  if (a.type === 'pk:delete') { const p = vault.removePasskey(String(a.id || '')); if (!p) return { ok: false }; const tok = token(); pkUndo.set(tok, p); setTimeout(() => pkUndo.delete(tok), 120000); return { ok: true, undo: tok }; }
+  if (a.type === 'pk:undo') { const p = pkUndo.get(String(a.undo || '')); if (p) { pkUndo.delete(a.undo); vault.restorePasskey(p); } return { ok: !!p }; }
+  if (a.type === 'pw:import') {
+    const r = !app.isPackaged && process.env.WASHI_TEST_PICK_PW ? { canceled: false, filePaths: [process.env.WASHI_TEST_PICK_PW] }
+      : await dialog.showOpenDialog(C.win, { title: 'Import passwords', message: 'Pick a passwords export (.csv) from Chrome, Firefox, 1Password, Bitwarden… or Safari\'s export (.zip)', defaultPath: app.getPath('downloads'), properties: ['openFile'], filters: [{ name: 'Passwords', extensions: ['csv', 'zip'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const f = r.filePaths[0];
+    try {
+      let text;
+      if (/\.zip$/i.test(f)) { text = bmimport.readFile(f).passwordsCSV; if (!text) return { ok: false, error: 'That export has no passwords in it. In Safari, tick Passwords when you export.' }; }
+      else { if (fs.statSync(f).size > 32 * 1024 * 1024) return { ok: false, error: 'That file is too big.' }; text = fs.readFileSync(f, 'utf8'); }
+      return vault.importCSV(text);
+    } catch (e) { return { ok: false, error: e.message || 'Couldn\'t read that file.' }; }
+  }
+  if (a.type === 'pw:export') {
+    if (!vault.list().logins.length) return { ok: false, error: 'No passwords to export.' };
+    if (!(await vaultGate('export your saved passwords'))) return { ok: false, denied: true };
+    const r = !app.isPackaged && process.env.WASHI_TEST_SAVE_PW ? { canceled: false, filePath: process.env.WASHI_TEST_SAVE_PW }
+      : await dialog.showSaveDialog(C.win, { title: 'Export passwords', message: 'Anyone who opens this file can read your passwords. Delete it when you\'re done.', defaultPath: path.join(app.getPath('documents'), 'Washi Passwords.csv'), filters: [{ name: 'CSV', extensions: ['csv'] }] });
+    if (r.canceled || !r.filePath) return null;
+    try { fs.writeFileSync(r.filePath, vault.exportCSV(), { mode: 0o600 }); return { ok: true, n: vault.list().logins.length }; } catch (e) { return { ok: false, error: e.message }; }
   }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
@@ -806,6 +933,7 @@ app.on('open-url', (e, url) => { e.preventDefault(); if (alive(C && C.win) && P.
 app.whenReady().then(async () => {
   if (process.argv.includes('--fresh')) await wipeData();
   setupUISession();
+  autofill.init();
   web.setup(session.defaultSession);
   blocker.init();
   if (process.platform === 'darwin' && !app.isPackaged) try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {}   // the built app gets it from icon.icns

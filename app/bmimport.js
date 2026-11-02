@@ -141,14 +141,15 @@ function fromZip(zip) {
   try {
     try { unzip(zip, tmp); } catch { throw new Error('Couldn\'t open that .zip file.'); }
     const files = listFiles(tmp);
-    let bm = { bar: [], other: [], count: 0 }, history = [];
+    let bm = { bar: [], other: [], count: 0 }, history = [], passwordsCSV = '';
     for (const f of files) {
       const lower = path.basename(f).toLowerCase();
+      if (lower.endsWith('.csv') && fs.statSync(f).size < MAX_BYTES) { const t = fs.readFileSync(f, 'utf8'); if (/^\uFEFF?[^\n]*password/i.test(t)) passwordsCSV += (passwordsCSV ? '\n' + t.replace(/^[^\n]*\n/, '') : t); continue; }   // Safari's Passwords.csv (only ever handed to the password store)
       if (/\.html?$/.test(lower)) { try { const r = fromHTML(fs.readFileSync(f, 'utf8')); if (r.count > bm.count) bm = r; } catch {} }
       else if (lower.endsWith('.json') && fs.statSync(f).size < MAX_BYTES * 4) { const h = fromHistoryJSON(fs.readFileSync(f, 'utf8')); if (h) history.push(...h); }
     }
-    if (!bm.count && !history.length) throw new Error('No bookmarks or history in that export. In Safari, choose File › Export Browsing Data to File… and tick Bookmarks and History.');
-    return { ...bm, history: tidyHistory(history) };
+    if (!bm.count && !history.length && !passwordsCSV) throw new Error('No bookmarks, history or passwords in that export. In Safari, choose File › Export Browsing Data to File… and tick what you want.');
+    return { ...bm, history: tidyHistory(history), passwordsCSV };
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 /* newest first, each page once, a sensible amount */

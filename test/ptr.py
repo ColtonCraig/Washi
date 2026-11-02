@@ -8,6 +8,21 @@ def up(): xtest.fake_input(d, X.ButtonRelease, 1); d.sync()
 cmd = sys.argv[1]
 if cmd == 'move': move(sys.argv[2], sys.argv[3])
 elif cmd == 'down': down()
+elif cmd == 'rdown': xtest.fake_input(d, X.ButtonPress, 3); d.sync()
+elif cmd == 'rup': xtest.fake_input(d, X.ButtonRelease, 3); d.sync()
+elif cmd == 'resize':   # resize W H: the browser window's outer size (no window manager on the test screen)
+    w, h = int(sys.argv[2]), int(sys.argv[3])
+    def walk(win):
+        for c in win.query_tree().children:
+            try:
+                k = c.get_wm_class() or ()
+                if any('washi' in str(x).lower() for x in k) and c.get_geometry().width > 400: return c
+            except Exception: pass
+            r = walk(c)
+            if r: return r
+    win = walk(d.screen().root)
+    if not win: sys.exit('no Washi window')
+    win.configure(width=w, height=h); d.sync()
 elif cmd == 'up': up()
 elif cmd == 'drag':   # drag x0 y0 x1 y1 [hold_seconds_at_end]
     x0, y0, x1, y1 = map(float, sys.argv[2:6]); hold = float(sys.argv[6]) if len(sys.argv) > 6 else 0

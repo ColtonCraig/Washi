@@ -60,5 +60,5 @@ body{background:var(--desk)}
 body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 
 /* bookmarks bar (when it's set to always show) */
-.bmbar{position:fixed;z-index:2;height:30px;display:none;align-items:center;gap:2px;overflow:hidden;-webkit-app-region:no-drag}
+.bmbar{position:fixed;z-index:2;height:38px;display:none;align-items:center;gap:3px;overflow:hidden;-webkit-app-region:no-drag}
 body.bm-always .bmbar{display:flex}

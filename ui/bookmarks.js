@@ -56,6 +56,10 @@ window.BMK = (() => {
       : '<span class="bmhint">Bookmarks go here. Click ☆ next to the address, or press ⇧⌘D.</span>';
     fit(el);
     if (el._wired) return; el._wired = true;
+    /* the overlay strip can be drawn before its window has its final size, and before the font has loaded:
+       measure again whenever either changes, so nothing is ever cut off at the right */
+    try { new ResizeObserver(() => fit(el)).observe(el); } catch {}
+    try { document.fonts.ready.then(() => fit(el)); document.fonts.addEventListener('loadingdone', () => fit(el)); } catch {}
     el.addEventListener('click', e => {
       const b = e.target.closest('.bm'); if (!b || el._dragged) return;
       const r = b.getBoundingClientRect();

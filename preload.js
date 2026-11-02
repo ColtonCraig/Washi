@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('washi', {
   layoutInfo: send('layout:info'), intent: send('sb:intent'), drag: send('drag:msg'), sbReady: send('sb:ready'), sbHover: send('sb:hover'), bmHover: send('bm:hover'), bmAct: send('bm:act'),
   prefsSync: send('prefs:sync'), setupMsg: send('setup:msg'), setupReply: send('setup:reply'), setupInfo: invoke('setup:info'), setupAct: invoke('setup:act'),
   findQuery: send('find:query'), scrapOpen: send('scrap:open'), scrapAct: send('scrap:act'), scrapAdopt: invoke('scrap:adopt'), peekOpen: send('peek:open'), peekAdopt: invoke('peek:adopt'),
+  vaultPick: send('vault:pick'), vaultSel: send('vault:sel'), vaultSave: invoke('vault:save'), vaultPk: send('vault:pk'), onVaultKey: on('vault:key'),
   keysList: invoke('keys:list'), keysRecording: send('keys:recording'),
   dlList: invoke('dl:list'), dlAct: send('dl:act'), suggest: invoke('suggest'),
   onTab: on('tab:event'), onOpenRequest: on('tab:openRequest'), onCmd: on('cmd'),

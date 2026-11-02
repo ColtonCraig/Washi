@@ -11,6 +11,7 @@ let D = null, items = [], sel = 0, sugg = [], suggFor = '', suggT = 0;
 /* ---------- the bookmarks bar, when it shows on hover ---------- */
 const strip = $('#bmstrip'), stripIn = $('#bmin');
 function showStrip(d) {
+  toast.classList.remove('on'); clearTimeout(toastT);             // never both in the same small window
   BMK.draw(stripIn, d.items || [], d.favs || {}, m => B.bmAct(m));
   strip.classList.remove('out'); strip.classList.add('on');
 }
@@ -18,8 +19,9 @@ function hideStrip() { strip.classList.remove('on'); }
 B.onBmHide(hideStrip);
 B.onOverlayInit(d => {
   applyTheme(d.theme, d.pal);
-  if (d.mode === 'bmbar') { window.PANELS.closeAll(); window.SHEETS.close(true); close(); showStrip(d); return; }
-  hideStrip();
+  if (d.mode === 'bmbar') { window.PANELS.closeAll(); window.SHEETS.close(true); window.VAULTUI.close(); close(); showStrip(d); return; }
+  hideStrip(); window.VAULTUI.close();
+  if (d.mode === 'vault') { toast.classList.remove('on'); window.PANELS.closeAll(); window.SHEETS.close(true); close(); window.VAULTUI.open(d); return; }
   if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'panel' && d.mode !== 'peek' && d.mode !== 'sheet' && d.mode !== 'setup') close();
   if (d.mode === 'setup') { window.SETUP.open(d); return; }
   if (d.mode === 'panel') { window.PANELS.open(d); return; }
@@ -86,6 +88,7 @@ res.addEventListener('pointermove', e => { const r = e.target.closest('.r'); if 
 res.addEventListener('click', e => { const r = e.target.closest('.r'); if (r) pick(items[+r.dataset.n].r); });
 cmd.addEventListener('pointerdown', e => { if (e.target === cmd) cancel(); });
 addEventListener('keydown', e => {
+  if (window.VAULTUI && window.VAULTUI.isOpen()) return window.VAULTUI.key(e);
   if (window.SETUP && window.SETUP.isOpen()) return window.SETUP.key(e);
   if (window.SHEETS && window.SHEETS.isOpen()) return window.SHEETS.key(e);
   if (window.PANELS && window.PANELS.isOpen()) return window.PANELS.key(e);
@@ -142,6 +145,7 @@ B.onFx(f => {
   if (f.type === 'switch') return drawSwitch(f);
   if (f.type === 'switchEnd') { swEl.classList.remove('on'); swEl._key = ''; return; }
   if (f.type === 'toast') {
+    hideStrip();                                                   // the overlay just moved to the bottom for the toast
     $('#toastTxt').textContent = f.text;
     const btn = $('#toastBtn'), a = f.action || (f.reveal ? { label: 'Show in Finder', cmd: 'reveal', path: f.reveal } : null);
     btn.hidden = !a; if (a) { btn.textContent = a.label; btn.onclick = () => { toast.classList.remove('on'); B.toastAct(a); }; }
@@ -150,4 +154,4 @@ B.onFx(f => {
   }
 });
 
-B.onOverlayClosed(() => { close(); hideStrip(); window.PANELS.closeAll(); window.SHEETS.close(true); });
+B.onOverlayClosed(() => { close(); hideStrip(); window.PANELS.closeAll(); window.SHEETS.close(true); window.VAULTUI.close(); });

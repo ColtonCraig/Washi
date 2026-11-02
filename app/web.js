@@ -153,6 +153,7 @@ function setup(ses) {
   ses.setDevicePermissionHandler(d => (perms[originOf(d.origin)] || {})[d.deviceType] === 'allow');
   for (const ev of ['select-hid-device', 'select-serial-port', 'select-usb-device']) ses.on(ev, (e, _d, cb) => { e.preventDefault(); try { cb(''); } catch { try { cb(); } catch {} } });
   pipeline(ses);
+  ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, 'page-preload.js') });   // saved passwords and passkeys (top frames only)
   ses.on('will-download', onDownload);
   blocker.cosmetics(require('electron').ipcMain, ses);
   return ses;

@@ -17,13 +17,60 @@ const routes = {
   '/boost.html': () => `<!doctype html><title>Boost me</title><body style="margin:0;font:18px Arial,sans-serif;background:#fff"><header id="top" style="padding:20px 40px;background:#36c;color:#fff"><h1 style="margin:0">Boost me</h1></header>
     <main style="padding:20px 40px"><p id="txt">Some ordinary words on an ordinary page.</p><div class="ad-slot" style="width:400px;height:160px;background:#f0c;color:#fff;display:grid;place-items:center">ANNOYING AD</div>
     <ul><li class="item">one</li><li class="item">two</li><li class="item">three</li></ul><button id="b" onclick="document.title='clicked'">a button</button></main></body>`,
-  '/cookie.html': () => page('Cookie', '#fff', '<script>document.title = "cookie:" + document.cookie</script>')
+  '/cookie.html': () => page('Cookie', '#fff', '<script>document.title = "cookie:" + document.cookie</script>'),
+  /* saved passwords: a sign-in form (right password: "hunter2"), a sign-up form, a two-step sign-in, an SPA sign-in */
+  '/login.html': () => page('Sign in', '#fff', '<form id=f action="/signin" method="post"><input id=u name=login autocomplete="username" placeholder="Username"><input id=p type=password name=password autocomplete="current-password"><button id=go>Sign in</button></form><p id=v></p><script>document.getElementById("u").addEventListener("input",e=>document.getElementById("v").textContent="react:"+e.target.value)</script>'),
+  '/signup.html': () => page('Sign up', '#fff', '<form action="/welcome" method="get"><input id=e type=email name=email placeholder="Email"><input id=n1 type=password name=pw autocomplete="new-password"><input id=n2 type=password name=pw2 autocomplete="new-password"><button id=go>Create account</button></form>'),
+  '/step1.html': () => page('Step one', '#fff', '<form action="/step2.html" method="get"><input id=u type=email name=identifier autocomplete="username"><button id=go>Next</button></form>'),
+  '/step2.html': (q) => { const u = new URL(q.url, 'http://x').searchParams.get('identifier') || ''; return page('Step two', '#fff', `<form action="/welcome" method="get"><input type=email name=identifier autocomplete="username" value="${u.replace(/[^\w@.+-]/g, '')}" hidden><input id=p type=password name=pw autocomplete="current-password"><button id=go>Sign in</button></form>`); },
+  '/spa.html': () => page('App sign in', '#fff', '<div id=box><input id=u autocomplete="username"><input id=p type=password><button id=go type=button onclick="setTimeout(()=>{document.getElementById(\'box\').innerHTML=\'<h2 id=hi>Signed in</h2>\'},200)">Sign in</button></div>'),
+  '/welcome': () => page('Welcome', 'hsl(140 60% 92%)', '<p id=w>You are signed in.</p>'),
+  /* passkeys: registers and signs in with WebAuthn and really checks the signature (ES256) in the page */
+  '/webauthn.html': () => `<!doctype html><title>Passkeys</title><body style="font:20px system-ui;padding:30px"><h1>Passkey site</h1>
+    <button id=reg>Register</button> <button id=log>Sign in</button> <button id=log2>Sign in (this account)</button> <button id=caps>Caps</button><pre id=out></pre>
+    <script>
+    const out = m => { document.getElementById('out').textContent = m; document.title = m; };
+    const b64 = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+    const unb = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+    let keys = JSON.parse(localStorage.keys || '{}');
+    document.getElementById('reg').onclick = async () => {
+      try {
+        const c = await navigator.credentials.create({ publicKey: { rp: { name: 'Test', id: 'localhost' }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'colton@example.com', displayName: 'Colton' }, challenge: crypto.getRandomValues(new Uint8Array(32)), pubKeyCredParams: [{ type: 'public-key', alg: -7 }], authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' } } });
+        keys[c.id] = b64(c.response.getPublicKey()); localStorage.keys = JSON.stringify(keys); out('registered:' + c.id.length);
+      } catch (e) { out('reg-error:' + e.name); document.getElementById('out').dataset.msg = e.message; }
+    };
+    async function signIn(allow) {
+      try {
+        const ch = crypto.getRandomValues(new Uint8Array(32));
+        const a = await navigator.credentials.get({ publicKey: { rpId: 'localhost', challenge: ch, userVerification: 'preferred', allowCredentials: allow ? Object.keys(keys).map(id => ({ type: 'public-key', id: unb(id) })) : [] } });
+        const spki = keys[a.id]; if (!spki) return out('unknown-key');
+        const key = await crypto.subtle.importKey('spki', unb(spki), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+        const cd = JSON.parse(new TextDecoder().decode(a.response.clientDataJSON));
+        const hash = await crypto.subtle.digest('SHA-256', a.response.clientDataJSON);
+        const data = new Uint8Array([...new Uint8Array(a.response.authenticatorData), ...new Uint8Array(hash)]);
+        const der = new Uint8Array(a.response.signature); let i = 2; const rl = der[i + 1]; let r = der.slice(i + 2, i + 2 + rl); i += 2 + rl; const sl = der[i + 1]; let s = der.slice(i + 2, i + 2 + sl);
+        const fix = x => { while (x.length > 32 && x[0] === 0) x = x.slice(1); const o = new Uint8Array(32); o.set(x, 32 - x.length); return o; };
+        const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, new Uint8Array([...fix(r), ...fix(s)]), data);
+        const flags = new Uint8Array(a.response.authenticatorData)[32], count = new DataView(a.response.authenticatorData).getUint32(33);
+        out((ok && cd.type === 'webauthn.get' && cd.challenge === b64(ch) ? 'signed-in' : 'bad-signature') + ':uv=' + ((flags & 4) ? 1 : 0) + ':count=' + count + ':user=' + (a.response.userHandle ? a.response.userHandle.byteLength : 0));
+      } catch (e) { out('get-error:' + e.name); document.getElementById('out').dataset.msg = e.message; }
+    }
+    document.getElementById('log').onclick = () => signIn(false);
+    document.getElementById('log2').onclick = () => signIn(true);
+    document.getElementById('caps').onclick = async () => out('caps:' + (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) + ':' + (await PublicKeyCredential.isConditionalMediationAvailable()));
+    </script>`
 };
 /* fake GitHub + feeds for test/live.js: /live/set?prs=1,2,3&items=a,b changes what they return */
 const LIVE = { prs: [1, 2, 3], items: ['a', 'b', 'c'], auth: '' };
 /* fake update server for test/update.js: files from $UPD_DIR, and a switch to serve broken update info */
 let updMode = 'good';
 const srv = http.createServer((q, r) => {
+  if (q.url.startsWith('/signin') && q.method === 'POST') {          // the sign-in form: right password → welcome, wrong → the form again
+    let b = ''; q.on('data', c => { b += c; }); q.on('end', () => { const f = new URLSearchParams(b); r.setHeader('content-type', 'text/html');
+      if (f.get('password') === 'hunter2') { r.statusCode = 303; r.setHeader('location', '/welcome'); return r.end(); }
+      r.end(routes['/login.html']().replace('<h1>Sign in</h1>', '<h1>Sign in</h1><p id=bad>Wrong password</p>')); });
+    return;
+  }
   if (q.url.startsWith('/live/set?')) { const u = new URL(q.url, 'http://x'); if (u.searchParams.has('prs')) LIVE.prs = u.searchParams.get('prs').split(',').filter(Boolean).map(Number); if (u.searchParams.has('items')) LIVE.items = u.searchParams.get('items').split(',').filter(Boolean); return r.end('ok'); }
   if (q.url === '/live/auth') return r.end(LIVE.auth);
   /* pretend apps for test/today.js: /app/<name> is "signed out" until /app/<name>?login=1 sets its cookie */

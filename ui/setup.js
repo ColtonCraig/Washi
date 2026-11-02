@@ -361,6 +361,84 @@ window.SETUP = (() => {
     return [bar, importBox(false)];
   }
 
+  /* ---------- Settings › Passwords: saved logins and passkeys, kept encrypted on this Mac ---------- */
+  function secPasswords() {
+    const box = h('div', { class: 'pwbox' }), pkbox = h('div', { class: 'pwbox' }), nvbox = h('div', {});
+    let L = { logins: [], passkeys: [], never: [], ok: true }, q = '', open = null, shown = new Map(), msg = null, undo = null, adding = false;
+    const say = (text, ok = true, un = null, where = 'pw') => { msg = { text, ok, where }; undo = un; draw(); };
+    const load = async () => { try { L = (await B.setupAct({ type: 'pw:list' })) || L; } catch {} draw(); };
+    const ago = t => { if (!t) return 'never'; const d = Math.round((Date.now() - t) / 864e5); return d < 1 ? 'today' : d < 2 ? 'yesterday' : d < 31 ? d + ' days ago' : new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); };
+    function editor(l) {
+      const site = h('input', { class: 'txt', value: l ? (l.origin.startsWith('https://') ? l.host : l.origin) : '', placeholder: 'github.com', spellcheck: 'false', 'aria-label': 'Website' });
+      const user = h('input', { class: 'txt', value: l ? l.user : '', placeholder: 'Username or email', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Username' });
+      const pass = h('input', { class: 'txt', type: 'password', placeholder: l ? 'Leave empty to keep it' : 'Password', autocomplete: 'new-password', 'aria-label': 'Password' });
+      const err = h('small', { class: 'err' });
+      const save = async () => {
+        const r = l ? await B.setupAct({ type: 'pw:edit', id: l.id, site: site.value, user: user.value, pass: pass.value || undefined }) : await B.setupAct({ type: 'pw:add', site: site.value, user: user.value, pass: pass.value });
+        if (!r || !r.ok) { err.textContent = (r && r.error) || 'Couldn\'t save that.'; return; }
+        open = null; adding = false; shown.delete(l && l.id); await load(); say(l ? 'Saved your changes.' : 'Added the password.');
+      };
+      [site, user, pass].forEach(i => i.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') save(); if (e.key === 'Escape') { open = null; adding = false; draw(); } }));
+      setTimeout(() => (l ? user : site).focus(), 30);
+      return h('div', { class: 'pwedit' }, h('label', { class: 'fl' }, h('span', {}, 'Website'), site), h('label', { class: 'fl' }, h('span', {}, 'Username'), user), h('label', { class: 'fl' }, h('span', {}, 'Password'), pass), err,
+        h('div', { class: 'sbtns' }, h('button', { class: 'btn small plain', onclick: () => { open = null; adding = false; draw(); } }, 'Cancel'), h('button', { class: 'btn small primary', onclick: save }, l ? 'Save' : 'Add password')));
+    }
+    function draw() {
+      box.innerHTML = '';
+      if (!L.ok) box.append(h('p', { class: 'err' }, L.broken ? 'Washi couldn\'t unlock your saved passwords (the Keychain said no). They\'re untouched; restart Washi and allow access when macOS asks.' : 'Passwords can\'t be stored securely on this computer.'));
+      const note = () => h('p', { class: msg.ok ? 'okay' : 'err' }, (msg.ok ? '✓ ' : '') + msg.text, undo ? h('button', { class: 'link', onclick: async () => { const u = undo; undo = null; await B.setupAct(u); msg = null; load(); } }, ' Undo') : null);
+      if (msg && msg.where === 'pw') box.append(note());
+      const search = h('input', { class: 'txt pwq', type: 'search', placeholder: `Search ${L.logins.length} saved password${L.logins.length === 1 ? '' : 's'}`, value: q, spellcheck: 'false', 'aria-label': 'Search passwords' });
+      search.addEventListener('input', () => { q = search.value; drawList(); });
+      search.addEventListener('keydown', e => e.stopPropagation());
+      const list = h('div', { class: 'pwlist', role: 'list' });
+      function drawList() {
+        list.innerHTML = '';
+        const want = q.trim().toLowerCase(), rows = L.logins.filter(l => !want || l.host.toLowerCase().includes(want) || l.user.toLowerCase().includes(want));
+        if (!L.logins.length) list.append(h('p', { class: 'hint pwempty' }, 'No saved passwords yet. When you sign in to a site, Washi offers to save it.'));
+        else if (!rows.length) list.append(h('p', { class: 'hint pwempty' }, 'Nothing matches.'));
+        for (const l of rows) {
+          const sh = shown.get(l.id);
+          const row = h('div', { class: 'pwrow' + (open === l.id ? ' open' : ''), role: 'listitem', 'data-id': l.id },
+            h('span', { class: 'pwfav', html: BL.favHTML({ title: l.host, url: l.origin }) }),
+            h('span', { class: 'pwt' }, h('b', {}, l.host), h('small', {}, l.user || '(no username)')),
+            h('span', { class: 'pwv' + (sh ? ' on' : ''), title: sh ? '' : 'Hidden' }, sh || '•'.repeat(Math.min(12, Math.max(8, l.len)))),
+            h('span', { class: 'pwacts' },
+              h('button', { class: 'ib', title: sh ? 'Hide' : 'Show', 'aria-label': (sh ? 'Hide' : 'Show') + ' password for ' + l.host, 'data-a': 'show', html: BL.ic('eye', 16), onclick: async () => { if (sh) { shown.delete(l.id); return drawList(); } const r = await B.setupAct({ type: 'pw:reveal', id: l.id }); if (r && r.ok) { shown.set(l.id, r.pass); drawList(); setTimeout(() => { shown.delete(l.id); drawList(); }, 30000); } } }),
+              h('button', { class: 'ib', title: 'Copy password', 'aria-label': 'Copy password for ' + l.host, 'data-a': 'copy', html: BL.ic('copy', 16), onclick: async () => { const r = await B.setupAct({ type: 'pw:copy', id: l.id }); if (r && r.ok) say(`Copied the password for ${l.host}. It's cleared from the clipboard in a minute.`); } }),
+              h('button', { class: 'ib', title: 'Edit', 'aria-label': 'Edit ' + l.host, 'data-a': 'edit', html: BL.ic('pen', 16), onclick: () => { open = open === l.id ? null : l.id; adding = false; drawList(); } }),
+              h('button', { class: 'ib warn', title: 'Delete', 'aria-label': 'Delete password for ' + l.host, 'data-a': 'del', html: BL.ic('trash', 16), onclick: async () => { const r = await B.setupAct({ type: 'pw:delete', id: l.id }); await load(); if (r && r.ok) say(`Deleted the password for ${l.host}.`, true, { type: 'pw:undo', undo: r.undo }); } })));
+          list.append(row);
+          if (open === l.id) list.append(editor(l));
+        }
+      }
+      drawList();
+      box.append(...[h('div', { class: 'pwtop' }, search, h('button', { class: 'btn small', onclick: () => { adding = !adding; open = null; draw(); } }, adding ? 'Cancel' : 'Add password')), adding ? editor(null) : null, list,
+        h('div', { class: 'sbtns' },
+          h('button', { class: 'btn small', onclick: async () => { const r = await B.setupAct({ type: 'pw:import' }); if (!r) return; if (!r.ok) return say(r.error || 'Couldn\'t import that.', false); await load(); say(`Imported ${r.added} new password${r.added === 1 ? '' : 's'}${r.updated ? ` and updated ${r.updated}` : ''}${r.skipped ? ` (${r.skipped} skipped: no website or password)` : ''}.`); } }, 'Import passwords…'),
+          h('button', { class: 'btn small plain', disabled: !L.logins.length, onclick: async () => { const r = await B.setupAct({ type: 'pw:export' }); if (!r) return; if (!r.ok) return say(r.denied ? 'Export cancelled.' : r.error || 'Couldn\'t export.', false); say(`Exported ${r.n} passwords. Anyone who opens that file can read them: delete it when you're done.`); } }, 'Export…'))].filter(Boolean));
+      pkbox.innerHTML = '';
+      if (msg && msg.where === 'pk') pkbox.append(note());
+      if (!L.passkeys.length) pkbox.append(h('p', { class: 'hint' }, 'No passkeys yet. When a site offers to add a passkey (usually in its security settings), Washi saves it here.'));
+      for (const p of L.passkeys) pkbox.append(h('div', { class: 'pwrow pk', 'data-id': p.id },
+        h('span', { class: 'pwfav', html: BL.favHTML({ title: p.rpId, url: 'https://' + p.rpId }) }),
+        h('span', { class: 'pwt' }, h('b', {}, p.rpId), h('small', {}, (p.user || 'Passkey') + ' · used ' + ago(p.used))),
+        h('span', { class: 'pwacts' }, h('button', { class: 'ib warn', title: 'Delete passkey', 'aria-label': 'Delete passkey for ' + p.rpId, html: BL.ic('trash', 16), onclick: async () => { const r = await B.setupAct({ type: 'pk:delete', id: p.id }); await load(); if (r && r.ok) say(`Deleted the passkey for ${p.rpId}. Remove it in the site's settings too.`, true, { type: 'pk:undo', undo: r.undo }, 'pk'); } }))));
+      nvbox.innerHTML = '';
+      if (L.never.length) nvbox.append(field('Never saved for', h('div', { class: 'pwnever' }, L.never.map(o => h('span', { class: 'chipx' }, o.replace(/^https?:\/\//, ''), h('button', { 'aria-label': 'Offer to save on ' + o + ' again', title: 'Offer to save here again', onclick: async () => { await B.setupAct({ type: 'pw:never', origin: o }); load(); } }, '×'))))));
+    }
+    load();
+    return [
+      field('Passwords', h('div', { class: 'tgls' },
+        toggle('Offer to save passwords', 'When you sign in or sign up, Washi asks whether to keep it', () => P.pwSave !== false, v => setPref({ pwSave: v })),
+        toggle('Fill saved passwords', 'Pick an account under a sign-in field to fill it in. Nothing is filled until you pick.', () => P.pwFill !== false, v => setPref({ pwFill: v }))), 'Kept encrypted on this Mac with a key in your Keychain, never sent anywhere. Showing or copying one asks for Touch ID.'),
+      field('Saved passwords', box),
+      field('Passkeys', h('div', {}, h('div', { class: 'tgls' }, toggle('Use Washi for passkeys', 'Sites can save a passkey in Washi and sign you in with it (with Touch ID)', () => P.passkeys !== false, v => setPref({ passkeys: v }))), pkbox),
+        'Passkeys in iCloud Keychain or on your phone can\'t be used by Washi: Apple only lets browsers it has approved use them. Add a Washi passkey alongside them in each site\'s security settings.'),
+      nvbox
+    ];
+  }
+
   /* ---------- your apps: pick the ones you use; they're pinned (or go in a space that keeps its own logins) ---------- */
   const workSpace = () => SPACES.find(x => x.id === 'work') || SPACES.find(x => /work/i.test(x.name));
   function appPicker(o = {}) {
@@ -410,7 +488,7 @@ window.SETUP = (() => {
       const r = key === 'safari' || key === 'file' ? await B.setupAct({ type: 'bm:pick', kind: key }) : await B.setupAct({ type: 'bm:read', key });
       if (!r) { busy = ''; draw(); return; }
       if (!r.ok) { busy = ''; msg = { ok: false, text: r.error || 'Couldn\'t read that.' }; draw(); return; }
-      send({ type: 'bmImport', data: { bar: r.bar, other: r.other, history: r.history || [] }, name: key === 'safari' || key === 'file' ? r.name : label });
+      send({ type: 'bmImport', data: { bar: r.bar, other: r.other, history: r.history || [], pw: r.pw || null }, name: key === 'safari' || key === 'file' ? r.name : label });
     };
     hooks.bm = r => { busy = ''; msg = { ok: !!r.ok, text: r.text || r.error }; draw(); };
     const what = b => [b.count && `${fmtN(b.count)} bookmark${b.count === 1 ? '' : 's'}`, b.history && `${fmtN(Math.min(b.history, 3000))} page${b.history === 1 ? '' : 's'} of history`].filter(Boolean).join(' · ');
@@ -418,7 +496,7 @@ window.SETUP = (() => {
       box.innerHTML = '';
       if (msg) box.append(h('p', { class: msg.ok ? 'okay' : 'err' }, (msg.ok ? '✓ ' : '') + msg.text));
       const list = h('div', { class: 'arcl' });
-      list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, 'Safari'), h('small', {}, 'In Safari: File › Export Browsing Data to File… (bookmarks and history), then choose the .zip')),
+      list.append(h('div', { class: 'arow bmrow' }, h('span', { class: 'an' }, h('b', {}, 'Safari'), h('small', {}, 'In Safari: File › Export Browsing Data to File… (bookmarks, history and passwords), then choose the .zip')),
         h('button', { class: 'btn small', disabled: !!busy, onclick: () => run('safari', 'Safari') }, busy === 'safari' ? 'Bringing it in…' : 'Choose export…')));
       if (found) for (const b of found) {
         const lbl = b.browser + (found.filter(x => x.browser === b.browser).length > 1 ? ` (${b.profile})` : '');
@@ -429,7 +507,7 @@ window.SETUP = (() => {
       if (!found) box.append(h('p', { class: 'hint' }, 'Looking for other browsers on this Mac…'));
       else if (!found.length && !brief) box.append(h('p', { class: 'hint' }, 'No Chrome, Brave, Edge, Arc, Dia, Helium, Vivaldi, Opera or Firefox found on this Mac.'));
       if (!brief) box.append(h('div', { class: 'sbtns' }, h('button', { class: 'btn small plain', disabled: !!busy, onclick: () => run('file', '') }, busy === 'file' ? 'Bringing them in…' : 'Choose a bookmarks file…')),
-        h('p', { class: 'hint' }, 'Any browser\'s bookmarks export (.html) works too. Passwords aren\'t brought over: Washi doesn\'t store passwords yet.'));
+        h('p', { class: 'hint' }, 'Any browser\'s bookmarks export (.html) works too. Safari\'s export brings your passwords along; for other browsers, use Settings › Passwords › Import.'));
     }
     B.setupAct({ type: 'bm:scan' }).then(r => { found = Array.isArray(r) ? r : []; draw(); }).catch(() => { found = []; draw(); });
     draw();
@@ -613,6 +691,7 @@ window.SETUP = (() => {
       ['browser', 'Browser', () => [secSidebar(), secDownloads(), secDefault()]],
       ['privacy', 'Privacy & security', () => [secBlocking(), ...secSecurity(), secPerms(), secData()]],
       ['apps', 'Apps', () => secApps()],
+      ['passwords', 'Passwords', () => secPasswords()],
       ['bookmarks', 'Bookmarks', () => secBookmarks()],
       ['keys', 'Shortcuts', () => secKeys()],
       ['import', 'Import', () => secImport()],

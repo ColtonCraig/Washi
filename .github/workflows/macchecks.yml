@@ -1,13 +1,15 @@
-# Things that behave differently on a real Mac: the importer (Apple's ditto for Safari zips, Electron's built-in SQLite).
+# Things that behave differently on a real Mac: the importer (Apple's ditto for Safari zips, Electron's built-in SQLite),
+# and saved passwords + passkeys (the real Keychain via safeStorage, the macOS WebAuthn path).
 name: Mac checks
 on:
   push:
     branches: [main]
-    paths: ['app/bmimport.js', 'test/mac-import.js', 'test/fixtures/make-browsers.js', '.github/workflows/macchecks.yml']
+    paths: ['app/bmimport.js', 'app/vault.js', 'app/autofill.js', 'app/page-preload.js', 'ui/vaultui.js', 'test/mac-*.js', 'test/fixtures/make-browsers.js', '.github/workflows/macchecks.yml']
   workflow_dispatch:
 jobs:
   mac:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,3 +17,8 @@ jobs:
       - run: sw_vers
       - run: npm ci
       - run: ELECTRON_RUN_AS_NODE=1 npx electron test/mac-import.js
+      - name: Passwords and passkeys
+        run: |
+          node test/server.js > server.log 2>&1 &
+          sleep 1
+          node test/mac-passwords.js

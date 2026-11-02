@@ -1,0 +1,58 @@
+/* Saved passwords and passkeys: the account menu, the save card and the passkey card */
+.vault{display:none}
+.vault.on{display:block}
+.vault .vmenu{position:absolute;left:6px;right:6px;top:4px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:12px;background-color:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .12),0 6px 9px rgb(var(--sh) / .16);animation:vin .14s var(--ease) both}
+.vault .vmenu .tp{display:none}
+@keyframes vin{from{opacity:0;transform:translateY(-4px)}}
+.vault .vi{width:100%;min-height:46px;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;text-align:left;color:var(--ink);transition:background .1s}
+.vault .vi.on,.vault .vi:hover,.vault .vi:focus-visible{background:rgb(var(--inkc) / .07);outline:0}
+.vault .vi .fav{flex:none}
+.vault .vi>.i{flex:none;width:16px;height:16px;color:var(--tape)}
+.vault .vt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.vault .vt b{font:600 13.5px var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vault .vt small{font:500 11.5px var(--font-ui);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vault .vt small.mono{font:500 12px ui-monospace,'SF Mono',Menlo,monospace;color:var(--ink2);letter-spacing:.02em}
+.vault .vi.gen{background:color-mix(in srgb,var(--tape) 7%,transparent)}
+.vault .vi.gen.on,.vault .vi.gen:hover{background:color-mix(in srgb,var(--tape) 14%,transparent)}
+.vault .vfoot{height:32px;display:flex;align-items:center;gap:7px;margin-top:2px;padding:0 10px;border-top:1px dashed rgb(var(--inkc) / .14);color:var(--ink2);font:500 12px var(--font-ui);text-align:left}
+.vault .vfoot span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vault .vfoot .i{flex:none;width:14px;height:14px}
+.vault .vfoot:hover{color:var(--ink)}
+
+/* the cards */
+.vault .vcard{display:flex;flex-direction:column;gap:12px;padding:18px 18px 14px;border-radius:14px;background-color:var(--paper);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 8px 9px rgb(var(--sh) / .18)}
+.vault.save .vcard{position:absolute;left:6px;right:6px;top:14px;animation:vdrop .2s var(--spring,cubic-bezier(.34,1.3,.64,1)) both}
+@keyframes vdrop{from{opacity:0;transform:translateY(-8px) rotate(-.6deg)}}
+.vault .vh{display:flex;align-items:center;gap:10px;min-width:0}
+.vault .vh .fav,.vault .vh>.i{flex:none}
+.vault .vh>.i{width:20px;height:20px;color:var(--tape)}
+.vault .vh b{min-width:0;font:700 15px/1.3 var(--font-ui);color:var(--ink);overflow-wrap:anywhere}
+.vault .vh .h{color:color-mix(in srgb,var(--tape) 70%,var(--ink))}
+.vault .vf{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:10px;margin:0}
+.vault .vf>span:first-child{color:var(--ink2);font:600 12px var(--font-ui)}
+.vault .vf input{width:100%;height:32px;padding:0 10px;border:0;border-radius:8px;background:var(--white);color:var(--ink);font:500 13px var(--font-ui);box-shadow:inset 0 0 0 1px rgb(var(--inkc) / .18);outline:0}
+.vault .vf input:focus{box-shadow:inset 0 0 0 2px var(--tape)}
+.vault .dots{height:32px;display:flex;align-items:center;padding:0 10px;border-radius:8px;background:rgb(var(--inkc) / .04);color:var(--ink2);letter-spacing:2px;font:600 13px var(--font-ui);overflow:hidden;white-space:nowrap}
+.vault .vbtns{display:flex;align-items:center;gap:8px;margin-top:2px}
+.vault .vbtns .fill{flex:1}
+.vault .vbtns .btn{height:32px;padding:0 14px;border-radius:9px;font-size:13px}
+.vault .lnk{color:var(--ink2);font:600 12.5px/1 var(--font-ui);text-decoration:underline;text-decoration-color:rgb(var(--inkc) / .3);text-underline-offset:3px;white-space:nowrap}
+.vault .lnk:hover{color:var(--ink)}
+.vault .vp{margin:0;color:var(--ink2);font:500 13.5px/1.5 var(--font-ui)}
+.vault .vp b{color:var(--ink)}
+.vault .vp.sm{font-size:12.5px;color:var(--ink3)}
+
+/* the passkey card: centred over the page, with the page dimmed */
+.vault.pk{position:fixed;inset:0}
+.vault .vdim{position:absolute;inset:0;background:rgb(var(--sh) / .22);animation:vfade .18s ease both}
+@keyframes vfade{from{opacity:0}}
+.vault .vstage{position:absolute;display:grid;place-items:center;padding:24px}
+.vault .pkc{position:relative;width:min(430px,100%);padding:24px 22px 16px;animation:vpop .24s var(--spring,cubic-bezier(.34,1.3,.64,1)) both}
+.vault .pkc .tp{top:-10px}
+@keyframes vpop{from{opacity:0;transform:translateY(10px) scale(.97) rotate(-.8deg)}}
+.vault .vlist{display:flex;flex-direction:column;gap:4px}
+.vault .vlist .vi{background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .08)}
+.vault .vlist .vi:hover,.vault .vlist .vi:focus-visible{box-shadow:0 0 0 2px var(--tape);background:var(--white)}
+.vault .vlist .vi>.i{color:var(--ink3)}
+.motion-off .vault *{animation:none!important}
+@media (prefers-reduced-motion:reduce){.vault *{animation:none!important}}
