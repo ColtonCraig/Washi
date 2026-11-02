@@ -18,4 +18,5 @@ const fix = () => {
   }
 };
 let dbg = false; try { dbg = !!(process.env && process.env.WASHI_DEBUG_EXT); } catch {}
-try { if (globalThis.location && location.protocol === 'chrome-extension:') { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); contextBridge.executeInMainWorld({ func: fix }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
+const isExt = () => { try { return process.type === 'service-worker' || (globalThis.location && String(location.href).startsWith('chrome-extension://')); } catch { return false; } };   // a worker has no location yet: ask process.type, like the engine does
+try { if (isExt()) { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); contextBridge.executeInMainWorld({ func: fix }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
