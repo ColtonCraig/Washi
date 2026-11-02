@@ -19,7 +19,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install-deps chromium && npm i --no-save playwright@1 && sudo apt-get install -y xvfb imagemagick python3-xlib python3-pil
-      - run: sudo SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
+      - run: sudo CI=1 SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: 'screenshots-${{ matrix.shard }}', path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }
