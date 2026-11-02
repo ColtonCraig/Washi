@@ -5,6 +5,7 @@ Read this before any change. These are standing instructions from Colton, not su
 ## Quality bar
 - Nothing is "done" until it works 100%: no bugs, no clipping, no half-baked features. If something can't be finished, say so plainly instead of shipping it.
 - Every feature follows the paper theme: minimal but fun, purposeful animations, fast.
+- Design every new feature for **every look**, and verify it in each (tests + screenshots you look at): light and dark, Standard and Scrapbook (Settings › Look; `.scrapbook` on `<html>`, `ui/scrapbook.css`), and the paper/ink presets and space colours (use the theme variables, never hard-coded colours). Animations must feel like the same family everywhere: same easing and timing as the rest of Washi, more playful in Scrapbook, and respect "Animations off" and reduced motion. Colton: "I just want to make sure our designs are very cohesive across all possibilities."
 - Test like a person uses it: real clicks, drags, keyboard (see `test/`, `test/ptr.py`), at several window sizes, light and dark. Every new screen gets a clipping audit (`AUDIT` in `test/lib.js`) and a screenshot you actually look at.
 - Check Mac-specific behaviour against the current macOS (26 Tahoe) on GitHub's Mac runners (`.github/workflows/macchecks.yml`), not from memory.
 
