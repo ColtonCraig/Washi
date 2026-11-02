@@ -1,10 +1,9 @@
 # Things that behave differently on a real Mac: the importer (Apple's ditto for Safari zips, Electron's built-in SQLite),
 # and saved passwords + passkeys (the real Keychain via safeStorage, the macOS WebAuthn path).
 name: Mac checks
+# Mac minutes cost ~10x Linux minutes, so these run when asked (before a release that changes Mac-specific code):
+#   gh workflow run macchecks.yml   (or: gh api -X POST repos/ColtonCraig/Washi/actions/workflows/macchecks.yml/dispatches -f ref=main)
 on:
-  push:
-    branches: [main]
-    paths: ['app/extensions.js', 'test/mac-extensions.js', 'app/bmimport.js', 'app/vault.js', 'app/autofill.js', 'app/page-preload.js', 'ui/vaultui.js', 'test/mac-*.js', 'test/fixtures/make-browsers.js', '.github/workflows/macchecks.yml']
   workflow_dispatch:
 jobs:
   mac:

@@ -15,7 +15,7 @@ Speed matters as much as testing (Colton, Nov 2: "I would rather just push out a
 1. Locally, run only the test files that cover what you changed (`bash test/run.sh split extensions …`), 0 failures. New features still get real-pointer tests, a clipping audit and a screenshot you look at. Add new test files to `ALL` in `test/run.sh`. Never run the full ~30 min suite locally; GitHub does that.
 2. Push to `main` freely. Start `bash scripts/ci-wait.sh` in the background and **keep working**; don't sit and wait. Anything red gets fixed in the next push.
 3. Release a finished batch (not every fix) as soon as **Test (Linux)** is green on that commit: push `main` to `release`, wait for the Release workflow, verify `latest.json` (version + signature).
-   - Mac checks are a heads-up, not a blocker, unless the batch changed Mac-specific code (the files listed in `macchecks.yml`). Never wait on GitHub's Mac queue; `mac-retry.yml` re-runs a Mac job that never got a machine.
+   - Mac checks run only when asked (Mac minutes cost ~10x; GitHub billing stopped all runs once on Nov 2). Dispatch `macchecks.yml` once before a release whose batch changed Mac-specific code (extensions, passwords/passkeys, importer); otherwise they're not needed. Never wait on GitHub's Mac queue; `mac-retry.yml` re-runs a Mac job that never got a machine.
    - A failure that only happens on GitHub gets two tries. Then tell Colton plainly, mark it in the test (a NOTE saying where it's covered instead), and keep shipping.
    - Failure screenshots are uploaded as run artifacts (`gh run download <id>`).
 4. Tell Colton what shipped, plainly, including anything that isn't covered yet.

@@ -50,6 +50,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   if (pop) {
     await pop.waitForSelector('#t', { timeout: 5000 });
     ok((await pop.textContent('#t')) === 'Hello from the extension', 'the popup shows its page');
+    ok(await pop.evaluate(() => chrome.tabs.TAB_ID_NONE === -1 && chrome.tabs.TAB_INDEX_NONE === -1 && chrome.windows.WINDOW_ID_NONE === -1 && chrome.windows.WINDOW_ID_CURRENT === -2), 'extensions get Chrome\'s standard constants (chrome.tabs.TAB_ID_NONE…; Okta\'s plugin needs them)');
     shot('ext-popup');
     await pop.click('#open'); await sleep(2200);
     for (let i = 0; i < 20 && !(await ui.evaluate(() => S.tabs[focusedId()] && S.tabs[focusedId()].url === 'http://localhost:8765/p2.html?fromext=1')); i++) await sleep(250);
