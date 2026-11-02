@@ -32,7 +32,9 @@ const typeKeys = s => K(s.split('').map(c => SHIFTED[c] ? `down:Shift_L tap:${SH
   // ---------- 1. sign in: wrong password first (no offer), then the right one ----------
   const pg = await open('http://localhost:8765/login.html');
   ok(await pg.evaluate(() => typeof window.washi === 'undefined' && typeof require === 'undefined' && typeof process === 'undefined'), 'the page itself gets no way into Washi');
-  await pclick(pg, '#u'); typeKeys('colton'); await pclick(pg, '#p'); typeKeys('wrong'); K('tap:Return'); await sleep(3500);
+  await pclick(pg, '#u'); typeKeys('colton'); await pclick(pg, '#p'); typeKeys('wrong'); K('tap:Return'); await sleep(1500);
+  for (let i = 0; i < 40 && !(await pg.$('#bad').catch(() => null)); i++) await sleep(200);   // the page comes back with an error (slow machines take longer)
+  await sleep(1500);                                                                          // and Washi has had time to (not) offer
   ok(await pg.$('#bad') && !(await vault()).cls.includes('on'), 'a wrong password (the form comes back) isn\'t offered for saving');
   await pclick(pg, '#u'); K('down:Control_L tap:a up:Control_L'); typeKeys('colton'); await pclick(pg, '#p'); typeKeys('hunter2'); await pclick(pg, '#go');
   let v = await card('save');
