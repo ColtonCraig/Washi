@@ -850,7 +850,8 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
   if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reloadIgnoringCache(); return { ok: true }; }   // not from the cache: ads that loaded while blocking was off mustn't come back
-  if (a.type === 'blocking:info') { const t = activeTab(); let host = ''; try { host = new URL(t.wc.getURL()).hostname.replace(/^www\./, ''); } catch {} return { host, count: t ? blocker.countFor(t.wc.id) : 0, allowed: blocker.allowedOn(host), mode: blocker.getMode() }; }
+  if (a.type === 'blocking:info') { const t = activeTab(); let host = '', origin = ''; try { const u = new URL(t.wc.getURL()); host = u.hostname.replace(/^www\./, ''); if (/^https?:$/.test(u.protocol)) origin = u.origin; } catch {} return { host, origin, net: origin ? web.permOf(origin, 'local-network') : null, count: t ? blocker.countFor(t.wc.id) : 0, allowed: blocker.allowedOn(host), mode: blocker.getMode() }; }
+  if (a.type === 'perm:set') { web.setPerm(a.origin, a.perm, a.v); if (a.reload) { const t = activeTab(); if (t && (() => { try { return new URL(t.wc.getURL()).origin; } catch { return ''; } })() === a.origin) t.wc.reload(); } return web.listPerms(); }
   return { ok: false };
 });
 /* ---------- speed check (Settings → Help) ---------- */

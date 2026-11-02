@@ -157,16 +157,16 @@ window.SETUP = (() => {
   }
   function secPerms() {
     const box = h('div', { class: 'perms' });
-    const NAMES = { media: 'Camera & mic', geolocation: 'Location', notifications: 'Notifications', 'clipboard-read': 'Clipboard', midi: 'MIDI', midiSysex: 'MIDI control', 'display-capture': 'Screen recording', 'idle-detection': 'Idle detection', hid: 'HID devices', serial: 'Serial ports', usb: 'USB devices' };
+    const NAMES = { 'local-network': 'Apps on this Mac', media: 'Camera & mic', geolocation: 'Location', notifications: 'Notifications', 'clipboard-read': 'Clipboard', midi: 'MIDI', midiSysex: 'MIDI control', 'display-capture': 'Screen recording', 'idle-detection': 'Idle detection', hid: 'HID devices', serial: 'Serial ports', usb: 'USB devices' };
     const draw = list => {
       box.innerHTML = '';
       if (!list || !list.length) { box.append(h('p', { class: 'hint' }, 'No sites have asked for anything yet. When one does, your answer shows up here.')); return; }
       for (const { origin, perms } of list) box.append(h('div', { class: 'perm' }, h('b', {}, origin.replace(/^https:\/\//, '')),
-        h('span', { class: 'chips' }, Object.entries(perms).map(([k, v]) => h('button', { class: 'chip ' + v, title: 'Forget this choice', onclick: async () => draw(await B.setupAct({ type: 'perm:reset', origin, perm: k })) }, (v === 'allow' ? '✓ ' : '✕ ') + (NAMES[k] || k), h('i', {}, '×')))),
+        h('span', { class: 'chips' }, Object.entries(perms).map(([k, v]) => h('button', { class: 'chip ' + v, title: v === 'allow' ? 'Allowed: click to block' : 'Blocked: click to allow', 'aria-pressed': String(v === 'allow'), onclick: async () => draw(await B.setupAct({ type: 'perm:set', origin, perm: k, v: v === 'allow' ? 'block' : 'allow' })) }, (v === 'allow' ? '✓ ' : '✕ ') + (NAMES[k] || k)))),
         h('button', { class: 'lnk', onclick: async () => draw(await B.setupAct({ type: 'perm:reset', origin })) }, 'Reset')));
     };
     draw(INFO.perms || []); hooks.perms = draw;
-    return field('Site permissions', box, 'Click a choice to forget it; the site will ask again next time.');
+    return field('Site permissions', box, 'Click a choice to switch it between allowed and blocked. Reset forgets a site, so it asks again.');
   }
   function secDownloads() {
     return field('Downloads', seg([{ v: false, label: 'Save to Downloads', sub: 'No questions asked' }, { v: true, label: 'Ask where to save', sub: 'Pick a folder each time' }], () => P.askDownload, v => setPref({ askDownload: v }), 'wide'));

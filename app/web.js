@@ -20,11 +20,19 @@ const savePerms = () => store.writeJSON('site-permissions.json', perms);
 const SAFE = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock', 'keyboardLock', 'speaker-selection', 'storage-access', 'top-level-storage-access', 'window-management', 'background-sync', 'persistent-storage']);
 const LABEL = { media: 'use your camera or microphone', geolocation: 'know your location', notifications: 'send you notifications', 'clipboard-read': 'see what you copy', midi: 'use MIDI devices', midiSysex: 'control MIDI devices',
   'display-capture': 'record your screen', 'idle-detection': 'know when you\'re away', hid: 'use HID devices', serial: 'use serial ports', usb: 'use USB devices', openExternal: 'open another app' };
+/* Local network access (Chrome's "Apps on device" / "Local network access"): sign-in tools like Okta FastPass talk to
+   an app on this Mac (Okta Verify on localhost). Chromium asks under three names; Washi keeps one choice per site.
+   Until you decide, the site is allowed to try, so the request comes in and Washi can ask (instead of the page
+   being told "blocked" before it ever asks). */
+const NET = new Set(['local-network-access', 'local-network', 'loopback-network']), NETKEY = 'local-network';
+LABEL[NETKEY] = 'connect to apps on this Mac and devices on your network (like Okta Verify)';
+const permKey = p => NET.has(p) ? NETKEY : p;
 const originOf = u => { try { return new URL(u).origin; } catch { return ''; } };
 const asking = new Map();
 async function decide(wc, perm, details) {
   const origin = originOf(details.requestingUrl || (wc && wc.getURL()) || '');
   if (!origin || origin === 'null') return false;
+  perm = permKey(perm);
   const saved = (perms[origin] || {})[perm];
   if (saved) return saved === 'allow';
   const key = origin + '|' + perm;
@@ -44,6 +52,8 @@ async function decide(wc, perm, details) {
   asking.set(key, p); try { return await p; } finally { asking.delete(key); }
 }
 const listPerms = () => Object.entries(perms).map(([origin, p]) => ({ origin, perms: p })).sort((a, b) => a.origin.localeCompare(b.origin));
+function setPerm(origin, perm, v) { if (!/^https?:\/\//.test(origin || '') || !['allow', 'block'].includes(v)) return; perm = permKey(perm); perms[origin] = { ...(perms[origin] || {}), [perm]: v }; savePerms(); }
+const permOf = (origin, perm) => (perms[origin] || {})[permKey(perm)] || null;
 function resetPerm(origin, perm) { if (!perms[origin]) return; if (perm) delete perms[origin][perm]; else delete perms[origin]; if (perms[origin] && !Object.keys(perms[origin]).length) delete perms[origin]; savePerms(); }
 
 /* ---------- address rules ---------- */
@@ -149,7 +159,7 @@ function setup(ses) {
   ses.setUserAgent(UA.clean);
   try { ses.setSpellCheckerEnabled(true); } catch {}
   ses.setPermissionRequestHandler((wc, perm, cb, details) => { if (SAFE.has(perm)) return cb(true); decide(wc, perm, details).then(cb, () => cb(false)); });
-  ses.setPermissionCheckHandler((wc, perm, origin) => { if (SAFE.has(perm)) return true; return (perms[originOf(origin)] || {})[perm] === 'allow'; });
+  ses.setPermissionCheckHandler((wc, perm, origin) => { if (SAFE.has(perm)) return true; const v = (perms[originOf(origin)] || {})[permKey(perm)]; return NET.has(perm) ? v !== 'block' : v === 'allow'; });
   ses.setDevicePermissionHandler(d => (perms[originOf(d.origin)] || {})[d.deviceType] === 'allow');
   for (const ev of ['select-hid-device', 'select-serial-port', 'select-usb-device']) ses.on(ev, (e, _d, cb) => { e.preventDefault(); try { cb(''); } catch { try { cb(); } catch {} } });
   pipeline(ses);
@@ -178,5 +188,5 @@ function configure(p) {
 module.exports = {
   isDangerStop: u => !!(P.safety && !riskOK.has(hostOf(u)) && blocker.danger(u)),
   P, UA, uaFor, googleAuth, matchUA, needsUA, setup, pageSession, configure, clearData, sessions, httpOK, riskOK, upgraded, upgradeable,
-  listPerms, resetPerm, listDownloads, dlAct, bind: h => { ui = { ...ui, ...h }; }
+  listPerms, resetPerm, setPerm, permOf, listDownloads, dlAct, bind: h => { ui = { ...ui, ...h }; }
 };

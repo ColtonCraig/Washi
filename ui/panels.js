@@ -32,7 +32,10 @@ window.PANELS = (() => {
       <div class="ph">${ic('shield', 18)}<b>Blocking</b><span class="mode">${d.mode === 'off' ? 'off' : d.mode}</span></div>
       <div class="big"><b>${d.mode === 'off' || d.allowed ? '–' : d.count}</b><span>${d.mode === 'off' ? 'Blocking is turned off in Settings.' : d.allowed ? `Off for ${esc(d.host)}` : `ads and trackers blocked on ${esc(d.host || 'this page')}`}</span></div>
       ${d.host && d.mode !== 'off' ? `<div class="tgl"><span class="tl"><b>Block on this site</b><small>Turn off if the site looks broken</small></span><button class="sw${on ? ' on' : ''}" id="sitesw" role="switch" aria-checked="${on}" aria-label="Block on this site"><i></i></button></div>` : ''}
-      <button class="lnk" id="toset">Blocking settings</button></div>`;
+      ${d.origin ? `<div class="tgl net"><span class="tl"><b>Apps on this Mac</b><small>${d.net === 'allow' ? 'Allowed: it can reach apps like Okta Verify' : d.net === 'block' ? 'Blocked for this site' : 'Washi asks the first time it tries'}</small></span><button class="sw${d.net === 'allow' ? ' on' : ''}" id="netsw" role="switch" aria-checked="${d.net === 'allow'}" aria-label="Let this site reach apps on this Mac"><i></i></button></div>` : ''}
+      <button class="lnk" id="toset">Site settings</button></div>`;
+    const nsw = document.getElementById('netsw');
+    if (nsw) nsw.onclick = async () => { const on = !nsw.classList.contains('on'); nsw.classList.toggle('on', on); nsw.setAttribute('aria-checked', String(on)); await B.setupAct({ type: 'perm:set', origin: d.origin, perm: 'local-network', v: on ? 'allow' : 'block', reload: true }); setTimeout(() => B.overlayCancel(), 350); };
     const sw = document.getElementById('sitesw');
     if (sw) sw.onclick = async () => { const block = !sw.classList.contains('on'); sw.classList.toggle('on', block); await B.setupAct({ type: 'blocking:site', host: d.host, block }); setTimeout(() => B.overlayCancel(), 350); };
     document.getElementById('toset').onclick = () => B.overlayResult({ kind: 'cmd', cmd: 'settings:privacy' });

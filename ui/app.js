@@ -1064,7 +1064,7 @@ bReload.addEventListener('click', () => { const id = focusedId(); if (!id) retur
 bSplit.addEventListener('click', toggleSplit);
 bShield.addEventListener('click', async () => {
   const r = bShield.getBoundingClientRect(), info = await B.setupAct({ type: 'blocking:info' });
-  B.panel('shield', { x: Math.round(r.right - 306), y: Math.round(r.bottom + 2), w: 324, h: 258 }, { ...info, ...look() });
+  B.panel('shield', { x: Math.round(r.right - 306), y: Math.round(r.bottom + 2), w: 324, h: info.origin ? 318 : 258 }, { ...info, ...look() });
 });
 bDl.addEventListener('click', () => openSheet('downloads'));
 bBoost.addEventListener('click', openBoost);
