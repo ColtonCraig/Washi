@@ -570,7 +570,7 @@ window.SETUP = (() => {
         <span class="lb" data-t="url"><em></em>washi.paper/hello</span><i class="st sp" data-t="split"></i></div>
       <div class="mb-side" data-t="sidebar">
         <b class="nm">Home</b>
-        <span class="sr"><span class="sc" data-t="scrap"><i>+</i>new scrap</span><b class="sq"></b><b class="sq"></b></span>
+        <span class="sr"><span class="sc" data-t="scrap"><i>+</i>new scrap</span><b class="sq sun" data-t="today"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></b><b class="sq"></b></span>
         <span class="pn" data-t="pins"><i style="--c:#ff6a3d"></i><i style="--c:#3d63ff"></i><i style="--c:#1f9d57"></i><i style="--c:#7b46ff"></i></span>
         <span class="tb on" data-t="tabs"><i style="background:#3d63ff"></i>Recipes</span>
         <span class="tb"><i style="background:#1f9d57"></i>Weather</span>
@@ -595,6 +595,7 @@ window.SETUP = (() => {
     ['folder', 'Folders', '', 'Drag tabs in. Click its icon for an emoji and color.', 'left', [0, 298, 228], [14, 210]],
     ['pair', 'Split cards', '', 'Split tabs stay together here.', 'left', [0, 368, 228], [14, 277]],
     ['spaces', 'Spaces', '⌃1–5', 'A desk for each part of your life.', 'left', [0, 450, 228], [14, 379]],
+    ['today', 'Today', '⇧⌘H', 'Your landing page: apps, pins and recent tabs. ☀︎ next to New scrap brings it back.', 'right', [772, 150, 228], [490, 96]],
     ['page', 'Your page', '', 'Every tab is a real web page.', 'right', [772, 286, 228], [490, 200]],
     ['yours', 'Make it yours', '⌘,', 'Colors, dark mode, shortcuts and more.', 'right', [772, 448, 228], [496, 360]]
   ];
@@ -603,7 +604,7 @@ window.SETUP = (() => {
     const mb = mini('big'); mb.style.left = MX + 'px'; mb.style.top = MY + 'px'; stage.append(mb);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${GW} ${GH}`); svg.setAttribute('class', 'arrows'); stage.append(svg);
-    const KID = { side: 'sidebar', url: 'location', split: 'split', scrap: 'newtab', pins: 'pin', yours: 'settings' };
+    const KID = { side: 'sidebar', url: 'location', split: 'split', scrap: 'newtab', pins: 'pin', yours: 'settings', today: 'today' };
     NOTES.forEach(([id, title, keys, text, side, [lx, ly, lw], [tx, ty]], i) => {
       if (KID[id] && KEYMAP[KID[id]] !== undefined) keys = BL.fmtKey(KEYMAP[KID[id]]);
       const lab = h('div', { class: 'gl ' + side, 'data-t': id, style: `left:${lx}px;top:${ly}px;width:${lw}px;--i:${i}` },
