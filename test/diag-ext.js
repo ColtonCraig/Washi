@@ -24,7 +24,10 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
     const apis = new Set(); const walk = d => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else if (/\.js$/.test(f)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/chrome\.([a-zA-Z]+)\.([a-zA-Z]+)/g)) apis.add(m[1] + '.' + m[2]); } }; walk(path.join(dir, v)); say('apis used', [...apis].sort());
   } catch (e) { say('manifest error', e.message); }
   // a page it works on, then its popup
-  await ui.evaluate(() => openTab('https://www.okta.com/')); await sleep(6000);
+  const early = [];
+  const ctx = ui.context(); ctx.on('page', p => { if (/chrome-extension:/.test(p.url()) || true) { p.on('console', m => early.push(p.url().slice(0, 60) + ' ' + m.type() + ': ' + m.text())); p.on('pageerror', e => early.push(p.url().slice(0, 60) + ' pageerror: ' + e.message)); } });
+  for (const u of ['https://www.okta.com/', 'https://idmsa.apple.com/', 'https://github.com/login']) { await ui.evaluate(u => openTab(u), u); await sleep(5000); }
+  say('tabs after visiting login pages', await ui.evaluate(() => Object.values(S.tabs).map(t => t.url)));
   const btn = await ui.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (!e) return null; const r = e.getBoundingClientRect(); e.click(); return { x: r.x, y: r.y, w: r.width }; }, ID);
   say('button', btn);
   const pop = await page('chrome-extension://' + ID, 40);
@@ -35,10 +38,11 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
     say('popup', await pop.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, text: document.body.innerText.slice(0, 600), html: document.body.innerHTML.length, missing: ['privacy', 'webRequest', 'webNavigation', 'management', 'cookies', 'tabs', 'windows', 'storage', 'runtime', 'identity', 'scripting', 'alarms', 'idle', 'declarativeNetRequest'].filter(k => !chrome[k]) })).catch(e => 'eval failed ' + e.message));
     say('window', await ui.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, avail: [screen.availLeft, screen.availTop, screen.availWidth, screen.availHeight] })));
     say('popup console', msgs.slice(0, 60));
+    say('page consoles', early.filter(l => /error|Error|chrome-extension/.test(l)).slice(0, 60));
     try { await pop.screenshot({ path: path.join(OUT, 'diag-popup.png') }); } catch (e) { say('popup screenshot failed', e.message); }
   }
   shot('diag-screen');
   await sleep(1500);
-  say('main log (worker console, errors)', b.log().split('\n').filter(l => /ext-|rror|ID|extension/i.test(l) && !/DevTools|proxy/.test(l)).slice(-80));
+  say('worker errors', b.log().split('\n').filter(l => /ext-sw/.test(l) && /rror|Invalid|undefined|null/.test(l)).slice(0, 30));
   await b.stop(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });

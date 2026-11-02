@@ -36,7 +36,7 @@ async function enable(ses, { primary = false } = {}) {
   });
   all.set(ses, x);
   x.on('browser-action-popup-created', p => fitPopup(p));
-  if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('console-message', (_, m) => console.error('ext-sw', JSON.stringify(m).slice(0, 400)));
+  if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('console-message', (_, m) => console.error('ext-sw', JSON.stringify(m).slice(0, 3000)));
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) setTimeout(() => { try { console.error('ext-pre', JSON.stringify(ses.getPreloadScripts().map(p => [p.type, p.id, require('path').basename(p.filePath)]))); console.error('ext-run', JSON.stringify(ses.serviceWorkers.getAllRunning())); } catch (e) { console.error('ext-dbg', e.message); } }, 6000);
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('running-status-changed', d => console.error('ext-status', JSON.stringify(d)));
   const changed = () => ui.changed();
