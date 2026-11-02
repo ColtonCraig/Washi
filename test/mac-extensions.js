@@ -1,7 +1,7 @@
 'use strict';
 /* On a real Mac (GitHub's macOS runner), sandbox on, like Washi on your Mac:
    1. the test extension's background worker gets the full Chrome APIs (badge on its top-bar button, context menu)
-   2. the real Chrome Web Store: open Dark Reader's page, press "Add to Chrome", it installs and works on a page, then remove it.
+   2. the real Chrome Web Store: open Dark Reader's page, press "Add to Washi", it installs and works on a page, then remove it.
    Usage: node test/mac-extensions.js   (needs the internet) */
 const { execSync } = require('child_process'); const fs = require('fs'), os = require('os'), path = require('path');
 process.env.WASHI_TEST_EXT_ALLOW = '1';
@@ -24,17 +24,17 @@ const DARK = 'eimadpbcbfnmbkopoojfekhnkhdbieeh';
   const store = await page('chromewebstore.google.com');
   ok(!!store, 'macOS: the Chrome Web Store opens');
   let btnText = '';
-  for (let i = 0; i < 40; i++) { btnText = await store.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Add to Chrome|Remove from Chrome|Switch to Chrome|Get Chrome/i.test(x.textContent)); return b ? b.textContent.trim() : ''; }).catch(() => ''); if (btnText) break; await sleep(500); }
-  ok(/Add to Chrome/i.test(btnText), 'macOS: it offers "Add to Chrome" (it sees a Chrome it can install into): ' + btnText);
+  for (let i = 0; i < 40; i++) { btnText = await store.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Add to (Chrome|Washi)|Remove from (Chrome|Washi)|Switch to Chrome|Get Chrome/i.test(x.textContent)); return b ? b.textContent.trim() : ''; }).catch(() => ''); if (btnText) break; await sleep(500); }
+  ok(/Add to (Chrome|Washi)/i.test(btnText), 'macOS: the store offers "Add to Washi": ' + btnText);
   shot('mac-store');
-  if (!/Add to Chrome/i.test(btnText)) {                         // say what the store showed instead, then stop here
+  if (!/Add to (Chrome|Washi)/i.test(btnText)) {                         // say what the store showed instead, then stop here
     const D = process.env.WASHI_SHOTS || os.tmpdir();
     try { await store.screenshot({ path: path.join(D, 'mac-store-page.png') }); } catch {}
     const info = await store.evaluate(() => ({ url: location.href, ua: navigator.userAgent, uad: navigator.userAgentData && navigator.userAgentData.brands, wsp: typeof (window.chrome && chrome.webstorePrivate), mgmt: typeof (window.chrome && chrome.management), buttons: [...document.querySelectorAll('button,[role=button]')].map(b => b.textContent.trim()).filter(Boolean).slice(0, 25), text: document.body.innerText.replace(/\s+/g, ' ').slice(0, 900) })).catch(e => ({ err: e.message }));
     console.log('  store page: ' + JSON.stringify(info, null, 1));
     await b.stop(); done(); return;
   }
-  await store.evaluate(() => [...document.querySelectorAll('button')].find(x => /Add to Chrome/i.test(x.textContent)).click());
+  await store.evaluate(() => [...document.querySelectorAll('button')].find(x => /Add to (Chrome|Washi)/i.test(x.textContent)).click());
   let L = null; for (let i = 0; i < 90; i++) { L = await ui.evaluate(() => B.setupAct({ type: 'ext:list' })); if (L.list.some(e => e.id === 'eimadpbcbfnmbkopoojfekhnkhdbieeh')) break; await sleep(1000); }
   ok(L.list.some(e => e.id === DARK), 'macOS: pressing it installs Dark Reader: ' + L.list.map(e => e.name).join(', '));
   await ui.evaluate(() => openTab('http://localhost:8765/p3.html')); await sleep(5000);

@@ -11,8 +11,9 @@ const BASE = 'http://localhost:8765';
   const open = async (u, wait = 1500) => { await ui.evaluate(u => openTab(u), u); await sleep(wait); };
 
   // ---------- ads and trackers ----------
-  await open(BASE + '/trackers.html', 2500);
-  const blocked = await ui.evaluate(() => R.blocked[R.a] || 0);
+  await open(BASE + '/trackers.html', 1500);
+  let blocked = 0; for (let i = 0; i < 40 && (blocked = await ui.evaluate(() => R.blocked[R.a] || 0)) < 3; i++) await sleep(250);   // a cold first start is slower
+  await sleep(400); blocked = await ui.evaluate(() => R.blocked[R.a] || 0);
   ok(blocked >= 3, `trackers page: ${blocked} ads/trackers blocked`);
   ok((await ui.evaluate(() => document.querySelector('#bShield b').textContent)) === String(blocked), 'shield shows the count');
   await ui.click('#bShield'); await sleep(900); shot('feat-shield');

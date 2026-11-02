@@ -29,7 +29,7 @@ chrome.runtime.onMessage.addListener((m, s, reply) => { if (m === 'tabs') { let 
   'content.js': `document.documentElement.dataset.washiExt = 'ran';
 chrome.runtime.sendMessage('tabs', r => { document.documentElement.dataset.washiTabs = JSON.stringify(r || null); });`,
   'popup.html': `<!doctype html><html><body style="width:240px;height:90px;margin:0;padding:12px;font:14px system-ui"><p id="t">Hello from the extension</p><button id="open">Open page 2</button><script src="popup.js"></script></body></html>`,
-  'popup.js': `document.getElementById('open').onclick = () => chrome.tabs.create({ url: 'http://localhost:8765/p2.html?fromext=1' });`,
+  'popup.js': `document.getElementById('open').onclick = () => { document.body.dataset.r = 'clicked'; try { chrome.tabs.create({ url: 'http://localhost:8765/p2.html?fromext=1' }).then(t => { document.body.dataset.r = 'created ' + (t && t.id); }, e => { document.body.dataset.r = 'error ' + e.message; }); } catch (e) { document.body.dataset.r = 'threw ' + e.message; } };`,
   'options.html': `<!doctype html><title>Helper options</title><h1 id="o">Helper options</h1>`,
   'icon.png': png
 };

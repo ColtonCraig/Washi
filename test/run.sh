@@ -11,7 +11,7 @@ export UPD_DIR=$(mktemp -d)
 pkill -f '^node test/server.js' 2>/dev/null; sleep 0.3          # an old test server would serve the wrong files
 node test/server.js >/tmp/washi-test-server.log 2>&1 & SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
-sleep 1
+for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done   # wait until it answers (a cold machine is slow)
 RUN="node"; command -v xvfb-run >/dev/null && RUN="xvfb-run -a -s '-screen 0 ${SCREEN:-1440x900}x24' node"
 fail=0
 ALL="passwords bookmarks today features split polish preview audit live windows arc bar extensions scrap boost onboarding folders layout switcher security ua speed perf perf-heavy update"

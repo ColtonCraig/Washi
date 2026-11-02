@@ -20,12 +20,12 @@ jobs:
       - name: Passwords and passkeys
         run: |
           node test/server.js > server.log 2>&1 &
-          sleep 1
+          for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done
           WASHI_DEBUG_PW=1 node test/mac-passwords.js
       - name: Extensions (sandboxed, real Chrome Web Store)
         run: |
           node test/server.js > server2.log 2>&1 &
-          sleep 1
+          for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done
           WASHI_SHOTS=$RUNNER_TEMP node test/mac-extensions.js
       - uses: actions/upload-artifact@v4
         if: failure()

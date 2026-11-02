@@ -46,7 +46,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
     shot('ext-popup');
     await pop.click('#open'); await sleep(2200);
     for (let i = 0; i < 20 && !(await ui.evaluate(() => S.tabs[focusedId()] && S.tabs[focusedId()].url === 'http://localhost:8765/p2.html?fromext=1')); i++) await sleep(250);
-    const fx = await ui.evaluate(() => [S.tabs[focusedId()] && S.tabs[focusedId()].url, Object.values(S.tabs).map(t => t.url)]);
+    const fx = await ui.evaluate(() => [S.tabs[focusedId()] && S.tabs[focusedId()].url, Object.values(S.tabs).map(t => t.url)]); fx.push(await pop.evaluate(() => document.body.dataset.r).catch(e => 'popup gone: ' + e.message.slice(0, 80)));
     ok(fx[0] === 'http://localhost:8765/p2.html?fromext=1', 'chrome.tabs.create from the extension opens a Washi tab and shows it: ' + JSON.stringify(fx));
   }
 

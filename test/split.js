@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a);
 const shot = n => shot0(n);
 const ok = ok0;
-const color = (x, y) => { shot0('px'); const [r, g, b] = JSON.parse(execSync(`python3 -c "from PIL import Image;im=Image.open('/tmp/px.png').convert('RGB');print(list(im.getpixel((${Math.round(x)},${Math.round(y)}))))"`)); return g > r + 8 && g > b + 8 ? 'green' : b > r + 8 && b >= g ? 'blue' : r > g + 8 && r >= b ? 'pink' : `other(${r},${g},${b})`; };
+const color = (x, y) => { execSync('import -window root /tmp/px.png'); const [r, g, b] = JSON.parse(execSync(`python3 -c "from PIL import Image;im=Image.open('/tmp/px.png').convert('RGB');print(list(im.getpixel((${Math.round(x)},${Math.round(y)}))))"`)); return g > r + 8 && g > b + 8 ? 'green' : b > r + 8 && b >= g ? 'blue' : r > g + 8 && r >= b ? 'pink' : `other(${r},${g},${b})`; };
 (async () => {
   const bb = await start(); const { ui, sb, ov, pages } = bb; const find = s => pages().find(p => p.url().includes(s));
   await skipSetup(bb);
