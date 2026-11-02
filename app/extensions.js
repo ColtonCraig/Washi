@@ -35,6 +35,7 @@ async function enable(ses, { primary = false } = {}) {
     removeWindow: () => {}
   });
   all.set(ses, x);
+  x.on('browser-action-popup-created', p => fitPopup(p));
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('console-message', (_, m) => console.error('ext-sw', JSON.stringify(m).slice(0, 400)));
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) setTimeout(() => { try { console.error('ext-pre', JSON.stringify(ses.getPreloadScripts().map(p => [p.type, p.id, require('path').basename(p.filePath)]))); console.error('ext-run', JSON.stringify(ses.serviceWorkers.getAllRunning())); } catch (e) { console.error('ext-dbg', e.message); } }, 6000);
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('running-status-changed', d => console.error('ext-status', JSON.stringify(d)));
@@ -48,6 +49,34 @@ async function enable(ses, { primary = false } = {}) {
     });
   } catch (e) { console.error('extensions: web store', e.message); }
   return x;
+}
+/* Extension popups: size them to their page, under their button, on screen. Chromium's "preferred size" signal
+   doesn't always arrive (then the popup stays a 25px square, or opens huge and blank), so measure the page ourselves
+   the way Chrome sizes popups (up to 800x600), and keep the window inside the screen. */
+const { screen } = require('electron');
+function placePopup(p) {
+  const w = p.browserWindow; if (!w || w.isDestroyed() || !p.parent || p.parent.isDestroyed()) return;
+  const b = w.getBounds(), wa = screen.getDisplayMatching(p.parent.getBounds()).workArea;
+  const x = Math.max(wa.x + 4, Math.min(b.x, wa.x + wa.width - b.width - 4)), y = Math.max(wa.y + 4, Math.min(b.y, wa.y + wa.height - b.height - 4));
+  if (x !== b.x || y !== b.y) w.setBounds({ ...b, x, y });
+}
+function fitPopup(p) {
+  const w = p.browserWindow; if (!w || w.isDestroyed()) return;
+  p.on('moved', () => placePopup(p));
+  const measure = async tries => {
+    if (p.isDestroyed() || w.isDestroyed()) return;
+    const [cw, ch] = w.getSize();
+    if (cw > 40 && ch > 40 && !p.hidden) { placePopup(p); return; }          // Chromium sized it: just keep it on screen
+    try {
+      p.setSize({ width: 800, height: 600 }); await new Promise(r => setTimeout(r, 120));
+      if (p.isDestroyed() || w.isDestroyed()) return;
+      const r = await w.webContents.executeJavaScript(`(() => { const b = document.body, d = document.documentElement; if (!b) return null; const br = b.getBoundingClientRect(), kids = [...b.children].map(e => e.getBoundingClientRect()); const right = Math.max(br.right, ...kids.map(k => k.right)), bottom = Math.max(br.bottom, ...kids.map(k => k.bottom)); const cs = getComputedStyle(b); return { width: Math.ceil(Math.min(right + parseFloat(cs.marginRight || 0), 800)), height: Math.ceil(Math.min(bottom + parseFloat(cs.marginBottom || 0), 600)) }; })()`);
+      if (p.isDestroyed()) return;
+      if (r && r.width > 30 && r.height > 20) { p.setSize(r); p.updatePosition(); placePopup(p); if (p.hidden) p.show(); }
+      else if (tries > 0) setTimeout(() => measure(tries - 1), 300);
+    } catch { if (tries > 0) setTimeout(() => measure(tries - 1), 300); }
+  };
+  w.webContents.once('did-finish-load', () => setTimeout(() => measure(4), 250));
 }
 /* an extension installed in one space's session also loads in the others */
 async function syncAll() {

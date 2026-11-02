@@ -41,6 +41,13 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const pop = await page('popup.html');
   ok(!!pop, 'clicking the button opens its popup');
   if (pop) {
+    let pw = null; for (let i = 0; i < 20; i++) { pw = await pop.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight })); if (pw.w > 100) break; await sleep(200); }
+    const bx = await ui.evaluate(() => { const r = document.getElementById('exts').shadowRoot.querySelector('button').getBoundingClientRect(); return { r: r.right + screenX, b: r.bottom + screenY }; });
+    console.log('  popup', JSON.stringify(pw), 'button', JSON.stringify(bx));
+    const ww = await ui.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }));
+    ok(pw.w > 100 && pw.x >= ww.x && pw.x + pw.w <= ww.x + ww.w + 1 && pw.y >= ww.y, `its popup opens under the button, inside the window like Chrome's (popup ${JSON.stringify(pw)}, window ${JSON.stringify(ww)})`);
+  }
+  if (pop) {
     await pop.waitForSelector('#t', { timeout: 5000 });
     ok((await pop.textContent('#t')) === 'Hello from the extension', 'the popup shows its page');
     shot('ext-popup');
