@@ -44,6 +44,11 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.14.1)
+- Turning blocking back on for a site reloads without the cache, so ads that loaded while it was off can't come back
+- Typing a command's name ("import from arc") puts it at the top of the command bar, above search suggestions
+- Tests no longer depend on the internet; GitHub's test machine is green again (CLAUDE.md: every workflow must be green before shipping)
+
 ## Done and tested (0.14)
 - Saved passwords: offered after sign-in/sign-up (not after a failed sign-in), account menu under login fields (fills only when you pick, mouse or ↓/Return), strong passwords on sign-up, two-step and single-page sign-ins, "Never for this site". Settings › Passwords: show/copy (Touch ID), edit, delete + undo, add, import (Chrome/Firefox/1Password/Bitwarden CSV, Safari's export zip), export. Encrypted with a Keychain key (safeStorage); pages never see a password until you pick it
 - Passkeys: Washi keeps its own passkeys and serves each request you approve with a one-off virtual authenticator (Touch ID when the Mac has it). Sites whose passkey lives in iCloud Keychain get a clear card + "Use another way" instead of hanging. iCloud Keychain passkeys themselves need Apple's browser entitlement (paid developer account + Apple approval)
