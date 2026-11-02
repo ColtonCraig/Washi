@@ -44,6 +44,13 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.14)
+- Saved passwords: offered after sign-in/sign-up (not after a failed sign-in), account menu under login fields (fills only when you pick, mouse or ↓/Return), strong passwords on sign-up, two-step and single-page sign-ins, "Never for this site". Settings › Passwords: show/copy (Touch ID), edit, delete + undo, add, import (Chrome/Firefox/1Password/Bitwarden CSV, Safari's export zip), export. Encrypted with a Keychain key (safeStorage); pages never see a password until you pick it
+- Passkeys: Washi keeps its own passkeys and serves each request you approve with a one-off virtual authenticator (Touch ID when the Mac has it). Sites whose passkey lives in iCloud Keychain get a clear card + "Use another way" instead of hanging. iCloud Keychain passkeys themselves need Apple's browser entitlement (paid developer account + Apple approval)
+- Bookmarks bar: bigger chips (32px, 13.5px text), refits when its size or font changes so nothing is ever cut off (rest behind »), and the hover bar no longer covers the "Removed · Undo" toast
+- Checked on GitHub's macOS 26 machine: real Keychain, passkeys, password save/fill
+- [ ] Later: passwords and passkeys in pop-up windows, little scraps and peek; iCloud Keychain passkeys if there's ever a developer account
+
 ## Done and tested (0.13)
 - Your apps: a setup step (and Settings › Apps) to pick Gmail, Calendar, Drive, YouTube, Notion, GitHub, Slack, Linear, Figma, Outlook, ChatGPT, Claude. They're pinned, or go in an "Apps" folder of a space that keeps its own logins (setup offers "Keep Work's logins separate"). Sign-in is checked by each app's signed-in cookie (in the right space's cookie jar) or, for apps without one, by whether the page left the sign-in page
 - Today: the page shown when nothing's open in a space (after setup, new windows, ⇧⌘H, "Show Today"): greeting, search, sign-in checklist (hides itself when done), pinned apps, jump back in / recently visited, bookmarks, GitHub pull requests waiting on your review and your own (with a token; Settings › Apps). One column on narrow panes; light and dark
