@@ -9,6 +9,8 @@ const { ipcRenderer, contextBridge } = require('electron');
 
 if (window.top === window && /^https?:$/.test(location.protocol)) {
   const send = (t, d) => { try { ipcRenderer.send('washi-page', t, d || {}); } catch {} };
+  /* a sign-in being sent: tell Washi before the page can move on (a message from a page that's already gone is dropped) */
+  const sendNow = (t, d) => { try { ipcRenderer.sendSync('washi-page-now', t, d || {}); } catch {} };
 
   /* ---------- passkeys: ask Washi before the browser handles the request ---------- */
   try {
@@ -122,13 +124,13 @@ if (window.top === window && /^https?:$/.test(location.protocol)) {
     const ps = passesIn(root === document ? document : root).filter(p => p.value);
     if (!ps.length) {
       const u = [...(root === document ? document : root).querySelectorAll('input')].find(e => userish(e) && shown(e) && e.value);
-      if (u) { lastSent = Date.now(); send('user', { user: u.value.slice(0, 300) }); }
+      if (u) { lastSent = Date.now(); sendNow('user', { user: u.value.slice(0, 300) }); }
       return;
     }
     const news = ps.filter(isNew), cur = ps.find(p => !isNew(p));
     const pass = news.length ? news[news.length - 1].value : cur.value, u = userFor(news[0] || cur);
     lastSent = Date.now();
-    send('submit', { user: u ? u.value.slice(0, 300) : '', pass: pass.slice(0, 1000), isNew: !!news.length });
+    sendNow('submit', { user: u ? u.value.slice(0, 300) : '', pass: pass.slice(0, 1000), isNew: !!news.length });
   }
   document.addEventListener('submit', e => submitted(e.target instanceof HTMLFormElement ? e.target : document), true);
   document.addEventListener('click', e => {

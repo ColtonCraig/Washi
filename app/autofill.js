@@ -203,6 +203,12 @@ function init() {
     else if (type === 'submit') onSubmit(s, d);
     else if (type === 'check') onCheck(s, d);
   });
+  ipcMain.on('washi-page-now', (e, type, d) => {
+    e.returnValue = 0;
+    const s = source(e); if (!s || !d || typeof d !== 'object') return;
+    if (type === 'user' && d.user) lastUser.set(s.wc.id, { origin: s.origin, user: String(d.user).slice(0, 300), t: Date.now() });
+    else if (type === 'submit') onSubmit(s, d);
+  });
   ipcMain.handle('washi-passkey', passkey);
 }
 const configure = p => Object.assign(P, p);
