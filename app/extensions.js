@@ -71,7 +71,7 @@ async function remove(id) {
 }
 const forSession = ses => all.get(ses) || null;
 function addTab(wc, win, active) { const x = all.get(wc.session); if (!x) return; quiet++; try { x.addTab(wc, win); if (active && !active.isDestroyed() && active.session === wc.session && active !== wc) x.selectTab(active); } catch {} finally { quiet--; } }
-function selectTab(wc) { const x = wc && all.get(wc.session); if (x) try { x.selectTab(wc); } catch {} }
+function selectTab(wc) { const x = wc && all.get(wc.session); if (!x) return; quiet++; try { x.selectTab(wc); } catch {} finally { quiet--; } }   // Washi telling it: no echo back
 function menuItems(wc, params) { const x = all.get(wc.session); if (!x) return []; try { return x.getContextMenuItems(wc, params) || []; } catch { return []; } }
 const handleUI = ses => { if (ECE) try { ECE.handleCRXProtocol(ses); } catch (e) { console.error('extensions: crx protocol', e.message); } };
 module.exports = { enable, syncAll, list, remove, forSession, addTab, selectTab, menuItems, handleUI, partitionOf, available: () => !!(ECE && CWS), dir, P, DEFAULT_PART, bind: h => { ui = { ...ui, ...h }; } };
