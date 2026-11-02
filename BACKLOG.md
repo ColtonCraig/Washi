@@ -52,7 +52,7 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
 - Folder icons: Washi's own paper icon set; + opens the Mac emoji picker for any emoji
 - Quick-start guide explains Today (the landing page) and draws the ☀︎ button
 - "new scrap" never runs into ⌘T (the hint steps aside when the sidebar is narrow); AUDIT now catches text running into its neighbour
-- Not yet: the Okta Browser Plugin (its background crashes on a tab id Washi's extension engine doesn't pass; being fixed)
+- The Okta Browser Plugin works: Washi's extension engine was missing Chrome's standard constants (chrome.tabs.TAB_ID_NONE…); the plugin crashed on startup without them (blank popup, "We're having trouble launching your app"). Checked with the real plugin on GitHub's Mac
 
 ## Done and tested (0.15)
 - Chrome extensions: "Add to Washi" works on the Chrome Web Store (Washi asks first, in plain words: what it can see and change); extensions update themselves; their buttons (icon, badge, popup) sit in the top bar; chrome.tabs/windows/action/contextMenus/cookies… work with Washi's tabs; they run in every space (also the ones with their own logins); Settings › Extensions lists them (icon, version, Options) and removes them. Built on electron-chrome-web-store + electron-chrome-extensions (MIT). Checked on GitHub's Mac with the real Chrome Web Store (Dark Reader)
