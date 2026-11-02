@@ -42,6 +42,11 @@ const DARK = 'eimadpbcbfnmbkopoojfekhnkhdbieeh';
   let dark = false; for (let i = 0; i < 20 && !dark; i++) { dark = await p3.evaluate(() => !!document.querySelector('style.darkreader, meta[name="darkreader"]')).catch(() => false); if (!dark) await sleep(500); }
   ok(dark, 'macOS: Dark Reader works on pages in Washi');
   shot('mac-dark');
+  // its toolbar button opens its popup, and the popup gets Chrome's APIs (on Linux CI, without the sandbox, it doesn't)
+  await ui.evaluate(d => { const b = document.getElementById('exts').shadowRoot.querySelector(`[id="${d}"]`); b && b.click(); }, DARK);
+  const pop = await page('chrome-extension://' + DARK);
+  ok(!!pop, 'macOS: its button opens its popup');
+  if (pop) { let api = false; for (let i = 0; i < 20 && !api; i++) { api = await pop.evaluate(() => typeof chrome.tabs.create === 'function' && typeof chrome.tabs.query === 'function').catch(() => false); if (!api) await sleep(300); } ok(api, 'macOS: the popup has chrome.tabs (it can open tabs)'); shot('mac-dark-popup'); }
   await ui.evaluate(() => openSetup('settings', 'extensions')); await sleep(1500);
   ok(await ov.evaluate(() => /Dark Reader/i.test(document.querySelector('#sec-extensions').innerText)), 'macOS: Settings lists it');
   ok(await ui.evaluate(d => B.setupAct({ type: 'ext:remove', id: d }).then(r => r.ok), DARK), 'macOS: and it can be removed');

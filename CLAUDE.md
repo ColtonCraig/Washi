@@ -9,15 +9,14 @@ Read this before any change. These are standing instructions from Colton, not su
 - Check Mac-specific behaviour against the current macOS (26 Tahoe) on GitHub's Mac runners (`.github/workflows/macchecks.yml`), not from memory.
 
 ## Before saying anything is done or shipping — the checklist
-Speed matters too (Colton, Nov 2: "it can't take this long"). Batch work: one push per batch of changes, one release per batch, not one per fix.
-1. Locally, run the test files that cover what you changed (`bash test/run.sh split extensions …`), 0 failures. Add new test files to `ALL` in `test/run.sh`. GitHub runs every file on each push (4 groups side by side, ~5 min), so a full local run (~30 min) is only needed when GitHub can't run something.
-2. Push to `main`, then `bash scripts/ci-wait.sh` (run it in the background): it waits for **every** workflow on the commit and prints only the failing lines.
-   - Test (Linux), Mac checks, Signing check, Installer window check, iPhone — whichever ran. **All must be green.**
-   - A red workflow is a bug to fix now, even if it "only" fails on CI or looks unrelated. Never ignore it. Failure screenshots are uploaded as run artifacts (`gh run download <id>`).
-   - A Mac run that never got a Mac (0 steps ran: GitHub capacity) isn't a test failure; `mac-retry.yml` re-runs it automatically.
-3. Only then release: push `main` to `release`, wait for the Release workflow, verify `latest.json` (version + signature).
-4. After releasing, check the workflows triggered by that push are green too.
-5. Tell Colton what shipped, plainly, including anything that isn't covered yet.
+Speed matters as much as testing (Colton, Nov 2: "I would rather just push out a bunch of times to fix stuff than wait literally 2 hours"). Real testing stays; waiting goes.
+1. Locally, run only the test files that cover what you changed (`bash test/run.sh split extensions …`), 0 failures. New features still get real-pointer tests, a clipping audit and a screenshot you look at. Add new test files to `ALL` in `test/run.sh`. Never run the full ~30 min suite locally; GitHub does that.
+2. Push to `main` freely. Start `bash scripts/ci-wait.sh` in the background and **keep working**; don't sit and wait. Anything red gets fixed in the next push.
+3. Release a finished batch (not every fix) as soon as **Test (Linux)** is green on that commit: push `main` to `release`, wait for the Release workflow, verify `latest.json` (version + signature).
+   - Mac checks are a heads-up, not a blocker, unless the batch changed Mac-specific code (the files listed in `macchecks.yml`). Never wait on GitHub's Mac queue; `mac-retry.yml` re-runs a Mac job that never got a machine.
+   - A failure that only happens on GitHub gets two tries. Then tell Colton plainly, mark it in the test (a NOTE saying where it's covered instead), and keep shipping.
+   - Failure screenshots are uploaded as run artifacts (`gh run download <id>`).
+4. Tell Colton what shipped, plainly, including anything that isn't covered yet.
 
 ## Tests must not depend on the internet
 Use the local test server (`test/server.js`, port 8765). `test/run.sh` stops any old test server first (a stale one serves the wrong update files). Search suggestions in tests come from `WASHI_TEST_SUGGEST` (set in `test/lib.js`). Anything that waits on the network polls with a timeout instead of a fixed sleep.
