@@ -26,6 +26,9 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok(cs[0] === 'ran', 'its content script runs on the page');
   ok(cs[1] && cs[1].active[0] === 'http://localhost:8765/p1.html' && cs[1].me === 'http://localhost:8765/p1.html', 'chrome.tabs knows which tab is active (Washi tells it): ' + JSON.stringify(cs[1]));
 
+  const was = await ui.evaluate(() => focusedId());
+  await ui.evaluate(() => openTab('http://localhost:8765/p3.html?bg=1', { bg: true })); await sleep(1500);
+  ok(await ui.evaluate(w => focusedId() === w, was), 'a tab opened in the background stays in the background (extensions don\'t steal focus)');
   // ---------- 2. its button in the top bar ----------
   const btn = await ui.evaluate(() => { const b = document.getElementById('exts').shadowRoot.querySelector('button'); const r = b.getBoundingClientRect(), s = getComputedStyle(b); return { id: b.id, title: b.title, icon: !b.classList.contains('no-icon') && /crx:\/\/extension-icon/.test(b.style.backgroundImage), x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height, badge: (b.shadowRoot || b).textContent || '', cursor: s.cursor }; });
   ok(btn.id === id && btn.title === 'Test helper' && btn.icon, 'its button is in the top bar, with its icon');

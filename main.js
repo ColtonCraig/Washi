@@ -108,7 +108,7 @@ function ensureTab(id, url, space) {
   view.setVisible(false);
   C.win.contentView.addChildView(view, 0);
   hook(t);
-  exts.addTab(t.wc, C.win);
+  { const at = activeTab(); exts.addTab(t.wc, C.win, at && at.wc); }
   const w = tabWaiters.shift(); if (w) w(t);                      // an extension asked for this tab (chrome.tabs.create)
   if (url) go(t.wc, url).catch(() => {});
   return t;

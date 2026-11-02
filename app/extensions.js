@@ -17,6 +17,7 @@ const DEFAULT_PART = 'washi-pages';                       // what the toolbar ca
 const dir = () => path.join(app.getPath('userData'), 'Extensions');
 const all = new Map();                                    // session -> ElectronChromeExtensions
 const P = { on: true };
+let quiet = 0;                                            // adding a tab makes the library call it "activated"; Washi decides what's active
 let ui = { createTab: async () => null, selectTab() {}, removeTab() {}, confirm: async () => ({ action: 'deny' }), changed() {} };
 const testUnpacked = () => !app.isPackaged && !!process.env.WASHI_TEST_EXT;
 
@@ -28,7 +29,7 @@ async function enable(ses, { primary = false } = {}) {
   const x = new ECE({
     session: ses,
     createTab: d => ui.createTab(d, ses),
-    selectTab: wc => ui.selectTab(wc),
+    selectTab: wc => { if (!quiet) ui.selectTab(wc); },        // only when an extension asks (not when a tab is merely added)
     removeTab: wc => ui.removeTab(wc),
     createWindow: async d => { const url = Array.isArray(d.url) ? d.url[0] : d.url; const r = await ui.createTab({ url: url || 'about:blank', active: true }, ses); return r ? r[1] : null; },
     removeWindow: () => {}
@@ -69,7 +70,7 @@ async function remove(id) {
   ui.changed(); return true;
 }
 const forSession = ses => all.get(ses) || null;
-function addTab(wc, win) { const x = all.get(wc.session); if (x) try { x.addTab(wc, win); } catch {} }
+function addTab(wc, win, active) { const x = all.get(wc.session); if (!x) return; quiet++; try { x.addTab(wc, win); if (active && !active.isDestroyed() && active.session === wc.session && active !== wc) x.selectTab(active); } catch {} finally { quiet--; } }
 function selectTab(wc) { const x = wc && all.get(wc.session); if (x) try { x.selectTab(wc); } catch {} }
 function menuItems(wc, params) { const x = all.get(wc.session); if (!x) return []; try { return x.getContextMenuItems(wc, params) || []; } catch { return []; } }
 const handleUI = ses => { if (ECE) try { ECE.handleCRXProtocol(ses); } catch (e) { console.error('extensions: crx protocol', e.message); } };
