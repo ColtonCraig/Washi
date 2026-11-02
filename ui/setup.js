@@ -115,7 +115,7 @@ window.SETUP = (() => {
         colorField('Ink', () => P[modeKey()].ink, v => setPref({ [modeKey()]: { ink: v } }), () => presetOf().ink)))),
       field('Feel', h('div', { class: 'tgls' },
         toggle('Paper texture', 'The grain on every scrap', () => P.texture, v => setPref({ texture: v })),
-        toggle('Wonky scraps', 'Tabs sit a little crooked, like real paper', () => P.wobble, v => setPref({ wobble: v })),
+        toggle('Scrapbook', 'More paper everywhere: tape on what\'s stuck down, crooked scraps, sticker emoji', () => P.wobble, v => setPref({ wobble: v })),
         toggle('Animations', 'Turn off for a calmer, instant browser', () => P.motion, v => setPref({ motion: v }))))
     ];
   }

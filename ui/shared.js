@@ -140,7 +140,7 @@
       '--grain': p.texture ? (dark ? 'url(grain-dark.png)' : 'url(grain.png)') : 'none', '--wob': p.wobble ? 1 : 0, 'color-scheme': dark ? 'dark' : 'light'
     };
     for (const k in v) el.style.setProperty(k, v[k]);
-    el.classList.toggle('dark', dark); el.classList.toggle('motion-off', !p.motion); mode.off = !p.motion;
+    el.classList.toggle('dark', dark); el.classList.toggle('motion-off', !p.motion); el.classList.toggle('scrapbook', !!p.wobble); mode.off = !p.motion;
   }
   darkQ.addEventListener && darkQ.addEventListener('change', () => { if (last) applyTheme(...last); });
 

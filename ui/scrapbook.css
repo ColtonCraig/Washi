@@ -1,0 +1,36 @@
+/* Scrapbook: the extra-paper look (Settings › Look › Scrapbook). Off by default; applyTheme puts .scrapbook on <html>
+   in every Washi view. Tape on whatever is "stuck down", crooked scraps, sticker emoji, stamps that wiggle. Purely
+   decorative: nothing here changes a size or a position anything else depends on. */
+html.scrapbook{--tape-strip:repeating-linear-gradient(-45deg,var(--tape) 0 6px,color-mix(in srgb,var(--tape) 62%,#fff) 6px 12px)}
+/* a strip of tape with torn ends */
+html.scrapbook .tab.on::before,html.scrapbook .pin::after,html.scrapbook .label::before,html.scrapbook .tcard::before{content:"";position:absolute;pointer-events:none;background:var(--tape-strip);opacity:.82;box-shadow:0 1px 0 rgb(var(--sh) / .14);clip-path:polygon(0 18%,6% 0,30% 10%,52% 0,76% 8%,100% 0,96% 50%,100% 100%,72% 90%,48% 100%,24% 92%,0 100%,4% 50%)}
+
+/* ---------- sidebar ---------- */
+html.scrapbook .tabs{padding-top:10px}
+html.scrapbook .tab.on::before{left:-4px;top:-3px;width:28px;height:11px;transform:rotate(-20deg)}
+html.scrapbook .pin::after{left:50%;top:-4px;width:22px;height:9px;margin-left:-11px;transform:rotate(calc(var(--rot,1) * 5deg))}
+html.scrapbook .pins{padding-top:6px}
+html.scrapbook .fh .fi{transform:rotate(-7deg);filter:drop-shadow(0 0 0 #fff) drop-shadow(0 1px 1px rgb(var(--sh) / .25))}
+html.scrapbook .sname{transform:rotate(-1.5deg);transform-origin:0 50%}
+
+/* ---------- top bar ---------- */
+html.scrapbook .label::before{left:-9px;top:-3px;width:26px;height:11px;transform:rotate(-38deg);z-index:1}
+html.scrapbook .stamp:not(:disabled):hover svg.i{animation:sbwig .32s ease-in-out}
+@keyframes sbwig{25%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}}
+html.scrapbook .stamp.on{transform:rotate(-4deg)}
+
+/* ---------- overlay: command bar, toast, panels, peek, password menu: the tape they already carry ---------- */
+html.scrapbook .box .tp,html.scrapbook .toast .tp,html.scrapbook .peek .tp,html.scrapbook .vault .vmenu .tp{display:block}
+html.scrapbook .toast .tp{top:-8px;width:44px;height:14px;margin-left:-22px}
+html.scrapbook .panel .tp{display:block;top:-5px;width:46px;height:12px;margin-left:-23px}
+html.scrapbook .vault .vmenu .tp{top:-3px;width:40px;height:11px;margin-left:-20px}
+
+/* ---------- setup / settings: the second strip on each card ---------- */
+html.scrapbook .setup .tp.r{display:block;left:auto;right:40px;transform:rotate(3deg)}
+
+/* ---------- Today: cards taped down ---------- */
+html.scrapbook .tcard:nth-of-type(odd)::before{left:22px;top:-6px;width:42px;height:13px;transform:rotate(-4deg)}
+html.scrapbook .tcard:nth-of-type(even)::before{right:22px;top:-6px;width:42px;height:13px;transform:rotate(5deg)}
+
+@media (prefers-reduced-motion:reduce){html.scrapbook .stamp:hover svg.i{animation:none}}
+html.motion-off.scrapbook .stamp:hover svg.i{animation:none}
