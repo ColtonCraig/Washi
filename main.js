@@ -16,6 +16,7 @@ const web = require('./app/web');
 const blocker = require('./app/blocker');
 const arc = require('./app/arc');
 const boost = require('./app/boost');
+const reader = require('./app/reader');
 const live = require('./app/live');
 const bmimport = require('./app/bmimport');
 const bmFiles = new Map();                         // other browsers' data found by a scan (the interface only gets keys)
@@ -136,9 +137,13 @@ function hook(t) {
   wc.on('page-title-updated', (_, title) => { if (!pages.isNotice(wc.getURL())) send({ title }); });
   wc.on('page-favicon-updated', (_, favs) => { if (favs[0] && /^(https?|data):/.test(favs[0])) send({ fav: favs[0] }); });
   wc.on('did-start-loading', () => send({ loading: true }));
-  wc.on('did-stop-loading', () => send({ loading: false, ...(pages.isNotice(wc.getURL()) ? {} : { url: wc.getURL() }), ...nav(wc) }));
+  wc.on('did-stop-loading', () => {
+    send({ loading: false, ...(pages.isNotice(wc.getURL()) ? {} : { url: wc.getURL() }), ...nav(wc) });
+    if (/^https?:/.test(wc.getURL())) reader.able(wc).then(a => { if (!wc.isDestroyed()) send({ readable: a }); });   // Reader mode offered on articles
+  });
   wc.on('did-navigate', (_, url) => { if (!pages.isNotice(url)) { t.failed = null; t.notice = null; web.upgraded.delete(wc.id); } send({ ...(pages.isNotice(url) ? {} : { url, notice: null }), ...nav(wc), blocked: 0 }); });
-  wc.on('did-navigate-in-page', (_, url, isMain) => { if (isMain) send({ url, ...nav(wc) }); });
+  wc.on('did-navigate-in-page', (_, url, isMain) => { if (isMain) { send({ url, ...nav(wc) }); reader.isOn(wc).then(on => { if (!on) later(() => reader.able(wc).then(a => { if (!wc.isDestroyed()) send({ readable: a }); }), 700); }); } });
+  wc.on('did-start-navigation', d => { if (d.isMainFrame && !d.isSameDocument) send({ reading: false, readable: false }); });
   wc.on('media-started-playing', () => { t.playing = true; send({ audible: true }); });
   wc.on('media-paused', () => { t.playing = false; send({ audible: false }); });
   wc.on('audio-state-changed', e => send({ audible: !!e.audible }));
@@ -227,6 +232,12 @@ function focusPage() {
 
 HANDLE('emoji:panel', () => {                      // the Mac's own emoji picker (types into whatever has focus)
   try { if (app.isEmojiPanelSupported()) { app.showEmojiPanel(); return true; } } catch {} return false;
+});
+/* Reader mode for a tab: on (with the look), off, or restyle while on */
+HANDLE('reader:set', async (_, id, on, look) => {
+  const t = C.tabs.get(id); if (!t || t.wc.isDestroyed()) return { ok: false };
+  if (!on) { await reader.hide(t.wc); toUI('tab:event', { id, reading: false }); return { ok: true, on: false }; }
+  const r = await reader.show(t.wc, look); toUI('tab:event', { id, reading: !!r.ok }); return { ...r, on: !!r.ok };
 });
 HANDLE('tab:ensure', (_, id, url, space) => { ensureTab(id, url, space); return true; });
 HANDLE('panes:set', (_, p, fp) => {

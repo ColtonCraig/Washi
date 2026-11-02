@@ -63,6 +63,7 @@
 <symbol id="pi-cal" viewBox="0 0 24 24"><rect style="fill:var(--white)" x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.6v3.8M15.5 3.6v3.8"/><rect style="fill:var(--tape);stroke:none" x="13" y="13" width="3.6" height="3.6" rx=".6"/></symbol>
 <symbol id="pi-camera" viewBox="0 0 24 24"><path style="fill:var(--white)" d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle style="fill:var(--tape)" cx="12" cy="12.9" r="3.3"/></symbol>
 <symbol id="pi-cloud" viewBox="0 0 24 24"><path style="fill:var(--white)" d="M7.5 18.5h9.5a3.8 3.8 0 0 0 .4-7.6A5.5 5.5 0 0 0 6.8 10a4.3 4.3 0 0 0 .7 8.5z"/><path style="stroke:var(--tape)" fill="none" d="M9.3 12.2a2.8 2.8 0 0 1 2.4-1.9"/></symbol>
+<symbol id="i-reader" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5v13"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2L18.5 7.8"/></symbol>
 <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4.5M12 17.6v.1"/></symbol>
 <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/></symbol>

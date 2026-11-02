@@ -87,3 +87,4 @@ body.bm-always .bmbar{display:flex}
 
 /* hover mode for the bookmarks bar: the bottom edge of the top bar listens for the pointer (not a drag area) */
 .bmedge{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:3;-webkit-app-region:no-drag}
+.stamp.read[hidden]{display:none}

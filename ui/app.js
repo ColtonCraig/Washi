@@ -10,7 +10,7 @@ const sbW = () => Math.max(200, Math.min(380, Math.round((S && S.prefs.sbW) || S
 
 /* ---------- state ---------- */
 let S;                                    // persisted
-const R = { a: null, b: null, focus: 'a', split: false, loading: {}, audible: {}, muted: {}, blocked: {}, boosted: {}, notice: {}, canBack: {}, canFwd: {}, live: {}, menuTab: null, menuSpace: null, promptCb: null, keys: {}, downloads: [] };
+const R = { a: null, b: null, focus: 'a', split: false, readable: {}, reading: {}, loading: {}, audible: {}, muted: {}, blocked: {}, boosted: {}, notice: {}, canBack: {}, canFwd: {}, live: {}, menuTab: null, menuSpace: null, promptCb: null, keys: {}, downloads: [] };
 const fresh = () => ({ tabs: {}, pins: [], pairs: [], cur: 'home', history: [], closed: [], archive: [], dock: true, prefs: prefsOf({}),
   spaces: [{ id: 'home', name: 'Home', h: 40, tabs: [], folders: [], act: null }, { id: 'work', name: 'Work', h: 255, tabs: [], folders: [] }, { id: 'play', name: 'Play', h: 340, tabs: [], folders: [] }] });
 function sanitize(s) {
@@ -128,7 +128,7 @@ const keyHint = id => fmtKey(R.keys[id] || '');
 
 /* ---------- dom refs + layout ---------- */
 const stage = $('#stage'), pa = $('#pa'), pb = $('#pb'), gutter = $('#gutter');
-const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bmbar = $('#bmbar');
+const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bmbar = $('#bmbar');
 
 /* Layout is plain math, shared by the card frames here and the page views in the main process. */
 function layout() {
@@ -179,6 +179,9 @@ function updateChrome() {
   const web = !!(t && /^https?:/.test(t.url) && !R.notice[id]);
   const bk = !!(web && bmByUrl(t.url)); bStar.disabled = !web; if (bStar.classList.contains('on') !== bk) { bStar.classList.toggle('on', bk); if (bk && !calm()) bStar.firstElementChild.animate([{ transform: 'scale(.6) rotate(-30deg)' }, { transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.34,1.5,.64,1)' }); }
   bStar.title = bk ? 'Edit this bookmark (⇧⌘D)' : 'Bookmark this page (⇧⌘D)';
+  const rd = !!(id && R.reading[id]), ra = !!(id && (R.readable[id] || rd));
+  if (bRead.hidden === ra) { bRead.hidden = !ra; if (ra && !calm()) bRead.animate([{ transform: 'scale(.5) rotate(-12deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
+  bRead.classList.toggle('on', rd); bRead.title = rd ? `Reader: text size and font (${keyHint('reader')} to leave)` : `Reader mode (${keyHint('reader')})`;
   bBoost.disabled = !web; bBoost.classList.toggle('on', web && !!R.boosted[id]); bBoost.title = R.boosted[id] ? 'This site is boosted' : 'Boost this site: colors, font, hide things';
   const blocked = id ? R.blocked[id] || 0 : 0;
   bShield.querySelector('b').textContent = blocked > 99 ? '99+' : blocked || '';
@@ -201,7 +204,7 @@ function updateChrome() {
   document.title = t ? label(t) + ' · Washi' : 'Washi';
 }
 const render = () => { updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
-const theme = () => applyTheme(S.prefs, palFor(sp()));
+const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
 const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, keys: p.keys || {} }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
@@ -519,7 +522,7 @@ function openCmd(mode) {
   const A = (id, label, key) => ({ id, label, hint: keyHint(key || id) });
   const actions = [
     A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen closed tab'),
-    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'),
+    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
     A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('today', 'Show Today'), A('apps', 'Add apps to sign in to', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
@@ -533,7 +536,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -551,6 +554,25 @@ async function openSetup(page, section) {
   let info = {}; try { info = await B.setupInfo(); R.info = info; } catch {}
   B.overlayOpen({ mode: 'setup', page, section, apps: appsPresent(), keys: R.keys, prefs: S.prefs, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated })), cur: S.cur, dock: S.dock, info, ...look(), tabs: [], actions: [], history: [] });
 }
+/* ---------- Reader mode: the article as a sheet of Washi paper over the page ---------- */
+function readerLook() {
+  const cs = getComputedStyle(document.documentElement), v = k => cs.getPropertyValue(k).trim(), rgb = (k, a) => `rgba(${v(k).split(/\s+/).join(',')},${a})`;
+  const r = S.prefs.reader || {};
+  return { desk: v('--desk'), paper: v('--white') || v('--paper'), ink: v('--ink'), ink2: v('--ink2'), line: rgb('--inkc', .14), wash: rgb('--inkc', .06), tape: v('--tape'), tapeInk: v('--tape'),
+    dark: document.documentElement.classList.contains('dark'), scrap: !!S.prefs.wobble, face: r.face || 'serif', size: r.size || 19, width: r.width || 720 };
+}
+async function readerToggle(force) {
+  const id = focusedId(); if (!id || (!R.readable[id] && !R.reading[id])) return;
+  const on = force !== undefined ? force : !R.reading[id];
+  const r = await B.readerSet(id, on, readerLook());
+  if (on && !r.ok) B.fx({ type: 'toast', text: 'Couldn\'t find an article on this page', short: true });
+}
+function readerRestyle() { if (!S) return; for (const id of [R.a, R.b]) if (id && R.reading[id]) B.readerSet(id, true, readerLook()); }
+function readerPanel() {
+  const r = bRead.getBoundingClientRect(), p = S.prefs.reader || {};
+  B.panel('reader', { x: Math.round(Math.max(8, r.right - 262)), y: Math.round(r.bottom + 2), w: 280, h: 196 }, { face: p.face || 'serif', size: p.size || 19, ...look() });
+}
+bRead.addEventListener('click', () => { const id = focusedId(); if (id && R.reading[id]) readerPanel(); else readerToggle(true); });
 B.onSetupMsg(m => {
   if (!S) return;
   if (m.type === 'prefs') {
@@ -571,6 +593,13 @@ B.onSetupMsg(m => {
   } else if (m.type === 'sheet') sheetAct(m);
   else if (m.type === 'arcImport') importArc(m).then(r => B.setupReply({ type: 'arcDone', ...r }));
   else if (m.type === 'peekAdopt') adoptPeek();
+  else if (m.type === 'reader') {
+    if (m.exit) return readerToggle(false);
+    const r = S.prefs.reader = { ...(S.prefs.reader || {}) };
+    if (m.face === 'serif' || m.face === 'sans') r.face = m.face;
+    if (Number.isFinite(+m.size)) r.size = Math.max(14, Math.min(26, Math.round(+m.size)));
+    save(); readerRestyle();
+  }
   else if (m.type === 'folderLook') { const f = S.spaces.flatMap(x => x.folders).find(x => x.id === m.id); if (f && !f.live) { if (m.icon !== undefined) f.icon = m.icon ? String(m.icon).slice(0, 16) : null; if (m.color !== undefined) f.color = BMK.okColor(m.color) ? m.color : null; render(); save(); } }
   else if (m.type === 'bm') bmMsg(m);
   else if (m.type === 'apps') addApps(m.picks || []);
@@ -774,7 +803,7 @@ B.onCmd(n => {
   if (n.startsWith('switch:pick:')) return switchEnd(+n.slice(12));
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
-  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today'].includes(n)) return runAction(n);
+  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader'].includes(n)) return runAction(n);
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
@@ -804,7 +833,7 @@ B.onTab(({ id, ...p }) => {
   if (p.title !== undefined) { t.title = p.title; const h = S.history.find(x => x.url === t.url); if (h && h.title !== p.title) hist({ t: 'upd', url: t.url, title: p.title }); }
   if (p.fav !== undefined) { t.fav = p.fav; const h = S.history.find(x => x.url === t.url), f = smallFav(p.fav); if (h && h.fav !== f) hist({ t: 'upd', url: t.url, fav: f }); }
   if (p.notice !== undefined) R.notice[id] = p.notice;
-  for (const k of ['loading', 'audible', 'muted', 'blocked', 'boosted', 'canBack', 'canFwd']) if (p[k] !== undefined) R[k][id] = p[k];
+  for (const k of ['loading', 'audible', 'muted', 'blocked', 'boosted', 'canBack', 'canFwd', 'readable', 'reading']) if (p[k] !== undefined) R[k][id] = p[k];
   render(); save();
 });
 

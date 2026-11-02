@@ -40,6 +40,23 @@ window.PANELS = (() => {
     if (sw) sw.onclick = async () => { const block = !sw.classList.contains('on'); sw.classList.toggle('on', block); await B.setupAct({ type: 'blocking:site', host: d.host, block }); setTimeout(() => B.overlayCancel(), 350); };
     document.getElementById('toset').onclick = () => B.overlayResult({ kind: 'cmd', cmd: 'settings:privacy' });
   }
+  /* ---------- Reader: text size and font ---------- */
+  function readerp() {
+    let size = +data.size || 19, face = data.face === 'sans' ? 'sans' : 'serif';
+    const draw = () => {
+      panel.innerHTML = `<div class="pop readp" role="dialog" aria-label="Reader"><i class="tp"></i>
+        <div class="ph">${ic('reader', 18)}<b>Reader</b></div>
+        <div class="rrow"><button class="rbtn" id="rsm" aria-label="Smaller text" ${size <= 14 ? 'disabled' : ''}><span style="font-size:12px">A</span></button><span class="rsz" id="rsz">${size}px</span><button class="rbtn" id="rlg" aria-label="Bigger text" ${size >= 26 ? 'disabled' : ''}><span style="font-size:18px">A</span></button></div>
+        <div class="rseg" role="radiogroup" aria-label="Font"><button role="radio" class="${face === 'serif' ? 'on' : ''}" data-f="serif" aria-checked="${face === 'serif'}" style="font-family:'New York',Georgia,serif">Serif</button><button role="radio" class="${face === 'sans' ? 'on' : ''}" data-f="sans" aria-checked="${face === 'sans'}">Sans</button></div>
+        <button class="lnk" id="rexit">Leave Reader</button></div>`;
+      const $ = s => panel.querySelector(s);
+      $('#rsm').onclick = () => { size = Math.max(14, size - 1); B.setupMsg({ type: 'reader', size }); draw(); };
+      $('#rlg').onclick = () => { size = Math.min(26, size + 1); B.setupMsg({ type: 'reader', size }); draw(); };
+      panel.querySelectorAll('.rseg button').forEach(b => b.onclick = () => { face = b.dataset.f; B.setupMsg({ type: 'reader', face }); draw(); });
+      $('#rexit').onclick = () => { B.setupMsg({ type: 'reader', exit: true }); B.overlayCancel(); };
+    };
+    draw();
+  }
   /* ---------- boost: make this site look your way ---------- */
   const TINTS = [['none', 'Site', 'transparent'], ['warm', 'Warm', '#f3d9b0'], ['cool', 'Cool', '#c7dcf2'], ['soft', 'Soft', '#e7e2da'], ['gray', 'Gray', '#c9c9c9'], ['dark', 'Dark', '#2a2622']];
   const FONTS = [['site', 'Site', 'inherit'], ['sans', 'Sans', "-apple-system,system-ui,sans-serif"], ['serif', 'Serif', "'New York',Georgia,serif"], ['rounded', 'Round', "ui-rounded,'SF Pro Rounded',system-ui,sans-serif"], ['mono', 'Mono', "ui-monospace,Menlo,monospace"]];
@@ -101,13 +118,13 @@ window.PANELS = (() => {
   }
   addEventListener('blur', () => {
     if (kind === 'flook') { const g = panel.querySelector('.emos'); if (g && Date.now() - (+g.dataset.picking || 0) < 120000) return; }   // the Mac emoji picker took focus: stay open
-    if (kind === 'shield' || kind === 'boost' || kind === 'flook') { kind = null; panel.classList.remove('on'); B.overlayCancel(); }
+    if (kind === 'shield' || kind === 'boost' || kind === 'flook' || kind === 'reader') { kind = null; panel.classList.remove('on'); B.overlayCancel(); }
   });
 
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
-    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook();
+    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp();
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

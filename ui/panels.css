@@ -109,3 +109,14 @@
 .flook .bsec h6{margin:0 0 6px;font:700 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
 .flook .emos{display:flex;flex-wrap:wrap;gap:3px}
 .flook .fbtns{margin-top:auto}
+
+/* Reader: text size and font */
+.readp .rrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0}
+.readp .rbtn{width:44px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--ink);font-weight:700;box-shadow:0 0 0 1px rgb(var(--inkc) / .12);transition:background .12s,transform .12s var(--ease)}
+.readp .rbtn:hover:not(:disabled){background:rgb(var(--inkc) / .06)}
+.readp .rbtn:active:not(:disabled){transform:scale(.93)}
+.readp .rbtn:disabled{opacity:.35}
+.readp .rsz{flex:1;text-align:center;font:600 13px var(--font-ui);color:var(--ink2)}
+.readp .rseg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:10px;background:rgb(var(--inkc) / .06)}
+.readp .rseg button{height:30px;border-radius:8px;font:600 13px var(--font-ui);color:var(--ink2)}
+.readp .rseg button.on{background:var(--white);color:var(--ink);box-shadow:0 1px 2px rgb(var(--sh) / .14)}

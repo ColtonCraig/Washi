@@ -21,6 +21,7 @@ const ACTIONS = [
   ['findprev', 'Find Previous', 'edit', 'CmdOrCtrl+Shift+G'],
   ['copyurl', 'Copy Page Address', 'edit', 'CmdOrCtrl+Shift+C'],
   ['today', 'Today', 'view', 'CmdOrCtrl+Shift+H'],
+  ['reader', 'Reader Mode', 'view', 'CmdOrCtrl+Alt+R'],
   ['sidebar', 'Pin or Float Sidebar', 'view', 'CmdOrCtrl+S'],
   ['split', 'Split View', 'view', 'CmdOrCtrl+\\'],
   ['reload', 'Reload', 'view', 'CmdOrCtrl+R'],
