@@ -112,7 +112,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   let w = await ui.evaluate(() => [S.prefs.sbW, layout().stage.x]), sbw = await sb.evaluate(() => innerWidth);
   ok(Math.abs(w[0] - 302) <= 3 && sbw === w[0] && w[1] === w[0] + 4, `dragging its edge 70px makes the sidebar wider (${w[0]}px), the page moves over with it`);
   // the real page view, not just the plan: its left edge is where the page colour starts on screen
-  shot('pol-px'); const px = execSync(`python3 -c "from PIL import Image;im=Image.open('/tmp/pol-px.png').convert('RGB');y=${Y0 + TOP + 640};d=im.getpixel((${X0}+8,y));print([x for x in range(${X0}+8,${X0}+800) if sum(abs(a-b) for a,b in zip(im.getpixel((x,y)),d))>45][:1])"`).toString();
+  execSync('import -window root /tmp/pol-px.png'); const px = execSync(`python3 -c "from PIL import Image;im=Image.open('/tmp/pol-px.png').convert('RGB');y=${Y0 + TOP + 640};d=im.getpixel((${X0}+8,y));print([x for x in range(${X0}+8,${X0}+800) if sum(abs(a-b) for a,b in zip(im.getpixel((x,y)),d))>45][:1])"`).toString();
   const pageX = (JSON.parse(px)[0] || 0) - X0;
   ok(Math.abs(pageX - (w[0] + 4)) <= 3, `and the actual page on screen moves over too (page starts at ${pageX}px)`);
   await audit(sb, 'wider sidebar'); shot('pol-wide');

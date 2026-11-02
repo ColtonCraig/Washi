@@ -44,5 +44,5 @@ function writeSoon(n, s) {
 }
 function flush() { syncMode = true; for (const [n, s] of queued) write(n, s); queued.clear(); }   // at quit: finish anything still waiting
 const writeJSON = (n, o) => write(n, JSON.stringify(o));
-const remove = n => { try { fs.rmSync(file(n), { recursive: true, force: true }); } catch {} };
+const remove = n => { queued.delete(n); gen.set(n, (gen.get(n) || 0) + 1); try { fs.rmSync(file(n), { recursive: true, force: true }); } catch {} };   // a save still on its way must not bring it back
 module.exports = { file, read, readJSON, write, writeSoon, flush, idle, pending: () => busy.size > 0, writeJSON, remove };

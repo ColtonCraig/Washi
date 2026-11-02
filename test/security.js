@@ -50,8 +50,14 @@ const PHISH = fs.readFileSync(path.join(__dirname, 'fixtures', 'phish-sample.txt
   ok(geo === 'denied:1', 'a site you blocked from your location is refused without asking again');
   await ui.evaluate(() => openSetup('settings', 'privacy')); await sleep(1500); shot('sec-perms');
   ok(await ov.evaluate(() => [...document.querySelectorAll('.perm b')].some(b => b.textContent.includes('localhost:8765'))), 'Settings lists the site and its permission');
+  const permsNow = async () => { for (let i = 0; i < 20; i++) { try { return JSON.parse(fs.readFileSync(path.join(profile, 'site-permissions.json'), 'utf8')); } catch {} await sleep(150); } return {}; };
+  const chipT = () => ov.evaluate(() => document.querySelector('.perm .chip').textContent.trim());
+  const was = await chipT();
   await ov.click('.perm .chip'); await sleep(500);
-  ok(!JSON.parse(fs.readFileSync(path.join(profile, 'site-permissions.json'), 'utf8'))['http://localhost:8765'], 'clicking the choice forgets it');
+  const now = await chipT();
+  ok(/^✕/.test(was) && /^✓/.test(now), `clicking the choice flips it (${was} → ${now})`);
+  await ov.evaluate(() => [...document.querySelectorAll('.perm .lnk')].find(b => b.textContent === 'Reset').click()); await sleep(500);
+  ok(!(await permsNow())['http://localhost:8765'], 'Reset forgets the site');
   await ov.keyboard.press('Escape'); await sleep(500);
 
   // ---------- settings reach the main process ----------
