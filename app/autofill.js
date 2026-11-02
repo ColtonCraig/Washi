@@ -156,7 +156,7 @@ async function serve(wc, rpId, uv, creds, userName) {
   const st = { wc, ours, auth: null, rpId, timer: null, onMsg: null, userName };
   serving.set(wc.id, st);
   await d.sendCommand('WebAuthn.enable', { enableUI: false });
-  const { authenticatorId } = await d.sendCommand('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', ctap2Version: 'ctap2_1', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: !!uv, automaticPresenceSimulation: true } });
+  const { authenticatorId } = await d.sendCommand('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', ctap2Version: 'ctap2_1', transport: 'internal', hasResidentKey: true, hasUserVerification: !!uv, isUserVerified: !!uv, automaticPresenceSimulation: true } });
   st.auth = authenticatorId;
   for (const p of creds) {
     const credential = { credentialId: std(p.credId), isResidentCredential: true, rpId: p.rpId, privateKey: p.key, userHandle: std(p.userHandle), signCount: p.count || 0 };
