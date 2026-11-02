@@ -16,7 +16,7 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-macpw-'));
   console.log('diag: store', JSON.stringify(await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))), 'preload in page:', await lp.evaluate(() => String(CredentialsContainer.prototype.get).slice(0, 12)));
   await lp.fill('#u', 'mac-user'); await lp.fill('#p', 'hunter2'); await lp.click('#go');
   ok(await card('save'), 'macOS: after signing in, Washi offers to save the password');
-  if (!(await vault()).includes('save')) { console.log('diag: url', lp.url(), 'vault', await vault()); console.log(b.log().split('\n').filter(l => !/gpu|dbus|viz|socket|NODE_OPTION/i.test(l)).slice(-25).join('\n')); }
+  if (!(await vault()).includes('save')) { console.log('diag: url', lp.url(), 'vault', await vault()); console.log(b.log().split('\n').filter(l => /pw-dbg/.test(l)).join('\n')); }
   await ov.click('.vault [data-a=save]'); await sleep(600);
   let L = await ui.evaluate(() => B.setupAct({ type: 'pw:list' }));
   ok(L.ok && L.logins.length === 1, 'macOS: saved, encrypted with the Keychain (store ready: ' + L.ok + ')');

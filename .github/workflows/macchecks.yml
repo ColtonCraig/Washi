@@ -21,4 +21,4 @@ jobs:
         run: |
           node test/server.js > server.log 2>&1 &
           sleep 1
-          node test/mac-passwords.js
+          WASHI_DEBUG_PW=1 node test/mac-passwords.js

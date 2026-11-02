@@ -511,6 +511,7 @@ autofill.bind({
     C = s.c; const c = C; let tries = 0;
     const show = () => {
       C = c; if (!alive(C.win) || s.wc.isDestroyed()) return;
+      if (process.env.WASHI_DEBUG_PW) console.error('pw-dbg show', C.overlayOpen, C.panelOpen, s.t.visible);
       if (C.overlayOpen && C.panelOpen !== 'pwmenu' && C.panelOpen !== 'pwsave') { if (++tries < 30) later(show, 1000); return; }   // wait for the command bar etc. to close
       if (!s.t.visible) return;
       vaultYield(); bmHide(true);

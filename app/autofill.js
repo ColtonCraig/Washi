@@ -16,13 +16,14 @@ const pkBusy = new Set();          // webContents ids with a passkey request on 
 const pkQuiet = new Map();         // webContents id -> time until which new passkey requests are refused (after you said no)
 const wired = new WeakSet();
 const testUV = () => !app.isPackaged && process.env.WASHI_TEST_UV === '1';
+const dbg = (...a) => { if (!app.isPackaged && process.env.WASHI_DEBUG_PW) console.error('pw-dbg', ...a); };
 
 const originOf = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.origin : null; } catch { return null; } };
 const sameFrame = (a, b) => !!a && !!b && a.processId === b.processId && a.routingId === b.routingId;
 function source(e) {
   const wc = e.sender, f = e.senderFrame;
-  if (!wc || wc.isDestroyed() || !f || !sameFrame(f, wc.mainFrame)) return null;
-  const found = ui.tab(wc); if (!found) return null;
+  if (!wc || wc.isDestroyed() || !f || !sameFrame(f, wc.mainFrame)) { dbg('source: not the top frame', !!f, f && f.url); return null; }
+  const found = ui.tab(wc); if (!found) { dbg('source: not a tab'); return null; }
   const origin = originOf(f.url); if (!origin) return null;
   watch(wc);
   return { wc, frame: f, origin, ...found };
@@ -71,18 +72,19 @@ function onSubmit(s, d) {
   let user = String(d.user || '');
   const lu = lastUser.get(s.wc.id);
   if (!user && lu && lu.origin === s.origin && Date.now() - lu.t < 10 * 60e3) user = lu.user;
-  const kind = vault.wouldSave(s.origin, user, pass); if (!kind) return;
+  const kind = vault.wouldSave(s.origin, user, pass); dbg('submit', s.origin, user, kind); if (!kind) return;
   const old = pend.get(s.wc.id); if (old) clearTimeout(old.timer);
   const p = { origin: s.origin, user, pass, kind, nav: false };
   p.timer = setTimeout(() => check(s.wc), 2500);                 // a sign-in that doesn't load a new page
   pend.set(s.wc.id, p);
 }
 function check(wc) {
+  dbg('check', pend.has(wc.id));
   if (wc.isDestroyed() || !pend.has(wc.id)) return;
   try { wc.mainFrame.send('washi-pw-check'); } catch { offer(wc); }
 }
 function onCheck(s, d) {
-  const p = pend.get(s.wc.id); if (!p) return;
+  const p = pend.get(s.wc.id); dbg('checked', JSON.stringify(d), !!p); if (!p) return;
   if (d.pass) { if (p.nav) pend.delete(s.wc.id); return; }       // the sign-in form is still there: it probably didn't work
   offer(s.wc);
 }
@@ -92,7 +94,7 @@ function offer(wc) {
   const tok = require('crypto').randomBytes(9).toString('hex');
   saving.set(tok, { origin: p.origin, user: p.user, pass: p.pass, at: Date.now() });
   for (const [k, v] of saving) if (Date.now() - v.at > 10 * 60e3) saving.delete(k);
-  const f = ui.tab(wc); if (!f) return;
+  const f = ui.tab(wc); dbg('offer', !!f); if (!f) return;
   ui.save({ wc, ...f }, { token: tok, kind, host: new URL(p.origin).host, user: p.user, len: p.pass.length });
 }
 /* your answer on the "Save password?" card */
