@@ -14,6 +14,8 @@ const fix = () => {
   const set = (o, k, v) => { try { if (o && o[k] === undefined) Object.defineProperty(o, k, { value: v, enumerable: true }); } catch {} };
   set(c.tabs, 'TAB_ID_NONE', -1); set(c.tabs, 'TAB_INDEX_NONE', -1); set(c.tabs, 'MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND', 2);
   set(c.windows, 'WINDOW_ID_NONE', -1); set(c.windows, 'WINDOW_ID_CURRENT', -2);
+  if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };
-try { if (globalThis.location && location.protocol === 'chrome-extension:') contextBridge.executeInMainWorld({ func: fix }); } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
+const dbg = !!process.env.WASHI_DEBUG_EXT;
+try { if (globalThis.location && location.protocol === 'chrome-extension:') { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); contextBridge.executeInMainWorld({ func: fix }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
