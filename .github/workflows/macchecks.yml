@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: sw_vers
-      - run: npm ci
+      - run: npm ci && npm i --no-save playwright@1
       - run: ELECTRON_RUN_AS_NODE=1 npx electron test/mac-import.js
       - name: Passwords and passkeys
         run: |
