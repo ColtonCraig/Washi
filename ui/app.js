@@ -736,7 +736,7 @@ B.onIntent(m => {
     case 'mute': B.tabAct(m.id, 'mute'); break;
     case 'warm': warm(m.id); break;
     case 'today': showToday(); break;
-    case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); placePanes(); } if (m.done) { save(); syncMain(); } break; }
+    case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
     case 'folderLook': folderLook(m.id, m); break;
     case 'pinOrder': { const ids = Array.isArray(m.ids) ? m.ids.filter(id => S.pins.includes(id)) : []; if (ids.length === S.pins.length && new Set(ids).size === ids.length) { S.pins = ids; render(); save(); } break; }
   }

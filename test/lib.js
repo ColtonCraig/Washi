@@ -70,6 +70,17 @@ const AUDIT = () => {
     }
     if (bad.length) out.push(name(e) + ' -> ' + bad.join('; ') + (clip ? '  [in ' + name(clip).slice(0, 40) + ']' : ' [window]'));
   }
+  /* text running into the text next to it (e.g. a label into its ⌘T hint): the painted text of siblings must not overlap */
+  const textBox = e => { const rg = document.createRange(); let u = null; for (const n of e.childNodes) { if (n.nodeType !== 3 || !n.textContent.trim()) continue; rg.selectNodeContents(n); for (const q of rg.getClientRects()) { if (q.width < 1) continue; u = u ? { left: Math.min(u.left, q.left), right: Math.max(u.right, q.right), top: Math.min(u.top, q.top), bottom: Math.max(u.bottom, q.bottom) } : { left: q.left, right: q.right, top: q.top, bottom: q.bottom }; } } return u; };
+  const seen = new Set();
+  for (const par of document.body.querySelectorAll('*')) {
+    if (seen.has(par) || par.closest('svg,[aria-hidden="true"],[data-clip],.bit,.cf-bit,.scraps,.deco,.desk,.tp') || !visible(par)) continue; seen.add(par);
+    const kids = [...par.children].filter(k => visible(k) && !/matrix\((?!1, 0, 0, 1)/.test(getComputedStyle(k).transform)).map(k => { let t = textBox(k); if (t) { const cs = getComputedStyle(k); if (/(hidden|clip)/.test(cs.overflowX)) { const kr = k.getBoundingClientRect(); t = { ...t, left: Math.max(t.left, kr.left), right: Math.min(t.right, kr.right) }; } } return [k, t]; }).filter(([, t]) => t && t.right - t.left > 1);
+    for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
+      const [a, A] = kids[i], [b, Bx] = kids[j], ox = Math.min(A.right, Bx.right) - Math.max(A.left, Bx.left), oy = Math.min(A.bottom, Bx.bottom) - Math.max(A.top, Bx.top);
+      if (ox > tol && oy > 4) out.push(`${name(a)} -> its text runs into ${name(b)} (${ox.toFixed(0)}px)`);
+    }
+  }
   return out;
 };
 const done = () => { console.log(`\n${passes} passed, ${fails} failed`); process.exit(fails ? 1 : 0); };
