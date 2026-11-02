@@ -44,6 +44,16 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.16)
+- Okta Browser Plugin: no more "We're having trouble launching your app" on hudl.okta.com and other sign-in pages. Washi's extension engine ignored Chrome's event filters, so the plugin's "an Okta app is launching" listener heard every page and took it over; now filters (webNavigation url filters, tabs.onUpdated) and hasListener work like Chrome. Checked with the real plugin on GitHub's Mac
+- Reader mode (⌥⌘R, the book stamp on articles): the article as a sheet of Washi paper over the page (Mozilla Readability), text size and Serif/Sans, follows every look live, works on strict-CSP sites; Leave puts the page back untouched
+- Tidy up (like Dia): with 10+ loose tabs the sidebar offers it; tabs from the same site go into a folder (docs. and drive.google.com together, named "Google"), ones you haven't opened today go to the Archive; Undo
+- Clear tabs (space menu): closes loose tabs, keeps pins and folders; Undo
+- Mute this site (tab menu): every tab on it, now and later
+- Rename any tab or pin: double-click its name or Rename…; "Use the Page's Title" undoes it
+- Press ⌘Q twice to quit (Settings › Basics); Quit from the menu with the mouse still quits straight away
+- Tab peek (like Dia): rest on a sidebar tab for a polaroid of it; follows along, never takes the keyboard; Settings switch
+
 ## Done and tested (0.15.1)
 - Bookmarks bar on hover works on a Mac: macOS sends no pointer events from the top bar (it's the window-drag area), so the bar now listens on the top bar's bottom edge and comes down when the pointer leaves the page upward (not when you're heading for the address)
 - Okta FastPass: "Apps on this Mac" (Chrome's local network access): a site may try until you decide; a switch in the shield popover for the site you're on; flip choices in Settings › Privacy
