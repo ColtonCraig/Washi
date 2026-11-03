@@ -57,6 +57,28 @@ const fix = () => {
     return (id, info, tab) => (f.tabId === undefined || id === f.tabId) && (f.windowId === undefined || (tab && tab.windowId === f.windowId)) && (!res || (tab && res.some(r => r.test(tab.url || '')))) && (!props || props.some(k => info && k in info));
   });
   for (const api of Object.values(c)) if (api && typeof api === 'object') for (const v of Object.values(api)) if (v && typeof v === 'object' && typeof v.addListener === 'function' && v.constructor && v.constructor.name === 'ExtensionEvent') wrapEvent(v, null);
+  /* chrome.privacy isn't in the engine, and asking chrome.permissions about it throws ("'privacy' is not a recognized
+     permission") where Chrome answers. Okta's plugin asks once you're signed in (to offer turning off the browser's own
+     password saving), and the throw left its popup on grey placeholders forever. Washi answers like Chrome: the
+     permission is granted and the browser's password saving is already handled (Washi's own vault, Settings ›
+     Passwords). */
+  const UNSUPPORTED = new Set(['privacy']);
+  const later = (v, cb) => { if (typeof cb === 'function') { try { cb(v); } catch {} return undefined; } return Promise.resolve(v); };
+  const setting = (value) => { const ls = new Set(); return { get: (d, cb) => later({ value, levelOfControl: 'controllable_by_this_extension' }, typeof d === 'function' ? d : cb), set: (d, cb) => later(undefined, cb), clear: (d, cb) => later(undefined, cb), onChange: { addListener: f => ls.add(f), removeListener: f => ls.delete(f), hasListener: f => ls.has(f), hasListeners: () => ls.size > 0 } }; };
+  if (!c.privacy) set(c, 'privacy', { services: { passwordSavingEnabled: setting(false), autofillAddressEnabled: setting(false), autofillCreditCardEnabled: setting(false), autofillEnabled: setting(false), safeBrowsingEnabled: setting(true), searchSuggestEnabled: setting(true), spellingServiceEnabled: setting(false), translationServiceEnabled: setting(false) },
+    network: { networkPredictionEnabled: setting(true), webRTCIPHandlingPolicy: setting('default') }, websites: { thirdPartyCookiesAllowed: setting(true), hyperlinkAuditingEnabled: setting(false), referrersEnabled: setting(true), doNotTrackEnabled: setting(false), protectedContentEnabled: setting(true) }, IPHandlingPolicy: { DEFAULT: 'default' } });
+  const P = c.permissions;
+  if (P && !P.__washi) {
+    const strip = o => { const q = { ...(o || {}) }; const had = Array.isArray(q.permissions) && q.permissions.some(k => UNSUPPORTED.has(k)); if (Array.isArray(q.permissions)) q.permissions = q.permissions.filter(k => !UNSUPPORTED.has(k)); return { q, had, empty: !(q.permissions && q.permissions.length) && !(q.origins && q.origins.length) }; };
+    const wrapP = (name, whenOnly) => { const f = P[name]; if (typeof f !== 'function') return; const base = f.bind(P);
+      const w = function (o, cb) { const { q, had, empty } = strip(o); if (had && empty) return later(whenOnly, cb); return typeof cb === 'function' ? base(q, cb) : base(q); };
+      try { P[name] = w; } catch {} if (P[name] !== w) try { Object.defineProperty(P, name, { value: w, configurable: true, writable: true }); } catch {} };
+    wrapP('contains', true); wrapP('request', true); wrapP('remove', false);
+    try { Object.defineProperty(P, '__washi', { value: true }); } catch {}
+  }
+  if (c.extension && typeof c.extension.isAllowedIncognitoAccess !== 'function') { try { c.extension.isAllowedIncognitoAccess = cb => later(false, cb); } catch {} }
+  if (c.extension && typeof c.extension.isAllowedFileSchemeAccess !== 'function') { try { c.extension.isAllowedFileSchemeAccess = cb => later(false, cb); } catch {} }
+  if (c.tabs && typeof c.tabs.highlight !== 'function' && typeof c.tabs.update === 'function') { try { c.tabs.highlight = (info, cb) => { const ix = [].concat(info && info.tabs).filter(x => x !== undefined); const p = c.tabs.query({ windowId: info && info.windowId }).then(ts => { const t = ts.find(t => t.index === ix[0]); return t ? c.tabs.update(t.id, { active: true }) : null; }).then(() => c.windows && c.windows.get && info && info.windowId ? c.windows.get(info.windowId) : undefined); if (typeof cb === 'function') { p.then(cb, () => cb()); return; } return p; }; } catch {} }
   if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };
