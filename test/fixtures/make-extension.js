@@ -23,7 +23,7 @@ const files = {
     action: { default_title: 'Test helper', default_popup: 'popup.html', default_icon: { 16: 'icon.png', 32: 'icon.png' } }, icons: { 16: 'icon.png', 32: 'icon.png', 128: 'icon.png' },
     background: { service_worker: 'bg.js', ...(process.argv.includes('--module') ? { type: 'module' } : {}) }, permissions: ['tabs', 'storage', 'contextMenus', 'cookies', 'unlimitedStorage', 'webRequest', 'webNavigation', 'scripting', 'declarativeNetRequestWithHostAccess', 'webRequestAuthProvider'], optional_permissions: ['privacy'], host_permissions: ['http://127.0.0.1:8765/*', 'http://localhost:8765/*'],
     content_scripts: [{ matches: ['http://localhost:8765/*'], js: ['content.js'], run_at: 'document_idle' }], options_page: 'options.html' }, null, 1),
-  'bg.js': `self.atStart = ['windows', 'commands', 'cookies', 'contextMenus', 'action', 'privacy', 'webNavigation'].filter(k => !chrome[k]).join(',') || 'all there';
+  'bg.js': `self.atStart = (['windows', 'commands', 'cookies', 'contextMenus', 'action', 'privacy', 'webNavigation'].filter(k => !chrome[k]).join(',') || 'all there') + (typeof browser !== 'undefined' && browser !== chrome ? ' (but browser.* is not chrome.*)' : '');
 self.probe = async () => { const out = {}; const T = (k, f) => Promise.race([Promise.resolve().then(f), new Promise((_, j) => setTimeout(() => j(new Error('hung')), 2500))]).then(v => { out[k] = v === undefined ? 'ok' : JSON.stringify(v).slice(0, 80); }, e => { out[k] = 'ERR ' + String(e && e.message || e).slice(0, 260); });
   const [tb] = await chrome.tabs.query({ url: 'http://localhost:8765/*' }).catch(() => []); const tid = tb ? tb.id : -1;
   await T('cookies.getAllCookieStores', () => chrome.cookies.getAllCookieStores()); await T('cookies.get', () => chrome.cookies.get({ url: 'http://127.0.0.1:8765/', name: 'sidl' }).then(c => c && c.value)); await T('cookies.getAll', () => chrome.cookies.getAll({ domain: '127.0.0.1' }).then(c => c.length));
@@ -43,7 +43,7 @@ self.probe = async () => { const out = {}; const T = (k, f) => Promise.race([Pro
   await T('privacy.passwordSavingEnabled.get', () => new Promise(r => chrome.privacy.services.passwordSavingEnabled.get({}, d => r(d && d.value)))); await T('storage.managed', () => chrome.storage.managed.get(null).then(o => o.orgUrl || 'ERR ' + JSON.stringify(o)));
   await T('runtime.setUninstallURL', () => chrome.runtime.setUninstallURL('')); await T('runtime.getManifest', () => chrome.runtime.getManifest().version); await T('runtime.getURL', () => chrome.runtime.getURL('x')); await T('runtime.onConnect', () => typeof chrome.runtime.onConnect.addListener);
   await T('fetch org (cookies, no CORS)', () => fetch('http://127.0.0.1:8765/org/me', { credentials: 'include' }).then(r => r.json()).then(j => j.cookie));
-  out.atStart = self.atStart;
+  out.atStart = self.atStart; out.browserNs = typeof browser === 'undefined' || browser === chrome ? 'ok' : 'ERR browser.* lacks ' + ['windows', 'commands', 'cookies', 'tabs', 'contextMenus'].filter(k => !browser[k]).join(','); if (/not chrome/.test(out.atStart)) out.atStart = 'ERR ' + out.atStart;
   return out; };
 chrome.runtime.onConnect.addListener(p => p.onMessage.addListener(m => p.postMessage({ echo: m })));
 chrome.runtime.onInstalled.addListener(() => chrome.contextMenus.create({ id: 'washi-test', title: 'Washi test item', contexts: ['page'] }));

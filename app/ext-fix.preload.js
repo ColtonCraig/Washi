@@ -105,6 +105,18 @@ const fix = (policy) => {
     const mine = () => { try { const m = c.runtime.getManifest(), pop = ((m.action || m.browser_action || {}).default_popup || '').replace(/^\//, ''); return pop && location.pathname.replace(/^\//, '') === pop.split('?')[0] ? 'popup' : 'tab'; } catch { return 'tab'; } };
     try { c.extension.getViews = f => { let v = []; try { v = gv(f) || []; } catch {} const t = f && f.type; if (!v.includes(window) && (!t || t === mine())) v = [...v, window]; return v; }; Object.defineProperty(c.extension, '__washiViews', { value: true }); } catch {}
   }
+  /* the engine also has Chrome's newer `browser` namespace, but only with its built-in APIs: no windows, commands, cookies,
+     contextMenus… Extensions that prefer `browser` when it exists (1Password, uBlock Origin Lite) fell over at start
+     ("Cannot read properties of undefined (reading 'WINDOW_ID_NONE')"), leaving blank popups. In Chrome `browser` is
+     the same object as `chrome`: make it so here. */
+  try {
+    const br = globalThis.browser;
+    if (br !== c) {
+      let swapped = false;
+      try { Object.defineProperty(globalThis, 'browser', { value: c, configurable: true, writable: true, enumerable: false }); swapped = globalThis.browser === c; } catch {}
+      if (!swapped && br && typeof br === 'object') for (const k of Object.keys(c)) { if (br[k] === undefined) try { Object.defineProperty(br, k, { value: c[k], enumerable: true, configurable: true }); } catch { try { br[k] = c[k]; } catch {} } }
+    }
+  } catch {}
   if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };
