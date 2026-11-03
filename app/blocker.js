@@ -40,10 +40,16 @@ const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
 const topHost = d => { try { const wc = d.webContents; if (wc && !wc.isDestroyed()) return hostOf(wc.getURL()); } catch {} return hostOf(d.referrer || ''); };
 const allowedOn = host => exceptions.has(host);
 
+/* YouTube's player talks to YouTube's own servers for playback, stats and heartbeats; blocking any of those can leave
+   the player blank (seen signed in). On YouTube, its own servers are left alone: ads are still stripped out of the page
+   by the cosmetic filters, and other companies' trackers are still blocked. */
+const YT_PAGE = /(^|\.)(youtube\.com|youtube-nocookie\.com)$/, YT_OWN = /(^|\.)(youtube\.com|youtube-nocookie\.com|googlevideo\.com|ytimg\.com|ggpht\.com|youtubei\.googleapis\.com)$/;
+const ytOwn = (page, url) => { if (!page || !YT_PAGE.test(page)) return false; try { return YT_OWN.test(new URL(url).hostname); } catch { return false; } };
 /* subresource blocking; returns true when it answered the request */
 function onRequest(d, cb) {
   const e = active(); if (!e || d.resourceType === 'mainFrame') return false;
   const host = topHost(d); if (host && allowedOn(host)) return false;
+  if (ytOwn(host, d.url)) return false;
   let res = null;
   e.onBeforeRequest(d, r => { res = r; });                         // the engine answers synchronously
   if (res && (res.cancel || res.redirectURL)) {

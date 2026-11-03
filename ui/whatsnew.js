@@ -5,6 +5,17 @@
    your own shortcuts); try: an action to run from the sheet. */
 window.WHATSNEW = [
   {
+    v: '1.0.0',
+    lead: 'Washi 1.0: your extensions work, and lots of little things got fixed.',
+    items: [
+      { icon: 'p:tools', title: 'Your Chrome extensions work', text: 'Okta\'s plugin shows your apps once you\'re signed in, and 1Password, uBlock Origin Lite, Bitwarden, Dark Reader and Grammarly open and work properly. Settings your company sets for an extension (through Chrome\'s managed policy) reach it too.', how: 'Right-click inside an extension\'s popup for Reload and Inspect.' },
+      { icon: 'i:play', title: 'YouTube plays, blocking on', text: 'No more blank white player: YouTube\'s own player is left alone, while ads are still stripped from the page and other ad companies stay blocked.' },
+      { icon: 'p:book', title: 'Leaving Reader is easy', text: 'Click the book stamp again, press Esc, or use the × on the sheet. Aa on the sheet changes the text size and font.', keys: ['reader'] },
+      { icon: 'p:star', title: 'Bookmarks from the star', text: 'Rest the pointer on the star and the bookmarks bar comes out, in Focus mode too.' },
+      { icon: 'i:bolt', title: 'Sleeping tabs keep their colours', text: 'Tabs resting to save memory (Settings › Performance) look like any other tab, and wake the moment you click them.' }
+    ]
+  },
+  {
     v: '0.17.0',
     lead: 'A calmer page, music in the corner, notes for every space.',
     items: [

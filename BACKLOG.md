@@ -44,6 +44,21 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.0)
+- Chrome extensions, checked with the real ones on GitHub's Mac (Okta, 1Password, uBlock Origin Lite, Bitwarden, Dark Reader, Grammarly):
+  - `browser.*` is `chrome.*`. The engine's own `browser` namespace lacked windows/commands/cookies…, and 1Password and uBlock Origin Lite fell over at start (blank popups).
+  - `chrome.privacy` settings answer. The engine's get() never called back, so Okta's popup sat on grey placeholders once you were signed in. Asking chrome.permissions about privacy no longer throws.
+  - `chrome.storage.managed` is your company's Chrome policy for the extension (read from the Mac's managed preferences), read-only. It was the extension's own local storage.
+  - `chrome.idle`, `chrome.identity` (redirect URL; interactive flows say they're unsupported), `tabs.highlight`, `extension.isAllowedIncognitoAccess`; `getViews` includes the asking page.
+  - Washi's fixes load before the engine's preload and finish just before chrome.* is frozen, so they can add whole APIs.
+  - Popups: right-click › Reload / Inspect.
+  - test/ext-org.js probes every API Okta's plugin uses, sandboxed like the app: CI shard 1 (Linux, sandbox on) and macchecks.yml.
+- YouTube plays with blocking on: on YouTube, requests to YouTube's own servers aren't blocked (blocking ad_break / get_midroll_info could leave the player blank). Other ad servers stay blocked; the cosmetic filters still strip ads. test/youtube.js
+- Reader: the book stamp toggles it; Esc and the × on the sheet leave; Aa on the sheet (or right-click the stamp) for size and font
+- The star brings out the bookmarks bar in any mode, Focus mode too; the bar keeps Focus mode's top bar out while you use it
+- Sleeping tabs keep their colours (no grey icons)
+- Note stamp centred like the other stamps
+
 ## Done and tested (0.17)
 - Fresh off the press: the first start after an update shows a paper sheet of what's new and how to use it (Try it buttons, your shortcuts); Help › What's New and Settings › Help any time (ui/whatsnew.js: one entry per release)
 - Focus mode (⌥⌘F): the page gets the whole window; the top edge brings the top bar back, the left edge the sidebar; remembered

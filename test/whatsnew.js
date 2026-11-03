@@ -42,7 +42,8 @@ const sheetOn = ov => ov.evaluate(() => !!document.querySelector('#setup.on .she
   // "Try it" runs it (real click)
   await ui.evaluate(() => openSetup('news', '0.15.1')); await sleep(1400);
   const tr = await ov.evaluate(() => { const c = [...document.querySelectorAll('.nw .nwc')].find(x => /sticky note/i.test(x.textContent)); if (!c) return null; const btn = c.querySelector('.btn'); btn.scrollIntoView({ block: 'center' }); const r = btn.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-  if (tr) { await sleep(300); const t2 = await ov.evaluate(() => { const r = [...document.querySelectorAll('.nw .nwc')].find(x => /sticky note/i.test(x.textContent)).querySelector('.btn').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }); ptr(`move ${X0 + t2.x} ${Y0 + t2.y}`); await sleep(100); ptr('down'); ptr('up'); await sleep(1400); }
+  if (tr) { await sleep(300); for (let i = 0, last = ''; i < 30; i++) { const now = await ov.evaluate(() => JSON.stringify([...document.querySelectorAll('.nw .nwc')].find(x => /sticky note/i.test(x.textContent)).querySelector('.btn').getBoundingClientRect())); if (now === last) break; last = now; await sleep(100); }   // cards drop in one after another: wait until it has landed
+    const t2 = await ov.evaluate(() => { const r = [...document.querySelectorAll('.nw .nwc')].find(x => /sticky note/i.test(x.textContent)).querySelector('.btn').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }); ptr(`move ${X0 + t2.x} ${Y0 + t2.y}`); await sleep(100); ptr('down'); ptr('up'); await sleep(1400); }
   ok(!!tr && await ov.evaluate(() => !!document.querySelector('.panel.on .pop.note')), '"Try it" on the sticky note opens it');
   await ov.keyboard.press('Escape'); await sleep(500);
   // Got it, and it doesn't come back
