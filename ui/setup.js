@@ -306,8 +306,10 @@ window.SETUP = (() => {
       btn.onclick = async () => { if (u.status === 'ready') return B.setupAct({ type: 'update:install' }); draw(await B.setupAct({ type: 'update:check' })); };
     };
     draw(INFO.update); hooks.update = draw;
-    return field('Updates', h('div', {}, h('p', { class: 'ver' }, h('b', {}, 'Washi ' + (INFO.version || '')), h('small', {}, ` · Chromium ${INFO.chrome || ''} · Electron ${INFO.electron || ''}`)), st, btn),
-      'Each update brings the newest Chromium security fixes. Updates download in the background; you choose when to restart.');
+    return [field('Updates', h('div', {}, h('p', { class: 'ver' }, h('b', {}, 'Washi ' + (INFO.version || '')), h('small', {}, ` · Chromium ${INFO.chrome || ''} · Electron ${INFO.electron || ''}`)), st, btn),
+      'Each update brings the newest Chromium security fixes. Updates download in the background; you choose when to restart.'),
+      field('When an update is ready', seg([{ v: 'card', label: 'Show me a card', sub: 'Restart now, or later' }, { v: 'quiet', label: 'Stay quiet', sub: 'It installs when you quit' }], () => P.updates || 'card', v => setPref({ updates: v }), 'wide')),
+      field('After an update', toggle('Show what\'s new', 'A page of what changed and how to use it, the first time Washi starts after an update.', () => P.showNews !== false, v => setPref({ showNews: v })))];
   }
 
 
@@ -762,7 +764,7 @@ window.SETUP = (() => {
       ['help', 'Help', () => [
         field('Quick-start guide', h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => open({ page: 'guide' }, true) }, 'Show the guide'), h('button', { class: 'btn', onclick: () => open({ page: 'news' }, true) }, 'What\'s new'), h('button', { class: 'btn', onclick: () => open({ page: 'onboard' }, true) }, 'Run the welcome setup again'))),
         field('Start fresh', h('div', {}, h('p', { class: 'hint' }, 'Erase every tab, space, setting and cookie and start Washi as if it was just installed.'), h('button', { class: 'btn warn', onclick: () => B.setupAct({ type: 'startFresh' }) }, 'Start fresh…'))),
-        secAbout(), secSpeed()]]
+        ...secAbout(), secSpeed()]]
     ];
     const scroll = h('div', { class: 'scroll' }, secs.map(([id, n, f]) => h('section', { class: 'sec', id: 'sec-' + id }, h('h3', {}, n), f())));
     const rail = h('nav', { class: 'rail' }, secs.map(([id, n]) => h('button', { 'data-s': id, onclick: () => { scroll.querySelector('#sec-' + id).scrollIntoView({ behavior: calm() ? 'auto' : 'smooth' }); } }, n)));

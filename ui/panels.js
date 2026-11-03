@@ -54,6 +54,22 @@ window.PANELS = (() => {
     t.addEventListener('blur', () => { if (tm) put(); });
     setTimeout(() => { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 30);
   }
+  /* ---------- an update is downloaded: a little postcard offering to restart ---------- */
+  function update() {
+    const notes = String(data.notes || '').split(/\n+/).map(s => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean).slice(0, 3);
+    panel.innerHTML = `<div class="pop upd" role="dialog" aria-label="Update ready"><i class="tp"></i>
+      <span class="ust" aria-hidden="true"><b>${esc(data.version || '')}</b><small>Washi</small></span>
+      <h5 class="uh">Fresh copy, ready to go</h5>
+      <p class="ut">Washi ${esc(data.version || '')} is downloaded. Restart to install it: every window and tab comes right back.</p>
+      ${notes.length ? `<ul class="un">${notes.map(n => `<li>${esc(n.slice(0, 90))}</li>`).join('')}</ul>` : ''}
+      <div class="ub"><button class="btn soft" id="ulater">Later</button><button class="btn primary" id="unow">Restart now</button></div>
+      <small class="uf">Later: it installs by itself the next time you quit Washi.</small></div>`;
+    const $ = s => panel.querySelector(s);
+    $('#unow').onclick = () => { $('#unow').disabled = true; $('#unow').textContent = 'Restarting…'; B.setupAct({ type: 'update:install' }); };
+    $('#ulater').onclick = () => { B.setupAct({ type: 'update:later', version: data.version }); B.overlayCancel(); };
+    panel.querySelector('.upd').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); B.setupAct({ type: 'update:later', version: data.version }); B.overlayCancel(); } });
+    setTimeout(() => { const b = $('#unow'); if (b) b.focus(); }, 40);
+  }
   /* ---------- Reader: text size and font ---------- */
   function readerp() {
     let size = +data.size || 19, face = data.face === 'sans' ? 'sans' : 'serif';
@@ -139,7 +155,7 @@ window.PANELS = (() => {
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
-    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp(); else if (kind === 'notes') notes();
+    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp(); else if (kind === 'notes') notes(); else if (kind === 'update') update();
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

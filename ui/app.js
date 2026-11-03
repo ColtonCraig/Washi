@@ -259,7 +259,7 @@ function autoIcons() {
 const render = () => { if (S) autoIcons(); updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); if (window.TOOLBAR) TOOLBAR.apply(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
-const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
+const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {}, updates: p.updates || 'card', focusBar: p.focusBar || 'peek', focusSide: p.focusSide || 'edge' }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
 
 /* ---------- native page views ---------- */
@@ -450,6 +450,8 @@ function focusMode(on = !S.focusMode, quiet) {
 /* extension buttons: they belong to this window's tab; an extension's own shortcut (View › Extension Shortcuts) opens its popup like a click */
 B.onExtTab(id => { const xl = document.getElementById('exts'); if (xl && +xl.getAttribute('tab') !== id) xl.setAttribute('tab', String(id)); });
 B.onExtOpen(id => { const xl = document.getElementById('exts'), b = xl && xl.shadowRoot && xl.shadowRoot.querySelector(`[id="${id}"]`); if (b && !b.hidden) b.click(); });
+/* the update postcard, bottom right over the page */
+B.onUpdateCard(d => { if (!S || !d) return; const L = layout().stage, w = 380, h = d.notes ? 268 : 214; R.updRect = { x: Math.round(L.x + L.w - w - 10), y: Math.round(L.y + L.h - h - 10), w, h }; B.panel('update', R.updRect, { ...d, ...look() }); });
 B.onFocusPeek(p => { if (!S || !S.focusMode) return; R.focusPeek = !!p; document.body.classList.toggle('peek', R.focusPeek); placePanes(); commit(false, true, true); });
 
 /* ---------- pin, move, folders ---------- */
@@ -671,7 +673,7 @@ async function whatsNew() {
   const newer = (a, b) => { const x = vn(a), y = vn(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
   if (seen === v) return;
   const wasSetUp = S.prefs.done; S.prefs.seenVer = v; save();
-  if (!wasSetUp) return;                                              // a new install gets the welcome instead
+  if (!wasSetUp || S.prefs.showNews === false) return;               // a new install gets the welcome instead; or you said not to (Settings › Help)
   const since = seen || (news[1] && news[1].v) || '0.0.0';             // from before this page existed: show this release
   if (!newer(v, since) || !news.some(r => newer(r.v, since) && !newer(r.v, v))) return;
   setTimeout(() => openSetup('news', since), 900);

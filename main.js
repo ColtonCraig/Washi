@@ -447,6 +447,16 @@ ON('tab:peek', async (_, d) => {
   C.overlay.setBounds(rr({ x, y, width: w, height: h })); C.overlay.setVisible(true);
   toOverlay('overlay:fx', { type: 'tabpeek', img: img ? 'data:image/jpeg;base64,' + img : null, title: String(d.title || '').slice(0, 200), url: String(d.url || '').slice(0, 500), fav: d.fav || null, pal: d.pal, theme: d.theme, arrowY: Math.round(d.y + d.h / 2 - y) });
 });
+/* an update is downloaded: a postcard in the window you're using offers to restart (Settings › Help: or just install it
+   when you quit). Waits for a moment when nothing else is open; "Later" doesn't ask again for that version. */
+let updLater = null, updT = 0;
+function offerUpdate(s, tries = 0) {
+  clearTimeout(updT);
+  if (!s || s.status !== 'ready' || updLater === s.version || P.updates === 'quiet') return;
+  const fw = BrowserWindow.getFocusedWindow(), c = (fw && [...W.values()].find(x => x.win === fw)) || (lastMain && alive(lastMain.win) ? lastMain : null);
+  if (!c || c.overlayOpen || c.dragging || recording || (c.win && !c.win.isFocused())) { if (tries < 400) updT = later(() => offerUpdate(s, tries + 1), 3000); return; }   // when you're back, and not in the middle of something
+  C = c; toUI('update:card', { version: s.version, notes: s.notes || '' });
+}
 function showFx(f) {
   C.tabPeekOn = false;
   if (f.type === 'switchEnd') { if (!C.overlayOpen && !C.dragging && C.overlay) { toOverlay('overlay:fx', f); C.overlay.setVisible(false); } return; }
@@ -946,6 +956,8 @@ HANDLE('setup:act', async (_, a) => {
   }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
+  if (a.type === 'update:later') { const s = updater.state(); updLater = (typeof a.version === 'string' && a.version) || (s && s.version); return { ok: true }; }
+  if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), notes: String(a.notes || '') }); return { ok: true }; }
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
   if (a.type === 'test:focus' && !app.isPackaged) { C.win.focus(); return { focused: BrowserWindow.getFocusedWindow() === C.win }; }
   if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
@@ -1135,7 +1147,7 @@ app.whenReady().then(async () => {
   buildMenu();
   const order = WINS().order; if (!order.length) createWindow('w1'); else for (const wid of order) createWindow(wid);
   C.win.webContents.once('did-finish-load', () => later(() => { for (const u of pendingUrls.splice(0)) toUI('tab:openRequest', { url: u }); }, 1200));
-  updater.start(s => { toUI('update:state', s); toOverlay('update:state', s); if (s.status === 'ready') showFx({ type: 'toast', text: `Washi ${s.version} is ready`, action: { label: 'Restart', cmd: 'update:install' } }); });
+  updater.start(s => { for (const c of W.values()) if (alive(c.win)) { c.win.webContents.send('update:state', s); if (c.overlay) c.overlay.webContents.send('update:state', s); } if (s.status === 'ready') offerUpdate(s); });
   later(() => blocker.refresh(false), 60 * 1000);                     // fresh blocklists, quietly, a minute after start
   setInterval(() => blocker.refresh(false), 12 * 3600 * 1000);
 });

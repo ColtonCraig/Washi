@@ -131,3 +131,23 @@
 .pop.note #nsv.on{opacity:1}
 html.scrapbook .pop.note{transform:rotate(-.8deg)}
 .stamp.nstamp.has svg.i{color:var(--tape)}
+
+/* update ready: a postcard with a stamp, dropped in at the bottom right */
+.pop.upd{gap:8px;padding:18px 18px 14px;animation:updin .52s cubic-bezier(.3,1.35,.5,1) both;transform-origin:80% 100%}
+.pop.upd .ust{position:absolute;top:16px;right:16px;width:56px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--white);color:var(--tape);border-radius:2px;outline:2px dashed color-mix(in srgb,var(--tape) 55%,transparent);outline-offset:-6px;box-shadow:0 0 0 3px var(--white),0 2px 6px rgb(var(--sh) / .18);transform:rotate(4deg);animation:updstamp .5s .35s cubic-bezier(.3,1.6,.5,1) both}
+.pop.upd .ust b{font:700 15px/1 var(--font-ui);letter-spacing:-.02em}
+.pop.upd .ust small{font:600 9px/1 var(--font-ui);text-transform:uppercase;letter-spacing:.12em;color:var(--ink2)}
+.pop.upd .uh{margin:0;padding-right:70px;font:700 25px/1.05 var(--font-hand);color:var(--ink)}
+.pop.upd .ut{margin:0;padding-right:62px;font:13px/1.45 var(--font-ui);color:var(--ink2)}
+.pop.upd .un{margin:0;padding:0 0 0 16px;font:12.5px/1.5 var(--font-ui);color:var(--ink)}
+.pop.upd .un li::marker{color:var(--tape)}
+.pop.upd .ub{display:flex;justify-content:flex-end;gap:8px;margin-top:auto}
+.pop.upd .uf{font:11.5px var(--font-ui);color:var(--ink2);text-align:right}
+@keyframes updin{0%{opacity:0;transform:translateY(26px) rotate(calc(3deg + var(--wob,0) * 3deg)) scale(.96)}70%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes updstamp{0%{opacity:0;transform:scale(1.8) rotate(-14deg)}100%{opacity:1;transform:rotate(4deg)}}
+html.scrapbook .pop.upd{transform:rotate(-.8deg)}
+html.motion-off .pop.upd,html.motion-off .pop.upd .ust{animation:none}
+@media (prefers-reduced-motion:reduce){.pop.upd,.pop.upd .ust{animation:none}}
+.pop.upd .btn{height:36px;padding:0 16px;font-size:13.5px}
+.pop.upd .btn.soft{background:transparent;box-shadow:none;color:var(--ink2)}
+.pop.upd .btn.soft:hover{background:rgb(var(--inkc) / .07);color:var(--ink)}
