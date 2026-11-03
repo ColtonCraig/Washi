@@ -59,7 +59,7 @@ body.float .tab:hover{background:rgb(var(--inkc) / .06)}
 .tab.on .ttl{font-weight:600}
 body.float .tab.on{background:var(--white)}
 .tab.also{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tape) 70%,transparent)}
-.tab.asleep .fav{opacity:.55;filter:grayscale(.4)}   /* only the icon dims: titles stay fully readable */
+/* a sleeping tab (Settings › Performance) looks just like the others: it wakes the moment you click it */
 .tab.warn .ttl{color:#d23b2a}
 .tab.loading .fav{animation:breathe .9s ease-in-out infinite alternate}
 @keyframes breathe{to{opacity:.45}}

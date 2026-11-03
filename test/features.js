@@ -78,7 +78,7 @@ const BASE = 'http://localhost:8765';
   const sleeper = await ui.evaluate(() => spaceTabs(sp()).find(id => id !== R.a && R.live[id]));
   await ui.evaluate(id => { S.prefs.sleep = 15; S.tabs[id].seen = Date.now() - 20 * 60e3; sleepTabs(); }, sleeper); await sleep(600);
   ok(await ui.evaluate(id => R.live[id] === false, sleeper), 'an unused tab goes to sleep');
-  ok(await sb.evaluate(id => document.querySelector(`.tab[data-id="${id}"]`)?.classList.contains('asleep'), sleeper), 'the sleeping tab looks faded in the sidebar');
+  ok(await sb.evaluate(id => { const e = document.querySelector(`.tab[data-id="${id}"]`), f = e && e.querySelector('.fav'); return !!e && e.classList.contains('asleep') && (!f || (getComputedStyle(f).opacity === '1' && getComputedStyle(f).filter === 'none')); }, sleeper), 'the sleeping tab keeps its colours in the sidebar (no greying)');
   await ui.evaluate(id => selectTab(id), sleeper); await sleep(1500);
   ok(await ui.evaluate(id => R.live[id] === true && R.a === id, sleeper), 'clicking a sleeping tab wakes it up');
 

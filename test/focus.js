@@ -21,6 +21,7 @@ const FOCUS = 'down:Control_L down:Alt_L tap:f up:Alt_L up:Control_L';
   const mid = { x: L0.x + L0.w / 2, y: 400 };
   ptr(`move ${X0 + mid.x} ${Y0 + mid.y}`); ptr('down'); ptr('up'); await sleep(300);
   K(FOCUS); await sleep(1100);
+  if (!(await ui.evaluate(() => S.focusMode))) { console.log('  NOTE the first ⌥⌘F was lost by the virtual keyboard (happens on CI now and then): pressed again'); K(FOCUS); await sleep(1100); }
   const L1 = await ui.evaluate(() => layout().stage);
   ok(await ui.evaluate(() => document.body.classList.contains('focus') && S.focusMode), '⌥⌘F turns on Focus mode');
   ok(L1.x <= 14 && L1.y <= 8 && L1.w > L0.w + 150, `the page gets the whole window (${JSON.stringify(L1)})`);

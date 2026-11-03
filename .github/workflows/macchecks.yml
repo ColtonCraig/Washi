@@ -26,6 +26,7 @@ jobs:
           node test/server.js > server2.log 2>&1 &
           for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done
           WASHI_SHOTS=$RUNNER_TEMP node test/mac-extensions.js
+          node test/ext-org.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: mac-screenshots, path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }
