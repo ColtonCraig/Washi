@@ -61,6 +61,13 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
     say('youtube console', ym.slice(0, 12));
   }
   await sleep(1500);
-  say('worker log', b.log().split('\n').filter(l => /ext-sw/.test(l) && !/Receiving end does not exist|webNavigation\.on|tabs\.onUpdated|Skipped url/.test(l)).map(l => l.slice(0, 900)).slice(0, 120));
+  say('worker log', b.log().split('\n').filter(l => /ext-sw/.test(l) && !/Receiving end does not exist|webNavigation\.on|tabs\.onUpdated|Skipped url|\(result\)|tabs\.query|tabs\.get /.test(l)).map(l => l.slice(0, 900)).slice(0, 120));
+  // and after a restart (installed extensions load at start): does the popup work then?
+  await b.stop(); b = await start({ profile, fresh: false, sandbox: process.platform === 'darwin' }); await sleep(5000);
+  const ui2 = b.ui; await ui2.evaluate(() => openTab('https://example.com/')); await sleep(3000);
+  await ui2.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (e) e.click(); }, ID);
+  let pop2 = null; for (let i = 0; i < 40 && !pop2; i++) { pop2 = b.pages().filter(x => x.url().startsWith('chrome-extension://' + ID)).pop(); if (!pop2) await sleep(250); }
+  if (pop2) { await sleep(6000); say('after restart: popup', await pop2.evaluate(() => ({ outerWidth, outerHeight, text: document.body.innerText.slice(0, 300) })).catch(e => e.message)); } else say('after restart: popup', 'never opened');
+  say('after restart: worker errors', b.log().split('\n').filter(l => /ext-sw/.test(l) && /"level":3|Uncaught/.test(l)).map(l => l.slice(0, 500)).slice(0, 20));
   await b.stop(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
