@@ -33,7 +33,8 @@ const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
   ok(p.open && p.wid === wid1, `the first window's button opens the popup in the first window (${p.wid}, not ${wid2})`);
   { let pp = null; for (let i = 0; i < 30 && !pp; i++) { pp = b.pages().find(x => x.url().includes(id + '/popup.html')); if (!pp) await sleep(150); }
     const n1 = await w1.evaluate(() => Object.keys(S.tabs).length), n2 = await w2.evaluate(() => Object.keys(S.tabs).length);
-    if (pp) await pp.evaluate(() => document.getElementById('open').click()).catch(() => {}); await sleep(2000);
+    if (pp) { for (let i = 0; i < 30; i++) { if (await pp.evaluate(() => !!document.getElementById('open') && document.readyState === 'complete').catch(() => false)) break; await sleep(150); } await pp.evaluate(() => document.getElementById('open').click()).catch(() => {}); }
+    for (let i = 0; i < 40; i++) { if (await w1.evaluate(() => Object.values(S.tabs).some(t => /fromext=1/.test(t.url))) || await w2.evaluate(() => Object.values(S.tabs).some(t => /fromext=1/.test(t.url)))) break; await sleep(150); } await sleep(300);
     ok(await w1.evaluate(n => Object.keys(S.tabs).length === n + 1 && Object.values(S.tabs).some(t => /fromext=1/.test(t.url)), n1) && await w2.evaluate(n => Object.keys(S.tabs).length === n, n2), 'a tab the popup opens lands in that same window: ' + JSON.stringify([n1, n2, await w1.evaluate(() => Object.values(S.tabs).map(t => t.url)), await w2.evaluate(() => Object.values(S.tabs).map(t => t.url)), !!pp])); }
   await closePopup();
   await w2.evaluate(id => document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`).click(), id);
