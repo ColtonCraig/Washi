@@ -76,6 +76,13 @@ function placePopup(p) {
 function fitPopup(p) {
   const w = p.browserWindow; if (!w || w.isDestroyed()) return;
   p.on('moved', () => placePopup(p));
+  /* right-click in a popup: Reload and Inspect, like Chrome (handy when an extension misbehaves) */
+  w.webContents.on('context-menu', (_, prm) => {
+    const { Menu } = require('electron'), wc = w.webContents, items = [];
+    if (prm.isEditable) items.push({ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { type: 'separator' }); else if (prm.selectionText) items.push({ role: 'copy' }, { type: 'separator' });
+    items.push({ label: 'Reload', click: () => { if (!wc.isDestroyed()) wc.reload(); } }, { label: 'Inspect', click: () => { if (!wc.isDestroyed()) { wc.openDevTools({ mode: 'detach' }); setTimeout(() => { try { wc.inspectElement(prm.x, prm.y); } catch {} }, 300); } } });
+    Menu.buildFromTemplate(items).popup({ window: w });
+  });
   const measure = async tries => {
     if (p.isDestroyed() || w.isDestroyed()) return;
     const [cw, ch] = w.getSize();
