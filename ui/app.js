@@ -214,7 +214,45 @@ function updateChrome() {
   $('#emptyTitle').textContent = `Nothing taped up in ${sp().name}`;
   document.title = t ? label(t) + ' · Washi' : 'Washi';
 }
-const render = () => { updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
+/* ---------- automatic folder icons: a folder you haven't picked an icon for gets a paper icon from its name and the
+   sites in it (Okta, Jamf → tools; Docs, Drive → reading; Budget → money…). Picking one yourself always wins. ---------- */
+const ICON_WORDS = [
+  ['tools', /\b(admin|console|mdm|tools?|it|okta|jamf|kandji|iru|hexnode|intune|maas360|addigy|mosyle|devices?|help ?desk|support|tickets?|servicenow|zendesk|freshservice)\b/],
+  ['code', /\b(code|dev|developer|github|gitlab|git|bitbucket|repos?|engineering|api|stack ?overflow|vercel|netlify|aws|cloudflare)\b/],
+  ['book', /\b(docs?|drive|notes?|wiki|confluence|notion|reading|read|books?|learn|learning|school|study|courses?|articles?|research)\b/],
+  ['chart', /\b(data|dashboards?|analytics|reports?|metrics|numbers|sheets?|stats|kpis?|datadog|grafana|looker|tableau)\b/],
+  ['money', /\b(money|bank|banking|finance|budget|expenses?|bills?|tax|taxes|invoices?|payroll|rippling|gusto|shopping|shop|amazon|crypto)\b/],
+  ['cal', /\b(calendar|plans?|planning|meetings?|schedule|events?|agenda|todo|to-do|tasks?|projects?|jira|asana|linear|trello)\b/],
+  ['plane', /\b(travel|trips?|flights?|hotels?|vacation|holiday|airbnb|booking|maps?)\b/],
+  ['music', /\b(music|songs?|spotify|playlists?|podcasts?|soundcloud|bandcamp|vinyl|records?)\b/],
+  ['camera', /\b(photos?|pictures?|video|videos|youtube|vimeo|netflix|watch|movies?|tv|camera)\b/],
+  ['game', /\b(games?|gaming|steam|twitch|play|xbox|playstation|nintendo)\b/],
+  ['palette', /\b(design|art|figma|dribbble|behance|inspo|inspiration|ideas board|canva|fonts?)\b/],
+  ['news', /\b(news|feeds?|rss|headlines|reddit|blogs?|newsletters?|press)\b/],
+  ['home', /\b(home|house|family|kids|personal|life|chores|recipes?|cooking)\b/],
+  ['case', /\b(work|job|jobs|office|company|team|clients?|hr|careers?|hudl|slack|zoom|teams)\b/],
+  ['bulb', /\b(ideas?|brainstorm|someday|inbox|later|misc)\b/],
+  ['heart', /\b(favou?rites?|faves?|loved?|health|fitness|gym|wellness)\b/],
+  ['cloud', /\b(cloud|storage|backups?|dropbox|icloud|onedrive|box)\b/],
+  ['sprout', /\b(garden|plants?|growing|grow|habits?)\b/],
+  ['search', /\b(search|find|lookups?|references?)\b/]
+];
+function guessIcon(s, f) {
+  const hosts = (f.tabs || []).filter(k => !k.startsWith('f:') && S.tabs[k]).map(k => hostOf(S.tabs[k].url).replace(/\.(com|org|net|io|co|app|dev)$/, '').replace(/\./g, ' '));
+  const name = String(f.name || '').toLowerCase(), sites = hosts.join(' ').toLowerCase();
+  let pick = null; for (const [icon, re] of ICON_WORDS) { const m = re.exec(name); if (m && (!pick || m.index < pick.at)) pick = { icon, at: m.index }; }
+  if (pick) return 'p:' + pick.icon;                                       // the name says most, and its first word most of all
+  const votes = {}; for (const h of hosts) for (const [icon, re] of ICON_WORDS) if (re.test(h.toLowerCase())) { votes[icon] = (votes[icon] || 0) + 1; break; }
+  const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] >= Math.max(1, Math.ceil(hosts.length / 3)) && sites ? 'p:' + best[0] : null;
+}
+function autoIcons() {
+  for (const s of S.spaces) for (const f of s.folders || []) {
+    if (f.live || f.iconPicked || (f.icon && !f.iconAuto)) continue;      // live folders have their own; yours stays yours
+    const g = guessIcon(s, f); if (g !== (f.icon || null)) { f.icon = g; f.iconAuto = !!g; }
+  }
+}
+const render = () => { if (S) autoIcons(); updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
 const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
@@ -642,7 +680,7 @@ B.onSetupMsg(m => {
     if (Number.isFinite(+m.size)) r.size = Math.max(14, Math.min(26, Math.round(+m.size)));
     save(); readerRestyle();
   }
-  else if (m.type === 'folderLook') { const f = S.spaces.flatMap(x => x.folders).find(x => x.id === m.id); if (f && !f.live) { if (m.icon !== undefined) f.icon = m.icon ? String(m.icon).slice(0, 16) : null; if (m.color !== undefined) f.color = BMK.okColor(m.color) ? m.color : null; render(); save(); } }
+  else if (m.type === 'folderLook') { const f = S.spaces.flatMap(x => x.folders).find(x => x.id === m.id); if (f && !f.live) { if (m.icon !== undefined) { f.icon = m.icon ? String(m.icon).slice(0, 16) : null; f.iconPicked = true; f.iconAuto = false; } if (m.color !== undefined) f.color = BMK.okColor(m.color) ? m.color : null; render(); save(); } }
   else if (m.type === 'bm') bmMsg(m);
   else if (m.type === 'apps') addApps(m.picks || []);
   else if (m.type === 'openUrl' && /^https:\/\//.test(m.url || '')) { B.overlayCancel(); openTab(m.url); }
