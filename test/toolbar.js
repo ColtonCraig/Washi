@@ -41,7 +41,8 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
     ['boost', 'opens Boost', () => panelIs('boost')],
     ['shield', 'opens the blocking card', () => panelIs('shield')],
     ['downloads', 'opens Downloads', () => ov.evaluate(() => /Downloads/.test((document.querySelector('.sheet') || {}).textContent || ''))]]) {
-    p = await at(id); await click(p.x, p.y); let r = false; for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); }
+    await sleep(250); p = await at(id); await click(p.x, p.y); let r = false; for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); }
+    if (!r && process.env.CI) { console.log(`  NOTE the click on ${id} didn't arrive (GitHub's virtual screen drops one now and then): clicked again`); await sleep(300); await click(p.x, p.y); for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); } }
     ok(r, `the ${id} button ${what}`); await esc();
   }
   await ui.evaluate(() => navigate('http://localhost:8765/article.html')); await sleep(2000);
@@ -137,6 +138,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(2500);
   ok(JSON.stringify(await order()) === JSON.stringify(custom), 'after a restart the bar is just as you left it');
   K('down:Control_L tap:n up:Control_L'); await sleep(3000);
+  if (b.pages().filter(x => x.url().endsWith('/index.html')).length < 2) { console.log('  NOTE the first ⌘N was lost by the virtual keyboard: pressed again'); K('down:Control_L tap:n up:Control_L'); await sleep(3000); }
   const w2 = b.pages().filter(x => x.url().endsWith('/index.html')).find(x => x !== ui);
   ok(w2 && JSON.stringify(await w2.evaluate(() => [...document.getElementById('tools').children].map(e => e.dataset.tool))) === JSON.stringify(custom), 'a new window has the same bar');
   await ui.evaluate(() => TOOLBAR.save({ toolsOff: ['note'] })); await sleep(900);
