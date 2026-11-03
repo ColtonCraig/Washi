@@ -44,5 +44,12 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok((await np()).shown, 'back on another tab, it\'s there again');
   const xr = await rect('#npX'); ptr(`move ${X0 + xr.x - 60} ${Y0 + TOP + xr.y}`); await sleep(200); ptr(`move ${X0 + xr.x} ${Y0 + TOP + xr.y}`); await sleep(200); ptr('down'); ptr('up'); await sleep(700);
   ok(!(await np()).shown, '× hides it');
-  await b.stop(); done();
+    // a page that lies about what's playing: Now playing takes nothing on trust
+  await ui.evaluate(() => openTab('http://localhost:8765/music-evil.html')); await sleep(1800);
+  const evil = b.pages().find(p => p.url().includes('/music-evil.html'));
+  await evil.evaluate(() => document.getElementById('a').play()); await sleep(900);
+  await ui.evaluate(() => { const id = Object.keys(S.tabs).find(k => !/evil/.test(S.tabs[k].url)); selectTab(id); }); await sleep(1800);
+  const ev = await sb.evaluate(() => ({ t: document.getElementById('npTitle').textContent, img: document.getElementById('npImg').style.backgroundImage }));
+  ok(ev.t.length <= 200 && !/javascript/i.test(ev.img), `a page that lies about its music gets a short title and no strange artwork (${ev.t.length} chars)`);
+await b.stop(); done();
 })().catch(e => { console.error(e); process.exit(1); });

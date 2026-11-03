@@ -3,7 +3,7 @@
    (shell = desk + top bar, C.sidebar, C.overlay = command bar / sheets / panels / effects). */
 const { app, BrowserWindow, WebContentsView, Menu, session, shell, dialog, nativeTheme, clipboard, screen, systemPreferences } = require('electron');
 
-if (!process.argv.includes('--no-sandbox')) app.enableSandbox();   // every renderer runs sandboxed (the flag only exists for the Linux test container, which runs as root)
+if (app.isPackaged || !process.argv.includes('--no-sandbox')) app.enableSandbox();   // every renderer runs sandboxed (the flag only exists for the Linux test container, which runs as root)
 app.setName('Washi');
 if (app.isPackaged) { app.commandLine.removeSwitch('remote-debugging-port'); app.commandLine.removeSwitch('remote-debugging-pipe'); }
 
@@ -261,7 +261,10 @@ ON('tab:act', (_, id, a) => tabAct(C.tabs.get(id), a));
 const MEDIA_INFO = `(() => { const m = navigator.mediaSession && navigator.mediaSession.metadata, all = [...document.querySelectorAll('video,audio')], v = all.find(e => !e.paused) || all.find(e => e.currentTime > 0) || all[0];
   if (!v && !m) return null; const art = m && m.artwork && m.artwork.length ? String(m.artwork[m.artwork.length - 1].src || '') : '';
   return { title: String(m && m.title || '').slice(0, 140), artist: String(m && (m.artist || m.album) || '').slice(0, 140), art: /^https?:/.test(art) ? art.slice(0, 2000) : '', playing: !!(v && !v.paused), video: !!(v && v.tagName === 'VIDEO') }; })()`;
-function mediaInfo(t, send) { const wc = t.wc; if (!wc || wc.isDestroyed()) return; wc.executeJavaScript(MEDIA_INFO).then(m => { if (!wc.isDestroyed()) send({ media: m ? { ...m, playing: m.playing || !!t.playing } : (t.playing ? { title: '', artist: '', art: '', playing: true } : null) }); }).catch(() => {}); }
+/* the page answers in its own world, so take nothing on trust: short plain strings, and artwork only from the web or a small image */
+const cleanMedia = m => { if (!m || typeof m !== 'object') return null; const str = v => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').slice(0, 200) : ''; const art = typeof m.art === 'string' && m.art.length < 300000 && /^(https?:\/\/|data:image\/(png|jpe?g|webp|gif);)/i.test(m.art) ? m.art : '';
+  return { title: str(m.title), artist: str(m.artist), art, playing: m.playing === true }; };
+function mediaInfo(t, send) { const wc = t.wc; if (!wc || wc.isDestroyed()) return; wc.executeJavaScript(MEDIA_INFO).then(r => { const m = cleanMedia(r); if (!wc.isDestroyed()) send({ media: m ? { ...m, playing: m.playing || !!t.playing } : (t.playing ? { title: '', artist: '', art: '', playing: true } : null) }); }).catch(() => {}); }
 const MEDIA_TOGGLE = `(() => { const all = [...document.querySelectorAll('video,audio')], p = all.find(e => !e.paused); if (p) { p.pause(); return 'paused'; } const v = all.find(e => e.currentTime > 0) || all[0]; if (v) { v.play(); return 'playing'; } return 'none'; })()`;
 async function mediaToggle(t) {
   const wc = t.wc; if (!wc || wc.isDestroyed()) return;

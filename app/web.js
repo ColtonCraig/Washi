@@ -17,9 +17,9 @@ let ui = { win: () => null, toast: () => {}, downloads: () => {}, onPerm: () => 
 /* ---------- permissions, remembered per site ---------- */
 const perms = store.readJSON('site-permissions.json', {});       // origin -> { perm: 'allow' | 'block' }
 const savePerms = () => store.writeJSON('site-permissions.json', perms);
-const SAFE = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock', 'keyboardLock', 'speaker-selection', 'storage-access', 'top-level-storage-access', 'window-management', 'background-sync', 'persistent-storage']);
+const SAFE = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock', 'keyboardLock', 'speaker-selection', 'storage-access', 'top-level-storage-access', 'background-sync', 'persistent-storage']);   // window-management (see every screen, place windows on them) asks first, like Chrome
 const LABEL = { media: 'use your camera or microphone', geolocation: 'know your location', notifications: 'send you notifications', 'clipboard-read': 'see what you copy', midi: 'use MIDI devices', midiSysex: 'control MIDI devices',
-  'display-capture': 'record your screen', 'idle-detection': 'know when you\'re away', hid: 'use HID devices', serial: 'use serial ports', usb: 'use USB devices', openExternal: 'open another app' };
+  'display-capture': 'record your screen', 'idle-detection': 'know when you\'re away', hid: 'use HID devices', serial: 'use serial ports', usb: 'use USB devices', openExternal: 'open another app', 'window-management': 'see your screens and place windows on them' };
 /* Local network access (Chrome's "Apps on device" / "Local network access"): sign-in tools like Okta FastPass talk to
    an app on this Mac (Okta Verify on localhost). Chromium asks under three names; Washi keeps one choice per site.
    Until you decide, the site is allowed to try, so the request comes in and Washi can ask (instead of the page

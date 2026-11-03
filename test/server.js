@@ -122,6 +122,11 @@ const srv = http.createServer((q, r) => {
     for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin(i / rate * 2 * Math.PI * 330) * 1200), 44 + i * 2);
     r.setHeader('content-type', 'audio/wav'); return r.end(b);
   }
+  if (q.url.startsWith('/music-evil.html')) {          // a page that lies about what's playing (Now playing must take nothing on trust)
+    r.setHeader('content-type', 'text/html');
+    return r.end(`<!doctype html><title>Evil Radio</title><body><audio id="a" src="/tone.wav" loop></audio>
+<script>Object.defineProperty(Navigator.prototype, 'mediaSession', { get() { return { metadata: { title: 'T'.repeat(5000), artist: { toString() { return 'obj'; } }, artwork: [{ src: 'javascript:alert(1)' }] } }; } });</script></body>`);
+  }
   if (q.url.startsWith('/music.html')) {
     r.setHeader('content-type', 'text/html');
     return r.end(`<!doctype html><title>Paper Radio</title><body style="background:#f3e9ff;font:20px system-ui"><h1>Paper Radio</h1><audio id="a" src="/tone.wav" loop></audio><button id="go" onclick="a.play()">Play</button>
