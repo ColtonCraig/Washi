@@ -144,7 +144,7 @@ window.SETUP = (() => {
   }
   function secSidebar() {
     return field('Sidebar', seg([{ v: true, label: 'Pinned', sub: 'Always beside your pages', art: artSide(true) }, { v: false, label: 'Floating', sub: 'Hides away; hover the left edge', art: artSide(false) }],
-      () => DOCK, v => { DOCK = v; send({ type: 'dock', dock: v }); refresh(); }, 'wide'), 'Switch any time with ⌘S.');
+      () => DOCK, v => { DOCK = v; send({ type: 'dock', dock: v }); refresh(); }, 'wide'), kh('sidebar') ? `Switch any time with ${kh('sidebar')}.` : '');
   }
   const BLOCK_OPTS = [{ v: 'off', label: 'Off', sub: 'Show everything' }, { v: 'standard', label: 'Standard', sub: 'Blocks ads and trackers' }, { v: 'strict', label: 'Strict', sub: 'Also hides cookie banners and pop-overs' }];
   function secBlocking(brief) {
@@ -182,6 +182,27 @@ window.SETUP = (() => {
     return field('Downloads', seg([{ v: false, label: 'Save to Downloads', sub: 'No questions asked' }, { v: true, label: 'Ask where to save', sub: 'Pick a folder each time' }], () => P.askDownload, v => setPref({ askDownload: v }), 'wide'));
   }
   const ARCHIVE_OPTS = [{ v: 0, label: 'Never' }, { v: 12, label: 'After 12 hours' }, { v: 24, label: 'After a day' }, { v: 168, label: 'After a week' }, { v: 720, label: 'After 30 days' }];
+  /* your shortcut for an action, as you've set it (hints follow your own keys) */
+  const kh = id => KEYMAP[id] ? BL.fmtKey(KEYMAP[id]) : '';
+  const withKey = (text, id) => kh(id) ? `${text} (${kh(id)})` : text;
+  /* ---------- Features: how Focus mode, Reader, Now playing, swiping, snapshots and the rest behave ---------- */
+  function secFeatures() {
+    const rd = () => P.reader || {};
+    return [
+      field(withKey('Focus mode', 'focus'), h('div', { class: 'segs' },
+        seg([{ v: 'peek', label: 'Top bar peeks in', sub: 'Point at the very top' }, { v: 'off', label: 'Top bar stays away', sub: 'Until you leave Focus mode' }], () => P.focusBar || 'peek', v => setPref({ focusBar: v }), 'wide'),
+        seg([{ v: 'edge', label: 'Sidebar slides in', sub: 'Point at the left edge' }, { v: 'off', label: 'Sidebar stays away', sub: 'Until you leave Focus mode' }], () => P.focusSide || 'edge', v => setPref({ focusSide: v }), 'wide'))),
+      field(withKey('Reader', 'reader'), h('div', { class: 'segs' },
+        seg([{ v: 'serif', label: 'Serif', sub: 'Like a book' }, { v: 'sans', label: 'Sans', sub: 'Clean and modern' }], () => rd().face || 'serif', v => setPref({ reader: { ...rd(), face: v } }), 'wide'),
+        seg([{ v: 16, label: 'Small' }, { v: 19, label: 'Medium' }, { v: 22, label: 'Large' }, { v: 25, label: 'Huge' }], () => [16, 19, 22, 25].reduce((a, b) => Math.abs(b - (rd().size || 19)) < Math.abs(a - (rd().size || 19)) ? b : a), v => setPref({ reader: { ...rd(), size: v } }), 'grid')),
+        'How articles look in Reader. Aa on the sheet changes it while you read.'),
+      field('Now playing', toggle('Show what\'s playing in the sidebar', 'Music or a video in another tab gets a little ticket at the bottom of the sidebar, with play and pause.', () => P.nowPlaying !== false, v => setPref({ nowPlaying: v }))),
+      field('Spaces', toggle('Swipe between spaces', 'Two fingers sideways on the sidebar goes to the next or previous space.', () => P.swipe !== false, v => setPref({ swipe: v }))),
+      field(withKey('Snapshot', 'snapshot'), seg([{ v: 'copy', label: 'Copy it', sub: 'Save from the note if you want' }, { v: 'save', label: 'Copy and save', sub: 'Also puts a PNG in Downloads' }], () => P.snapSave || 'copy', v => setPref({ snapSave: v }), 'wide')),
+      field('Bookmarks', toggle('Rest on the star for the bookmarks bar', 'The bar slides out while you point at the star, whatever Settings › Bookmarks says.', () => P.starBar !== false, v => setPref({ starBar: v }))),
+      field('Tidying', toggle('Offer to tidy up a busy sidebar', 'With 10 or more loose tabs, a Tidy button shows up in the sidebar.', () => P.tidyOffer !== false, v => setPref({ tidyOffer: v })))
+    ];
+  }
   /* ---------- Top bar: which tools show, in what order (drag the rows, or the buttons in the bar itself) ---------- */
   function secToolbar() {
     const box = h('div', { class: 'tbset' });
@@ -206,15 +227,15 @@ window.SETUP = (() => {
   }
   function secTabs(brief) {
     const arch = field('Tidy up old tabs', seg(ARCHIVE_OPTS, () => +P.archive, v => setPref({ archive: v }), 'grid'),
-      'Tabs you haven\'t opened in a while move to the Archive (⌥⌘A), so your sidebar stays clean. Pinned tabs and folders are never touched.');
+      `Tabs you haven't opened in a while move to the Archive${kh('archive') ? ` (${kh('archive')})` : ''}, so your sidebar stays clean. Pinned tabs and folders are never touched.`);
     const pos = field('New scraps go', seg([{ v: 'top', label: 'At the top', sub: 'Newest first, like Arc' }, { v: 'bottom', label: 'At the bottom', sub: 'In the order you opened them' }], () => P.newTabPos, v => setPref({ newTabPos: v }), 'wide'));
     if (brief) return arch;
     return [pos, arch,
       field('Sleeping tabs', seg([{ v: 0, label: 'Never' }, { v: 15, label: 'After 15 min' }, { v: 60, label: 'After 1 hour' }, { v: 240, label: 'After 4 hours' }], () => +P.sleep, v => setPref({ sleep: v }), 'grid'),
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
       field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
-      field('Little scraps', toggle('Open links from other apps in a little scrap', 'A small window you can glance at and close, or keep with ⌘O. Needs Washi as your default browser.', () => P.scrapLinks, v => setPref({ scrapLinks: v })),
-        'Open one any time with ⌥⌘N.'),
+      field('Little scraps', toggle('Open links from other apps in a little scrap', `A small window you can glance at and close, or keep${kh('scrapadopt') ? ` with ${kh('scrapadopt')}` : ''}. Needs Washi as your default browser.`, () => P.scrapLinks, v => setPref({ scrapLinks: v })),
+        kh('scrap') ? `Open one any time with ${kh('scrap')}.` : ''),
       field('Tab previews', toggle('Preview a tab when you rest on it', 'A little snapshot of the page beside the sidebar.', () => P.tabPeek !== false, v => setPref({ tabPeek: v }))),
       field('Quitting', toggle('Press ⌘Q twice to quit', 'So a stray ⌘Q doesn\'t close all your windows. Quitting from the menu with the mouse still quits right away.', () => P.confirmQuit !== false, v => setPref({ confirmQuit: v })))];
   }
@@ -394,7 +415,7 @@ window.SETUP = (() => {
   /* ---------- bookmarks: how the bar shows, and bringing them in from other browsers ---------- */
   function secBookmarks() {
     const bar = field('Bookmarks bar', seg([{ v: 'always', label: 'Always', sub: 'A slim row above your pages' }, { v: 'hover', label: 'On hover', sub: 'Point at the top bar to see it' }, { v: 'hidden', label: 'Hidden', sub: 'Find them with ⌘T or ⌥⌘B' }],
-      () => P.bookmarkBar || 'hover', v => setPref({ bookmarkBar: v, ...(v !== 'always' ? { barLast: v } : { barLast: P.bookmarkBar || 'hover' }) }), 'wide'), 'Click ☆ next to the address (or press ⇧⌘D) to bookmark a page. Right-click the bar for folders, emoji and colors.');
+      () => P.bookmarkBar || 'hover', v => setPref({ bookmarkBar: v, ...(v !== 'always' ? { barLast: v } : { barLast: P.bookmarkBar || 'hover' }) }), 'wide'), `Click ☆ next to the address${kh('bookmark') ? ` (or press ${kh('bookmark')})` : ''} to bookmark a page. Right-click the bar for folders, emoji and colors.`);
     return [bar, importBox(false)];
   }
 
@@ -750,6 +771,7 @@ window.SETUP = (() => {
     const secs = [
       ['look', 'Look', () => secLook()],
       ['toolbar', 'Top bar', () => secToolbar()],
+      ['features', 'Features', () => secFeatures()],
       ['spaces', 'Spaces', () => SPACES.map(x => field(x.name + (x.id === CUR ? ' (current)' : ''), h('div', {}, spaceColors(x.id), h('div', { class: 'tgls' }, toggle('Keep this space\'s logins separate', 'Its own cookies and sign-ins, like a separate browser profile: handy for work and personal accounts', () => !!x.isolated, v => { x.isolated = v; send({ type: 'isolate', id: x.id, on: v }); refresh(); })), routesFor(x.id))))],
       ['search', 'Search & startup', () => [...secSearch(), secStartup()]],
       ['tabs', 'Tabs', () => secTabs()],
@@ -768,7 +790,7 @@ window.SETUP = (() => {
     ];
     const scroll = h('div', { class: 'scroll' }, secs.map(([id, n, f]) => h('section', { class: 'sec', id: 'sec-' + id }, h('h3', {}, n), f())));
     const rail = h('nav', { class: 'rail' }, secs.map(([id, n]) => h('button', { 'data-s': id, onclick: () => { scroll.querySelector('#sec-' + id).scrollIntoView({ behavior: calm() ? 'auto' : 'smooth' }); } }, n)));
-    const mark = () => { let cur = secs[0][0]; for (const [id] of secs) if (scroll.querySelector('#sec-' + id).offsetTop - scroll.scrollTop < 140) cur = id; rail.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); };
+    const mark = () => { let cur = secs[0][0]; for (const [id] of secs) if (scroll.querySelector('#sec-' + id).offsetTop - scroll.scrollTop < 140) cur = id; if (scroll.scrollTop > 0 && scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 4) cur = secs[secs.length - 1][0];   /* at the very bottom: the last section, even if it's short */ rail.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); };
     scroll.addEventListener('scroll', mark, { passive: true });
     sheet = h('div', { class: 'sheet set' }, h('i', { class: 'tp l' }), h('i', { class: 'tp r' }),
       h('header', { class: 'shead' }, h('h2', { class: 'ttl' }, 'Settings'), h('button', { class: 'xx', 'aria-label': 'Close settings', onclick: finish }, '×')),

@@ -49,7 +49,8 @@ window.SNAP = (() => {
     Object.assign(pol.style, { left: s.x - 10 + 'px', top: s.y - 10 + 'px', width: s.w + 20 + 'px', height: s.h + 46 + 'px' });
     el.appendChild(pol);
     const flash = document.createElement('div'); flash.className = 'sflash'; el.appendChild(flash);
-    const done = () => { cancel(); setTimeout(() => B.fx({ type: 'toast', text: 'Snapshot copied: paste it anywhere', action: { label: 'Save', cmd: 'snap:save' } }), 60); };
+    const keep = !!(D && D.theme && D.theme.snapSave === 'save');     // Settings › Features: copy, or copy and save
+    const done = () => { cancel(); setTimeout(() => keep ? B.setupAct({ type: 'snap:save' }) : B.fx({ type: 'toast', text: 'Snapshot copied: paste it anywhere', action: { label: 'Save', cmd: 'snap:save' } }), 60); };
     if (calm()) { pol.style.left = W - fw - 24 + 'px'; pol.style.top = H - fh - 24 + 'px'; pol.style.width = fw + 'px'; pol.style.height = fh + 'px'; setTimeout(done, 700); return; }
     flash.animate([{ opacity: .9 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' });
     const tilt = document.documentElement.classList.contains('scrapbook') ? 6 : 3;

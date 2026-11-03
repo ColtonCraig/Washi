@@ -115,8 +115,8 @@ function apply(s) {
   drawNp(s.np);
   syncList(pinsEl, s.pins, mkPin, upPin);
   syncList(tabsEl, PLAN.root, mkItem, upItem);
-  const loose = PLAN.root.filter(k => !k.startsWith('f:') && s.tabs[k] && !(s.pairs || []).some(p => p.includes(k))).length, td = $('#tidy');
-  if (td.hidden !== loose < 10) { td.hidden = loose < 10; if (!td.hidden && !document.documentElement.classList.contains('motion-off')) td.animate([{ transform: 'translateY(8px) rotate(-3deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.3,1.4,.5,1)' }); }
+  const loose = PLAN.root.filter(k => !k.startsWith('f:') && s.tabs[k] && !(s.pairs || []).some(p => p.includes(k))).length, td = $('#tidy'), noTidy = loose < 10 || !!(ST.theme && ST.theme.tidyOffer === false);
+  if (td.hidden !== noTidy) { td.hidden = noTidy; if (!td.hidden && !document.documentElement.classList.contains('motion-off')) td.animate([{ transform: 'translateY(8px) rotate(-3deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.3,1.4,.5,1)' }); }
   $('#tidyN').textContent = loose + ' tabs';
   syncList(spacesEl, [...s.spaces.map(x => x.id), '+'], k => {
     const e = document.createElement('button'); e.className = 'sp' + (k === '+' ? ' add' : ''); if (k === '+') { e.id = 'addSp'; e.title = 'New space (⇧⌘N)'; e.innerHTML = ic('plus', 16); } else e.innerHTML = '<span class="nm"></span>'; return e;
@@ -361,7 +361,7 @@ function swipeBack(spring) {
   for (const e of swipeEls()) { e.style.transition = `transform ${spring ? 320 : 200}ms ${spring ? 'cubic-bezier(.3,1.6,.5,1)' : 'cubic-bezier(.2,.8,.2,1)'}, opacity 180ms`; e.style.transform = ''; e.style.opacity = ''; }
 }
 sheet.addEventListener('wheel', e => {
-  if (!ST || drag || !ST.spaces || ST.spaces.length < 2) return;
+  if (!ST || drag || !ST.spaces || ST.spaces.length < 2 || (ST.theme && ST.theme.swipe === false)) return;   // Settings › Features can turn swiping off
   const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY);
   if (ax < 1 || ax < ay * 1.3) return;                             // up and down still scrolls the tabs
   e.preventDefault();

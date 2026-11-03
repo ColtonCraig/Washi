@@ -149,8 +149,8 @@
 .shead{position:relative;padding:12px 30px 6px;margin:0 22px;border-bottom:1px solid rgb(var(--inkc) / .14)}
 .shead .ttl{margin-top:8px}
 .shead .lead{margin-bottom:4px}
-.cols{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr)}
-.rail{display:flex;flex-direction:column;gap:4px;padding:16px 10px 16px 24px}
+.cols{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.rail{display:flex;flex-direction:column;gap:4px;padding:16px 10px 16px 24px;min-height:0;overflow-y:auto;scrollbar-width:none}
 .rail button{padding:9px 12px;border-radius:8px;text-align:left;font-weight:600;color:var(--ink2);transition:transform var(--spring-ms) var(--spring),background .15s,color .15s}
 .rail button:hover{color:var(--ink);transform:translateX(3px)}
 .rail button.on{background:var(--white);color:var(--ink);box-shadow:0 0 0 1px rgb(var(--inkc) / .08)}
@@ -444,3 +444,5 @@ html.scrapbook .tbrow.drag{transform:rotate(-1.2deg)}
 html.motion-off .nw .nwfx{animation:none}
 @media (prefers-reduced-motion:reduce){.nw .nwfx{animation:none}}
 html.scrapbook .nw .nwfx{transform:rotate(-.25deg)}
+@media (max-height:720px){.rail{gap:1px}.rail button{padding-top:6px;padding-bottom:6px}}
+.segs{display:flex;flex-direction:column;gap:14px}

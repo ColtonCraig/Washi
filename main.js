@@ -350,7 +350,8 @@ const sbTop = () => C.focus ? 0 : TOP;                  // Focus mode: no top ba
 function sbBounds() {
   const T = sbTop(), [, h] = C.win.getContentSize(), H = Math.max(0, h - T);
   if (C.sbDocked) return { x: 0, y: T, width: sbW(), height: H };
-  return { x: C.sbShown || C.sbClosing ? 0 : EDGE - sbFW(), y: T, width: sbFW(), height: H };
+  const away = C.focus && P.focusSide === 'off';            // Focus mode with the sidebar told to stay away: no strip at the edge
+  return { x: C.sbShown || C.sbClosing ? 0 : (away ? -sbFW() : EDGE - sbFW()), y: T, width: sbFW(), height: H };
 }
 function applySidebar() { if (!alive(C && C.win) || !C.sidebar) return; C.sidebar.setBounds(sbBounds()); C.sidebar.setVisible(true); }
 function sbMode() { toSide('sb:mode', { docked: C.sbDocked, open: C.sbDocked || C.sbShown, top: sbTop() }); toUI('cmd', C.sbShown ? 'edge:off' : 'edge:on'); }
@@ -370,6 +371,7 @@ function pointerInSb() {
 function sbLeaveSoon(ms = 200) { clearTimeout(C.sbHideT); C.sbHideT = later(() => { if (!C.dragging && !C.menuOpen && !pointerInSb()) hideSb(); }, ms); }
 ON('sb:hover', (_, inside) => {
   if (C.sbDocked) return;
+  if (inside && C.focus && P.focusSide === 'off') return;
   if (inside) { if (C.sbShown || C.win.isFocused()) showSb(); else sbMode(); }   // not now: the sidebar takes back its head start
   else if (C.sbShown && !C.dragging && !C.menuOpen) sbLeaveSoon();
 });
@@ -390,7 +392,7 @@ ON('focus:set', (_, d) => {
     if (!c.focus || !alive(c.win)) { clearInterval(c.focusPoll); return; }
     if (!c.win.isFocused() || c.overlayOpen || c.menuOpen || c.dragging) { away = 0; return; }
     const p = screen.getCursorScreenPoint(), b = c.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y, inside = x >= 0 && x < b.width;
-    if (!c.focusPeek) { if (inside && y >= -1 && y <= 5) { c.focusPeek = true; away = 0; focusLights(c); C = c; toUI('focus:peek', true); } return; }
+    if (!c.focusPeek) { if (P.focusBar === 'off') return; if (inside && y >= -1 && y <= 5) { c.focusPeek = true; away = 0; focusLights(c); C = c; toUI('focus:peek', true); } return; }
     C = c; if ((inside && y >= -6 && y < TOP + 14) || (c.bmShown && pointerNearBar())) { away = 0; return; }   // on the top bar, or on the bookmarks bar it brought out
     if ((away += 120) >= 360) { if (c.bmShown) bmHide(); c.focusPeek = false; focusLights(c); C = c; toUI('focus:peek', false); }
   }, 120);
@@ -507,11 +509,11 @@ HANDLE('snap:take', (_, r) => {
   const small = crop.getSize().width > 560 ? crop.resize({ width: 560 }) : crop;
   return { url: small.toDataURL(), w, h };
 });
-function snapSave() {
+function snapSave(also) {
   const img = C.snapLast; if (!img) return;
   const d = new Date(), p2 = n => String(n).padStart(2, '0'), name = `Washi Snapshot ${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} at ${p2(d.getHours())}.${p2(d.getMinutes())}.${p2(d.getSeconds())}.png`;
   const dest = path.join(app.getPath('downloads'), name);
-  try { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, img.toPNG()); showFx({ type: 'toast', text: 'Saved to Downloads', reveal: dest }); } catch (e) { showFx({ type: 'toast', text: 'Couldn\'t save it: ' + e.message }); }
+  try { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, img.toPNG()); showFx({ type: 'toast', text: also ? 'Snapshot copied, and saved to Downloads' : 'Saved to Downloads', reveal: dest }); } catch (e) { showFx({ type: 'toast', text: 'Couldn\'t save it: ' + e.message }); }
 }
 HANDLE('overlay:open', (_, payload) => {
   vaultYield();
@@ -841,7 +843,8 @@ HANDLE('scrap:adopt', (_, sid, id, space) => {
 /* ---------- settings coming from the interface ---------- */
 let menuKeys = '';
 ON('prefs:sync', (_, p) => {
-  Object.assign(P, p);
+  const side = P.focusSide; Object.assign(P, p);
+  if (side !== P.focusSide) { const was = C; for (const c of W.values()) if (alive(c.win) && c.sidebar) { C = c; applySidebar(); } C = was; }
   try { nativeTheme.themeSource = P.mode === 'auto' ? 'system' : P.mode === 'dark' ? 'dark' : 'light'; } catch {}   // sites that support dark mode follow along
   web.configure({ gpc: p.gpc, askDownload: p.askDownload, httpsFirst: p.httpsFirst, safety: p.safety, blocking: p.blocking, clearOnExit: p.clearOnExit, dns: p.dns });
   autofill.configure({ save: p.pwSave !== false, fill: p.pwFill !== false, passkeys: p.passkeys !== false });
@@ -968,6 +971,7 @@ HANDLE('setup:act', async (_, a) => {
   }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
+  if (a.type === 'snap:save') { snapSave(true); return { ok: true }; }
   if (a.type === 'update:later') { const s = updater.state(); updLater = (typeof a.version === 'string' && a.version) || (s && s.version); return { ok: true }; }
   if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), notes: String(a.notes || '') }); return { ok: true }; }
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in

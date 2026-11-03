@@ -159,6 +159,7 @@ let pushQ = false;
 /* the card at the bottom of the sidebar: the most recent tab with something playing (or paused a moment ago),
    unless it's the one you're looking at */
 function nowPlaying() {
+  if (S.prefs.nowPlaying === false) return null;                     // Settings › Features
   const shown = new Set([R.a, R.split ? R.b : null]); let best = null;
   for (const id in R.media) { const m = R.media[id], t = S.tabs[id]; if (!t) { delete R.media[id]; continue; } if (shown.has(id) || id === R.npHide) continue; if (!m.playing && Date.now() - m.at > 20 * 60 * 1000) continue; if (!best || (m.playing && !best.m.playing) || (m.playing === best.m.playing && m.at > best.m.at)) best = { id, m }; }
   if (!best) return null; const t = S.tabs[best.id];
@@ -445,7 +446,7 @@ function focusMode(on = !S.focusMode, quiet) {
   document.body.classList.toggle('focus', S.focusMode); document.body.classList.remove('peek');
   B.focusSet({ on: S.focusMode }); B.sbMode({ docked: docked(), w: sbW() });
   placePanes(); commit(false, !quiet, true); updateChrome(); save();
-  if (!quiet && S.focusMode) B.fx({ type: 'toast', text: `Focus mode: point at the top for the bar · ${keyHint('focus') || '⌥⌘F'} to leave`, short: true });
+  if (!quiet && S.focusMode) B.fx({ type: 'toast', text: S.prefs.focusBar === 'off' ? `Focus mode · ${keyHint('focus') || '⌥⌘F'} to leave` : `Focus mode: point at the top for the bar · ${keyHint('focus') || '⌥⌘F'} to leave`, short: true });
 }
 /* extension buttons: they belong to this window's tab; an extension's own shortcut (View › Extension Shortcuts) opens its popup like a click */
 B.onExtTab(id => { const xl = document.getElementById('exts'); if (xl && +xl.getAttribute('tab') !== id) xl.setAttribute('tab', String(id)); });
@@ -1057,7 +1058,7 @@ let barAt = null;
 const showBar = () => B.bmHover({ items: light(), favs: bmFavs(), ...look() });
 /* resting on the star always brings the bar out (whatever Settings › Bookmarks bar says, and in Focus mode), unless it's already on screen */
 const bStarEl = $('#bStar'); let starT = 0;
-bStarEl.addEventListener('pointerenter', () => { if (!S || !S.bookmarks.length || (barAlways() && !S.focusMode)) return; clearTimeout(starT); starT = setTimeout(showBar, 160); });
+bStarEl.addEventListener('pointerenter', () => { if (!S || !S.bookmarks.length || S.prefs.starBar === false || (barAlways() && !S.focusMode)) return; clearTimeout(starT); starT = setTimeout(showBar, 160); });
 bStarEl.addEventListener('pointerleave', () => clearTimeout(starT));
 bStarEl.addEventListener('pointerdown', () => clearTimeout(starT));
 topbar.addEventListener('pointermove', e => {
