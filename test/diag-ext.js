@@ -50,6 +50,15 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
     try { await pop.screenshot({ path: path.join(OUT, 'diag-popup.png') }); } catch (e) { say('popup screenshot failed', e.message); }
   }
   shot('diag-screen');
+  // with the extension installed: does YouTube still play, opened directly and clicked from the home page?
+  for (const u of ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/']) {
+    await ui.evaluate(u => openTab(u), u); await sleep(9000);
+    const yp = b.pages().filter(x => x.url().includes('youtube.com')).pop(); if (!yp) { say('youtube', 'no page'); continue; }
+    const ym = []; yp.on('console', m => { if (/error/.test(m.type())) ym.push(m.text().slice(0, 200)); }); yp.on('pageerror', e => ym.push('pageerror: ' + e.message.slice(0, 200)));
+    if (u.endsWith('.com/')) { const r = await yp.evaluate(() => { const a = document.querySelector('a#thumbnail[href*="watch"], a[href*="/watch?v="]'); if (!a) return null; a.scrollIntoView(); const q = a.getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2 }; }).catch(() => null); say('home thumbnail', r); if (r) { await yp.mouse.click(r.x, r.y); await sleep(9000); } }
+    say('youtube with extension ' + u, await yp.evaluate(() => { const v = document.querySelector('video'); return { url: location.href, v: v && { rs: v.readyState, paused: v.paused, t: +v.currentTime.toFixed(1), w: v.videoWidth, err: v.error && v.error.code }, playerErr: (document.querySelector('.ytp-error') || {}).textContent || '' }; }).catch(e => e.message));
+    say('youtube console', ym.slice(0, 12));
+  }
   await sleep(1500);
   say('worker log', b.log().split('\n').filter(l => /ext-sw/.test(l) && !/Receiving end does not exist|webNavigation\.on|tabs\.onUpdated|Skipped url/.test(l)).map(l => l.slice(0, 900)).slice(0, 120));
   await b.stop(); process.exit(0);
