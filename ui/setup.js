@@ -19,6 +19,16 @@ window.SETUP = (() => {
   const modeKey = () => isDark(P) ? 'dark' : 'light';
   const calm = () => BL.motion.off || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* the sites that always open in this space (set from a tab's menu: Always Open … in); × sends one back to any space */
+  function routesFor(space) {
+    const box = h('div', { class: 'routes' });
+    const draw = () => {
+      box.innerHTML = ''; const mine = (P.routes || []).filter(r => r.space === space);
+      if (!mine.length) { box.append(h('p', { class: 'hint' }, 'Sites that always open here: right-click a tab › Always Open … in.')); return; }
+      box.append(h('p', { class: 'hint' }, 'Always opens here:'), h('span', { class: 'chips' }, mine.map(r => h('button', { class: 'chip allow', title: 'Open it in any space again', onclick: () => { setPref({ routes: (P.routes || []).filter(x => x.host !== r.host) }); draw(); } }, r.host, h('i', {}, '×')))));
+    };
+    sync(draw); return box;
+  }
   function setPref(patch) {
     for (const k in patch) { if (k === 'light' || k === 'dark') P[k] = { ...P[k], ...patch[k] }; else P[k] = patch[k]; }
     retheme(); send({ type: 'prefs', patch }); refresh();
@@ -715,7 +725,7 @@ window.SETUP = (() => {
     syncs = [];
     const secs = [
       ['look', 'Look', () => secLook()],
-      ['spaces', 'Spaces', () => SPACES.map(x => field(x.name + (x.id === CUR ? ' (current)' : ''), h('div', {}, spaceColors(x.id), h('div', { class: 'tgls' }, toggle('Keep this space\'s logins separate', 'Its own cookies and sign-ins, like a separate browser profile: handy for work and personal accounts', () => !!x.isolated, v => { x.isolated = v; send({ type: 'isolate', id: x.id, on: v }); refresh(); })))))],
+      ['spaces', 'Spaces', () => SPACES.map(x => field(x.name + (x.id === CUR ? ' (current)' : ''), h('div', {}, spaceColors(x.id), h('div', { class: 'tgls' }, toggle('Keep this space\'s logins separate', 'Its own cookies and sign-ins, like a separate browser profile: handy for work and personal accounts', () => !!x.isolated, v => { x.isolated = v; send({ type: 'isolate', id: x.id, on: v }); refresh(); })), routesFor(x.id))))],
       ['search', 'Search & startup', () => [...secSearch(), secStartup()]],
       ['tabs', 'Tabs', () => secTabs()],
       ['browser', 'Browser', () => [secSidebar(), secDownloads(), secDefault()]],

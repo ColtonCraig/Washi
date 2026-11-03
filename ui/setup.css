@@ -399,3 +399,10 @@ html.motion-off .nw .nwc{animation:none}
 html.scrapbook .nw .nwc:nth-child(odd){transform:rotate(-.5deg)}
 html.scrapbook .nw .nwc:nth-child(even){transform:rotate(.45deg)}
 html.scrapbook .nw .nwc::before{content:"";position:absolute;left:50%;top:-6px;width:40px;height:12px;margin-left:-20px;background:var(--tape-strip);opacity:.8;transform:rotate(-3deg);clip-path:polygon(0 18%,6% 0,30% 10%,52% 0,76% 8%,100% 0,96% 50%,100% 100%,72% 90%,48% 100%,24% 92%,0 100%,4% 50%)}
+/* Settings › Spaces: sites that always open in a space */
+.routes{margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.routes .hint{margin:0}
+.routes .chips{display:flex;flex-wrap:wrap;gap:6px}
+.routes .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 10px;border-radius:99px;font:700 12px var(--font-ui);color:var(--ink);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--tape) 60%,transparent);background:color-mix(in srgb,var(--tape) 8%,transparent)}
+.routes .chip i{font-style:normal;color:var(--ink3);font-size:14px;line-height:1}
+.routes .chip:hover i{color:var(--tape)}

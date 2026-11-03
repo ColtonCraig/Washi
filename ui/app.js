@@ -298,7 +298,30 @@ function selectTab(id, o = {}) {
   showTab(id); placePanes();
   commit(o.focusPage !== false); save();
 }
+/* ---------- sites that always open in a space (like Arc's Air Traffic Control): okta.com → Work ---------- */
+const hostName = url => { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } };
+function routeFor(url, any) {
+  const h = hostName(url); if (!h) return null;
+  const r = (S.prefs.routes || []).filter(x => h === x.host || h.endsWith('.' + x.host)).sort((a, b) => b.host.length - a.host.length)[0];
+  return r && (any || S.spaces.some(x => x.id === r.space)) ? r : null;
+}
+function setRoute(host, space, tabId) {
+  host = String(host || '').toLowerCase().replace(/^www\./, ''); if (!host) return;
+  const routes = (S.prefs.routes || []).filter(x => x.host !== host);
+  if (space && S.spaces.some(x => x.id === space)) routes.push({ host, space });
+  S.prefs.routes = routes; save();
+  const sn = space && S.spaces.find(x => x.id === space);
+  B.fx({ type: 'toast', text: sn ? `${host} will always open in ${sn.name}` : `${host} opens in any space again`, short: true });
+  if (sn && tabId && S.tabs[tabId] && !S.pins.includes(tabId) && spaceOf(tabId) !== sn) moveToSpace(tabId, sn.id);   // this tab goes there too
+}
 function openTab(url, o = {}) {
+  const rt = !o.here && routeFor(url);
+  if (rt && rt.space !== S.cur) {                                         // a site you send to another space opens there
+    const to = S.spaces.find(x => x.id === rt.space);
+    if (o.bg) { const id = uid('t'); S.tabs[id] = { url, title: hostOf(url), seen: Date.now() }; to.tabs[S.prefs.newTabPos === 'bottom' ? 'push' : 'unshift'](id); render(); save(); B.fx({ type: 'toast', text: `Opened ${hostName(url)} in ${to.name}`, short: true }); return; }
+    R.intoFolder = null; switchSpace(to.id, { quiet: true });
+    B.fx({ type: 'toast', text: `${hostName(url)} opens in ${to.name}`, short: true });
+  }
   const s = sp(), id = uid('t');
   S.tabs[id] = { url, title: hostOf(url), seen: Date.now() };
   const into = R.intoFolder && s.folders.find(f => f.id === R.intoFolder); R.intoFolder = null;
@@ -796,7 +819,8 @@ B.onOverlayResult(r => {
 B.onOverlayCancel(() => { R.promptCb = null; R.intoFolder = null; R.bmSheet = false; });
 
 /* ---------- native menus, requested from the sidebar ---------- */
-function tabMenu(id) {
+function tabMenu(id) { R.menuTab = id; B.popupMenu(tabMenuItems(id)); }
+function tabMenuItems(id) {
   const pinned = S.pins.includes(id), s = spaceOf(id) || sp(), items = [{ label: pinned ? 'Unpin' : 'Pin', id: 'pin' }, { label: 'Rename…', id: 'rename' }, ...(S.tabs[id] && S.tabs[id].name ? [{ label: 'Use the Page\'s Title', id: 'unname' }] : []), { label: 'Duplicate', id: 'dup' }, { label: 'Copy Address', id: 'copy' }, { type: 'separator' }];
   if (!pinned) {
     const others = S.spaces.filter(x => x.id !== s.id);
@@ -805,10 +829,14 @@ function tabMenu(id) {
     if (s.folders.some(f => f.tabs.includes(id))) items.push({ label: 'Remove from Folder', id: 'fo:none' });
   }
   const host = hostOf(S.tabs[id] && S.tabs[id].url || '');
-  if (host) items.push({ type: 'separator' }, { label: (S.prefs.muteSites || []).includes(host) ? `Unmute ${host}` : `Mute ${host}`, id: 'mutesite' });
+  if (host) {
+    const rt = routeFor(S.tabs[id].url, true), site = hostName(S.tabs[id].url);
+    items.push({ type: 'separator' }, { label: `Always Open ${site} in`, submenu: [...S.spaces.map(x => ({ label: x.name, id: 'route:' + x.id, type: 'checkbox', checked: !!(rt && rt.space === x.id) })), { type: 'separator' }, { label: 'Any Space (as usual)', id: 'route:', type: 'checkbox', checked: !rt }] },
+      { label: (S.prefs.muteSites || []).includes(host) ? `Unmute ${host}` : `Mute ${host}`, id: 'mutesite' });
+  }
   if (pairOf(id)) items.push({ type: 'separator' }, { label: 'Separate Split', id: 'sep' });
   items.push({ type: 'separator' }, { label: pinned ? 'Unload' : 'Close', id: 'close' });
-  R.menuTab = id; B.popupMenu(items);
+  return items;
 }
 function spaceMenu(id) {
   R.menuSpace = id;
@@ -847,6 +875,7 @@ function menuClick(id) {
   else if (id === 'sp:tidy') tidy(s);
   else if (id === 'sp:clear') clearTabs(s);
   else if (id === 'mutesite') muteSite(hostOf(S.tabs[t] && S.tabs[t].url || ''));
+  else if (id.startsWith('route:')) setRoute(hostName(S.tabs[t] && S.tabs[t].url || ''), id.slice(6), t);
   else if (id.startsWith('sp:color:')) { const sc = S.spaces.find(x => x.id === s); sc.h = +id.slice(9); sc.custom = null; if (s === S.cur) theme(); render(); save(); }
 }
 
