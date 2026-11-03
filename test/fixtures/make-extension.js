@@ -39,6 +39,7 @@ const files = {
   await T('contextMenus.removeAll', () => new Promise(r => chrome.contextMenus.removeAll(() => r('ok')))); await T('contextMenus.create', () => chrome.contextMenus.create({ id: 'probe', title: 'Probe', contexts: ['page'] }));
   await T('extension.isAllowedIncognitoAccess', () => chrome.extension.isAllowedIncognitoAccess());
   await T('permissions.contains', () => chrome.permissions.contains({ permissions: ['privacy'] })); await T('permissions.getAll', () => chrome.permissions.getAll().then(p => p.permissions.length)); await T('privacy', () => typeof chrome.privacy);
+  await T('privacy.passwordSavingEnabled.get', () => new Promise(r => chrome.privacy.services.passwordSavingEnabled.get({}, d => r(d && d.value)))); await T('storage.managed', () => chrome.storage.managed.get(null).then(o => o.orgUrl || 'ERR ' + JSON.stringify(o)));
   await T('runtime.setUninstallURL', () => chrome.runtime.setUninstallURL('')); await T('runtime.getManifest', () => chrome.runtime.getManifest().version); await T('runtime.getURL', () => chrome.runtime.getURL('x')); await T('runtime.onConnect', () => typeof chrome.runtime.onConnect.addListener);
   await T('fetch org (cookies, no CORS)', () => fetch('http://127.0.0.1:8765/org/me', { credentials: 'include' }).then(r => r.json()).then(j => j.cookie));
   return out; };

@@ -4,7 +4,7 @@
    its sign-in rules; with it undefined Chrome rejects them and the plugin's background falls over (blank popup,
    "We're having trouble launching your app"). */
 const { contextBridge } = require('electron');
-const fix = () => {
+const fix = (policy) => {
   /* the engine finishes by freezing chrome; whichever of us runs first, fill the constants in just before that (or now, if it already ran) */
   const C0 = globalThis.chrome;
   if (!C0 || !C0.tabs || !Object.isFrozen(C0)) { const freeze = Object.freeze; Object.freeze = function (o) { if (o && o === globalThis.chrome) { Object.freeze = freeze; try { apply(); } catch {} } return freeze.call(this, o); }; }
@@ -65,6 +65,26 @@ const fix = () => {
   const UNSUPPORTED = new Set(['privacy']);
   const later = (v, cb) => { if (typeof cb === 'function') { try { cb(v); } catch {} return undefined; } return Promise.resolve(v); };
   const setting = (value) => { const ls = new Set(); return { get: (d, cb) => later({ value, levelOfControl: 'controllable_by_this_extension' }, typeof d === 'function' ? d : cb), set: (d, cb) => later(undefined, cb), clear: (d, cb) => later(undefined, cb), onChange: { addListener: f => ls.add(f), removeListener: f => ls.delete(f), hasListener: f => ls.has(f), hasListeners: () => ls.size > 0 } }; };
+  /* the engine's own chrome.privacy settings are stubs whose get() never answers: Okta's plugin waits on
+     passwordSavingEnabled.get() once you're signed in, so its popup sat on grey placeholders. Make them answer. */
+  const VAL = { passwordSavingEnabled: false, autofillAddressEnabled: false, autofillCreditCardEnabled: false, autofillEnabled: false, safeBrowsingEnabled: true, searchSuggestEnabled: true, spellingServiceEnabled: false, translationServiceEnabled: false, networkPredictionEnabled: true, webRTCIPHandlingPolicy: 'default', thirdPartyCookiesAllowed: true, hyperlinkAuditingEnabled: false, referrersEnabled: true, doNotTrackEnabled: false, protectedContentEnabled: true };
+  if (c.privacy) for (const grp of ['services', 'network', 'websites']) {
+    let g = c.privacy[grp]; if (!g || typeof g !== 'object') { g = {}; try { c.privacy[grp] = g; } catch {} }
+    for (const k of Object.keys(VAL)) { const want = setting(VAL[k]); const cur = g[k];
+      if (cur && typeof cur === 'object') { for (const m of ['get', 'set', 'clear']) try { cur[m] = want[m]; } catch {} if (!cur.onChange || typeof cur.onChange.hasListener !== 'function') try { cur.onChange = want.onChange; } catch {} }
+      else if (({ services: /^(password|autofill|safeBrowsing|searchSuggest|spelling|translation)/, network: /^(networkPrediction|webRTC)/, websites: /^(thirdParty|hyperlink|referrers|doNotTrack|protectedContent)/ })[grp].test(k)) try { g[k] = want; } catch {} }
+  }
+  /* chrome.storage.managed: the engine hands back the extension's own local storage as if it were company policy. Chrome
+     gives {} unless an admin set something: use what your Mac's Chrome policy has for this extension, read-only. */
+  if (c.storage && !c.storage.__washiManaged) {
+    let mine = {}; try { mine = (JSON.parse(policy || '{}') || {})[c.runtime && c.runtime.id] || {}; } catch {}
+    const pick = k => { if (k == null) return { ...mine }; const o = {}; const ks = typeof k === 'string' ? [k] : Array.isArray(k) ? k : Object.keys(k); for (const x of ks) if (x in mine) o[x] = mine[x]; else if (k && typeof k === 'object' && !Array.isArray(k)) o[x] = k[x]; return o; };
+    const ro = cb => { const e = new Error('This is a read-only store.'); if (typeof cb === 'function') { try { cb(); } catch {} return undefined; } return Promise.reject(e); };
+    const ls = new Set();
+    const managed = { get: (k, cb) => { if (typeof k === 'function') { cb = k; k = null; } return later(pick(k), cb); }, getBytesInUse: (k, cb) => { if (typeof k === 'function') { cb = k; k = null; } return later(JSON.stringify(pick(k)).length, cb); }, set: (_, cb) => ro(cb), remove: (_, cb) => ro(cb), clear: cb => ro(cb), onChanged: { addListener: f => ls.add(f), removeListener: f => ls.delete(f), hasListener: f => ls.has(f), hasListeners: () => ls.size > 0 } };
+    try { Object.defineProperty(c.storage, 'managed', { value: managed, enumerable: true, configurable: true }); } catch { try { c.storage.managed = managed; } catch {} }
+    try { Object.defineProperty(c.storage, '__washiManaged', { value: true }); } catch {}
+  }
   if (!c.privacy) set(c, 'privacy', { services: { passwordSavingEnabled: setting(false), autofillAddressEnabled: setting(false), autofillCreditCardEnabled: setting(false), autofillEnabled: setting(false), safeBrowsingEnabled: setting(true), searchSuggestEnabled: setting(true), spellingServiceEnabled: setting(false), translationServiceEnabled: setting(false) },
     network: { networkPredictionEnabled: setting(true), webRTCIPHandlingPolicy: setting('default') }, websites: { thirdPartyCookiesAllowed: setting(true), hyperlinkAuditingEnabled: setting(false), referrersEnabled: setting(true), doNotTrackEnabled: setting(false), protectedContentEnabled: setting(true) }, IPHandlingPolicy: { DEFAULT: 'default' } });
   const P = c.permissions;
@@ -90,4 +110,4 @@ const fix = () => {
 };
 let dbg = false; try { dbg = !!(process.env && process.env.WASHI_DEBUG_EXT); } catch {}
 const isExt = () => { try { return process.type === 'service-worker' || (globalThis.location && String(location.href).startsWith('chrome-extension://')); } catch { return false; } };   // a worker has no location yet: ask process.type, like the engine does
-try { if (isExt()) { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); contextBridge.executeInMainWorld({ func: fix }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
+try { if (isExt()) { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); let pol = '{}'; try { pol = (process.env && process.env.WASHI_EXT_POLICY) || '{}'; } catch {} contextBridge.executeInMainWorld({ func: fix, args: [pol] }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }

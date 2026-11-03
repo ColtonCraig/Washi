@@ -21,6 +21,18 @@ let quiet = 0;                                            // adding a tab makes 
 let ui = { createTab: async () => null, selectTab() {}, removeTab() {}, confirm: async () => ({ action: 'deny' }), changed() {} };
 const testUnpacked = () => !app.isPackaged && !!process.env.WASHI_TEST_EXT;
 
+/* Extension settings your company pushes to Chrome by MDM (chrome.storage.managed: an Okta org URL, say) are read from
+   Chrome's managed preferences on a Mac and handed to the extensions through the environment (ext-fix.preload.js). */
+try {
+  if (process.platform === 'darwin' && !process.env.WASHI_EXT_POLICY) {
+    const { execFileSync } = require('child_process'), os = require('os'), out = {};
+    for (const f of ['/Library/Managed Preferences/com.google.Chrome.plist', `/Library/Managed Preferences/${os.userInfo().username}/com.google.Chrome.plist`]) {
+      if (!fs.existsSync(f)) continue;
+      try { const j = JSON.parse(execFileSync('/usr/bin/plutil', ['-convert', 'json', '-o', '-', f], { timeout: 3000 }).toString()); const ex = j && j['3rdparty'] && j['3rdparty'].extensions; if (ex && typeof ex === 'object') for (const [id, v] of Object.entries(ex)) out[id] = { ...(out[id] || {}), ...v }; } catch {}
+    }
+    const txt = JSON.stringify(out); if (txt !== '{}' && txt.length < 60000) process.env.WASHI_EXT_POLICY = txt;
+  }
+} catch {}
 if (setResolver) setResolver(p => (p === DEFAULT_PART || !p ? session.defaultSession : session.fromPartition(p)));
 const partitionOf = ses => ses === session.defaultSession ? DEFAULT_PART : [...all.keys()].includes(ses) && ses.storagePath ? 'persist:' + path.basename(ses.storagePath) : DEFAULT_PART;
 
