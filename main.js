@@ -462,7 +462,7 @@ function showFx(f) {
   C.toastUntil = f.type === 'toast' ? Date.now() + ms : 0;
   C.fxTimer = later(() => { C.toastUntil = 0; if (!C.overlayOpen && !C.dragging) C.overlay.setVisible(false); }, ms);
 }
-ON('toast:act', (_, a) => { clearTimeout(C.fxTimer); C.toastUntil = 0; C.overlay.setVisible(false); if (a && a.cmd === 'openUrl' && /^https?:/.test(a.url)) toUI('tab:openRequest', { url: a.url }); else if (a && a.cmd === 'update:install') updater.install(); else if (a && a.cmd === 'reveal' && a.path && fs.existsSync(a.path)) shell.showItemInFolder(a.path); else if (a && typeof a.cmd === 'string') toUI('cmd', a.cmd); });
+ON('toast:act', (_, a) => { clearTimeout(C.fxTimer); C.toastUntil = 0; C.overlay.setVisible(false); if (a && a.cmd === 'openUrl' && /^https?:/.test(a.url)) toUI('tab:openRequest', { url: a.url }); else if (a && a.cmd === 'update:install') updater.install(); else if (a && a.cmd === 'reveal' && a.path && fs.existsSync(a.path)) shell.showItemInFolder(a.path); else if (a && a.cmd === 'snap:save') snapSave(); else if (a && typeof a.cmd === 'string') toUI('cmd', a.cmd); });
 function closeOverlay() {
   if (C.panelOpen === 'find') { const t = activeTab(); if (t) t.wc.stopFindInPage('keepSelection'); }
   const pw = C.panelOpen === 'pwmenu' ? C.pwWc : null, pk = C.pkResolve; C.pkResolve = null; C.pwSave = null;
@@ -472,6 +472,25 @@ function closeOverlay() {
   C.overlayOpen = false; C.panelOpen = null; C.overlay.setVisible(false); toOverlay('overlay:closed'); focusPage();
 }
 ON('fx', (_, f) => showFx(f));
+/* ---------- Snapshot: freeze the page, drag a box (or the whole page), copied straight away; Save from the toast ---------- */
+HANDLE('snap:capture', async () => {
+  const t = activeTab(); if (!t || !t.rect || t.wc.isDestroyed()) return null;
+  try { const img = await t.wc.capturePage(); if (img.isEmpty()) return null; C.snapImg = img; C.snapRect = { ...t.rect }; C.snapTitle = t.wc.getTitle(); return { url: img.toDataURL(), rect: C.snapRect }; } catch { return null; }
+});
+HANDLE('snap:take', (_, r) => {
+  const img = C.snapImg, R0 = C.snapRect; if (!img || !R0 || !r) return null;
+  const sz = img.getSize(), k = sz.width / R0.width, cl = (v, m) => Math.max(0, Math.min(m, Math.round(v)));
+  const x = cl(r.x * k, sz.width - 1), y = cl(r.y * k, sz.height - 1), w = Math.max(1, Math.min(sz.width - x, Math.round(r.w * k))), h = Math.max(1, Math.min(sz.height - y, Math.round(r.h * k)));
+  const crop = img.crop({ x, y, width: w, height: h }); const png = crop.toPNG(); clipboard.write([new (require('electron').ClipboardItem)({ 'image/png': new Blob([png], { type: 'image/png' }) })]).catch(e => console.error('snapshot copy', e.message)); C.snapLast = crop; C.snapImg = null;
+  const small = crop.getSize().width > 560 ? crop.resize({ width: 560 }) : crop;
+  return { url: small.toDataURL(), w, h };
+});
+function snapSave() {
+  const img = C.snapLast; if (!img) return;
+  const d = new Date(), p2 = n => String(n).padStart(2, '0'), name = `Washi Snapshot ${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} at ${p2(d.getHours())}.${p2(d.getMinutes())}.${p2(d.getSeconds())}.png`;
+  const dest = path.join(app.getPath('downloads'), name);
+  try { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, img.toPNG()); showFx({ type: 'toast', text: 'Saved to Downloads', reveal: dest }); } catch (e) { showFx({ type: 'toast', text: 'Couldn\'t save it: ' + e.message }); }
+}
 HANDLE('overlay:open', (_, payload) => {
   vaultYield();
   if (C.peek) closePeek(true); bmHide(true);
@@ -1079,7 +1098,7 @@ function buildMenu() {
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { label: `Quit ${app.name}`, accelerator: 'CmdOrCtrl+Q', click: (_, __, ev) => askQuit(ev) }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
-    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), item('focus'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
+    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), item('focus'), item('snapshot'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },

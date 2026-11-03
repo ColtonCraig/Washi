@@ -23,6 +23,7 @@ B.onOverlayInit(d => {
   hideStrip(); window.VAULTUI.close();
   if (d.mode === 'vault') { toast.classList.remove('on'); window.PANELS.closeAll(); window.SHEETS.close(true); close(); window.VAULTUI.open(d); return; }
   if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'panel' && d.mode !== 'peek' && d.mode !== 'sheet' && d.mode !== 'setup') close();
+  if (d.mode === 'snap') { window.SNAP.open(d); return; }
   if (d.mode === 'setup') { window.SETUP.open(d); return; }
   if (d.mode === 'panel') { window.PANELS.open(d); return; }
   if (d.mode === 'peek') { window.PANELS.peek(d); return; }
@@ -190,4 +191,4 @@ B.onFx(f => {
   }
 });
 
-B.onOverlayClosed(() => { close(); hideStrip(); window.PANELS.closeAll(); window.SHEETS.close(true); window.VAULTUI.close(); });
+B.onOverlayClosed(() => { close(); hideStrip(); window.SNAP.close(); window.PANELS.closeAll(); window.SHEETS.close(true); window.VAULTUI.close(); });

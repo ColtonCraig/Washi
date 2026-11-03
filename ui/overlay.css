@@ -93,3 +93,25 @@ html.motion-off .tpk.on,html.motion-off .tpk.out{animation:none}
 .tpk .tp{display:none}
 html.scrapbook .tpk{transform:rotate(-1.2deg)}
 html.scrapbook .tpk .tp{display:block;top:-7px;width:46px;height:13px;margin-left:-23px}
+
+/* ---------- Snapshot (ui/snap.js) ---------- */
+.snap{position:fixed;inset:0;z-index:60;cursor:crosshair;outline:0}
+.snap .sshot{position:absolute;border-radius:10px;pointer-events:none;user-select:none}
+.snap .sveil{position:absolute;inset:0;background:rgb(var(--inkc) / .28);pointer-events:none;transition:opacity .15s}
+.snap.picking .sveil{opacity:0}
+.snap .ssel{position:absolute;border-radius:6px;outline:2px dashed var(--white);outline-offset:-1px;box-shadow:0 0 0 1.5px var(--tape),0 0 0 9999px rgb(var(--inkc) / .32);pointer-events:none}
+.snap .ssel[hidden]{display:none}
+.snap .ssz{position:absolute;right:6px;bottom:6px;padding:2px 8px;border-radius:6px;background:var(--paper);color:var(--ink2);font:700 11px/1.5 var(--font-ui);white-space:nowrap;box-shadow:0 2px 8px rgb(var(--sh) / .2)}
+.snap .shint{position:absolute;left:50%;top:52px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100% - 32px);padding:9px 14px;border-radius:12px;background:var(--paper);color:var(--ink2);font:500 13px var(--font-ui);white-space:nowrap;box-shadow:0 0 0 1px rgb(var(--inkc) / .08),0 10px 28px rgb(var(--sh) / .24);cursor:default;animation:shin .3s var(--spring,cubic-bezier(.3,1.4,.5,1)) both}
+.snap .shint b{font:700 20px/1 var(--font-hand);color:var(--ink);margin-right:4px}
+.snap .shint .tp{display:none}
+.snap.picking .shint,.snap.taken .shint{opacity:0;transition:opacity .15s}
+@keyframes shin{from{opacity:0;transform:translate(-50%,-8px)}}
+.snap .sflash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.snap .spol{position:absolute;box-sizing:border-box;padding:10px 10px 36px;border-radius:4px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .1),0 16px 40px rgb(var(--sh) / .32);transform-origin:50% 50%}
+.snap .spol img{display:block;width:100%;height:100%;object-fit:cover;border-radius:2px;background:var(--paper2)}
+.snap .spol b{position:absolute;left:0;right:0;bottom:7px;text-align:center;font:700 20px/1 var(--font-hand);color:var(--tape)}
+.snap .spol .tp{display:none}
+.snap.taken .sveil{opacity:1}
+.snap.taken .ssel{display:none}
+html.scrapbook .snap .spol .tp,html.scrapbook .snap .shint .tp{display:block;top:-8px;width:50px;height:15px;margin-left:-25px}

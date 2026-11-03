@@ -24,6 +24,7 @@ const ACTIONS = [
   ['reader', 'Reader Mode', 'view', 'CmdOrCtrl+Alt+R'],
   ['notes', 'Sticky Note', 'view', 'CmdOrCtrl+Shift+K'],
   ['focus', 'Focus Mode', 'view', 'Alt+CmdOrCtrl+F'],
+  ['snapshot', 'Snapshot of This Page', 'view', 'CmdOrCtrl+Shift+S'],
   ['sidebar', 'Pin or Float Sidebar', 'view', 'CmdOrCtrl+S'],
   ['split', 'Split View', 'view', 'CmdOrCtrl+\\'],
   ['reload', 'Reload', 'view', 'CmdOrCtrl+R'],
