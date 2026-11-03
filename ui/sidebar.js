@@ -328,4 +328,38 @@ const sizeEnd = () => { if (!sz) return; const w = sz.w; cancelAnimationFrame(sz
 grip.addEventListener('pointerup', sizeEnd); grip.addEventListener('pointercancel', sizeEnd);
 grip.addEventListener('dblclick', () => B.intent({ type: 'sbw', w: SB_W, done: true }));
 
+/* ---------- two fingers sideways on the sidebar: the next or previous space (like Arc). The tabs follow your fingers a
+   little, then the space changes; at the first or last space they stretch and spring back. ---------- */
+const SW = { acc: 0, t: 0, lock: false, el: null };
+const swipeEls = () => [pinsEl, tabsEl, sname];
+const calmSb = () => document.documentElement.classList.contains('motion-off') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+function swipeShow(dx) {
+  if (calmSb()) return;
+  const tilt = document.documentElement.classList.contains('scrapbook') ? dx * -.012 : 0;
+  const x = Math.max(-7, Math.min(7, dx)), fade = 1 - Math.min(.35, Math.abs(dx) / 90);   // a nudge and a fade, never far enough to cut the cards off
+  for (const e of swipeEls()) { e.style.transition = 'none'; e.style.transform = dx ? `translateX(${x.toFixed(1)}px) rotate(${tilt.toFixed(2)}deg)` : ''; e.style.opacity = dx ? fade.toFixed(2) : ''; }
+}
+function swipeBack(spring) {
+  for (const e of swipeEls()) { e.style.transition = `transform ${spring ? 320 : 200}ms ${spring ? 'cubic-bezier(.3,1.6,.5,1)' : 'cubic-bezier(.2,.8,.2,1)'}, opacity 180ms`; e.style.transform = ''; e.style.opacity = ''; }
+}
+sheet.addEventListener('wheel', e => {
+  if (!ST || drag || !ST.spaces || ST.spaces.length < 2) return;
+  const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY);
+  if (ax < 1 || ax < ay * 1.3) return;                             // up and down still scrolls the tabs
+  e.preventDefault();
+  clearTimeout(SW.t);
+  if (SW.lock) { SW.t = setTimeout(() => { SW.lock = false; SW.acc = 0; }, 260); return; }   // the rest of this swipe (momentum)
+  SW.acc += e.deltaX;
+  const i = ST.spaces.findIndex(x => x.id === ST.cur), dir = SW.acc > 0 ? 1 : -1, next = ST.spaces[i + dir];
+  const pull = next ? SW.acc : Math.sign(SW.acc) * Math.min(28, Math.abs(SW.acc) * .25);   // nothing that way: stretch a little
+  swipeShow(-pull * .35);
+  if (next && Math.abs(SW.acc) >= 90) {
+    SW.lock = true; SW.acc = 0; swipeBack(false);
+    B.intent({ type: 'space', id: next.id, swipe: dir });
+    SW.t = setTimeout(() => { SW.lock = false; }, 260);
+    return;
+  }
+  SW.t = setTimeout(() => { SW.acc = 0; swipeBack(!next); }, 180);
+}, { passive: false });
+
 B.sbReady();

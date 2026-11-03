@@ -24,6 +24,15 @@ elif cmd == 'resize':   # resize W H: the browser window's outer size (no window
     if not win: sys.exit('no Washi window')
     win.configure(width=w, height=h); d.sync()
 elif cmd == 'up': up()
+elif cmd == 'vscroll':   # vscroll N: N scroll-wheel steps down (negative = up)
+    n = int(sys.argv[2]); b = 5 if n > 0 else 4
+    for _ in range(abs(n)):
+        xtest.fake_input(d, X.ButtonPress, b); d.sync(); xtest.fake_input(d, X.ButtonRelease, b); d.sync(); time.sleep(0.012)
+elif cmd == 'hscroll':   # hscroll N [delay]: N sideways scroll steps, like a two-finger trackpad swipe (negative = to the left)
+    n = int(sys.argv[2]); dl = float(sys.argv[3]) if len(sys.argv) > 3 else 0.012
+    b = 7 if n > 0 else 6
+    for _ in range(abs(n)):
+        xtest.fake_input(d, X.ButtonPress, b); d.sync(); xtest.fake_input(d, X.ButtonRelease, b); d.sync(); time.sleep(dl)
 elif cmd == 'drag':   # drag x0 y0 x1 y1 [hold_seconds_at_end]
     x0, y0, x1, y1 = map(float, sys.argv[2:6]); hold = float(sys.argv[6]) if len(sys.argv) > 6 else 0
     move(x0, y0); time.sleep(.2); down(); time.sleep(.15)
