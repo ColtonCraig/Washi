@@ -44,6 +44,15 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.1)
+- Top bar your way: a Focus mode button; drag any tool along the bar (the others slide aside, Esc puts it back), right-click to hide, Settings › Top bar to show/hide/reorder/reset; animated; every window follows; tooltips follow your shortcuts. test/toolbar.js
+- Update postcard: Restart now / Later when an update has downloaded; Settings › Help: or stay quiet; and turn off What's new after updates. test/updatecard.js
+- What's new: small fixes as a short list; Show me points at what to click (a glowing ring and a note) with the way back (⌥⌘U). test/whatsnew.js
+- Settings › Features: Focus mode's bar and sidebar, Reader font and size, Now playing, swiping, snapshots also saved, the star's bookmarks bar, the Tidy offer. Settings fits small windows. test/settings.js
+- Every shortcut checked with real keys (test/shortcuts.js); the Window menu no longer took ⌘W from Close Tab
+- Tabs: ⇧⌘T back into the folder and place; Close Other Tabs / Close Tabs Below with Undo (test/scenarios.js)
+- Welcome setup: "What it does" page; the quick-start guide shows your tools
+
 ## Done and tested (1.0.1)
 - Extension popups open in the window whose button you clicked; the toolbar acts on that window's own tab, and the popup's window is the current one for chrome.tabs.create / windows.getCurrent (with two windows, the popup jumped to the one focused last, across Mac desktops). test/ext-keys.js
 - Extensions' own shortcuts from their manifest (Okta: ⇧⌘O) on View › Extension Shortcuts: _execute_action opens the popup in the window you're in, others reach chrome.commands.onCommand; ones that clash with a Washi shortcut are skipped; chrome.commands.getAll shows them

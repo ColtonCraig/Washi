@@ -9,11 +9,20 @@ window.WHATSNEW = [
     v: '1.1.0',
     lead: 'Washi, arranged your way.',
     items: [
-      { icon: 'i:focus', title: 'Your top bar, your way', text: 'Drag any button along the top bar to put it where you like. Right-click one you never use to hide it. Settings › Top bar has them all, with a reset.', point: '#tools', tip: 'Drag any of these along the bar. Right-click one to hide it.' },
-      { icon: 'i:focus', title: 'A Focus mode button', text: 'Focus mode has its own stamp in the top bar now: one click and the page gets the whole window.', point: '#bFocus', tip: 'Click it for Focus mode. Point at the very top of the window to bring the bar back.', keys: ['focus'] },
-      { icon: 'p:news', title: 'Updates on a postcard', text: 'When an update has downloaded, a little card offers to restart now or later. Rather not be asked? Settings › Help › Stay quiet, and it installs when you quit.' }
+      { icon: 'i:bolt', title: 'Your top bar, your way', text: 'Drag any button along the top bar to put it where you like, and right-click one you never use to hide it. Settings › Top bar has them all, with a reset.', point: '#tools', tip: 'Drag any of these along the bar. Right-click one to hide it.' },
+      { icon: 'i:focus', title: 'A Focus mode button', text: 'Focus mode has its own button in the top bar now: one click and the page gets the whole window.', point: '#bFocus', tip: 'Click it for Focus mode. Point at the very top of the window to bring the bar back.', keys: ['focus'] },
+      { icon: 'i:gear', title: 'More ways to make it yours', text: 'Settings › Features: whether Focus mode hides the bar and sidebar, Reader\'s font and size, Now playing, swiping between spaces, saving snapshots, and more.', try: 'features' },
+      { icon: 'p:news', title: 'Updates on a postcard', text: 'When an update has downloaded, a little card offers to restart now or later. Rather not be asked? Settings › Help › Stay quiet, and it installs when you quit.' },
+      { icon: 'i:eye', title: 'Show me', text: 'On this page, "Show me" points at the thing to click, and takes you back here when you\'re done.', keys: ['whatsnew'] }
     ],
-    fixes: []
+    fixes: [
+      'Closing a tab and bringing it back (⇧⌘T) puts it back in its folder, in its place, with the name you gave it.',
+      'Close Other Tabs and Close Tabs Below, in a tab\'s menu, with Undo.',
+      'Every button\'s tooltip shows your own shortcut, as you\'ve set it.',
+      '⌘W always closes the tab, never the whole window.',
+      'The welcome setup has a page of everything Washi can do, and the quick-start guide shows your tools.',
+      'Settings fits small windows, and small updates get a short list like this one instead of a page of cards.'
+    ]
   },
   {
     v: '1.0.1',

@@ -32,6 +32,27 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await click(p.x, p.y); await sleep(900);
   ok(await ui.evaluate(() => !S.focusMode && !document.body.classList.contains('focus')), 'clicking it again leaves Focus mode');
 
+  // ---------- every tool, clicked for real ----------
+  const esc = async () => { K('tap:Escape'); await sleep(500); };
+  const panelIs = k => ov.evaluate(k => !!document.querySelector('.panel.on.' + k), k);
+  for (const [id, what, check] of [
+    ['note', 'opens the sticky note', () => panelIs('notes')],
+    ['star', 'opens the bookmark card', () => panelIs('bmedit')],
+    ['boost', 'opens Boost', () => panelIs('boost')],
+    ['shield', 'opens the blocking card', () => panelIs('shield')],
+    ['downloads', 'opens Downloads', () => ov.evaluate(() => /Downloads/.test((document.querySelector('.sheet') || {}).textContent || ''))]]) {
+    p = await at(id); await click(p.x, p.y); let r = false; for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); }
+    ok(r, `the ${id} button ${what}`); await esc();
+  }
+  await ui.evaluate(() => navigate('http://localhost:8765/article.html')); await sleep(2000);
+  p = await at('reader'); await click(p.x, p.y); await sleep(1200);
+  ok(await ui.evaluate(() => !!R.reading[focusedId()]), 'on an article, the Reader button turns Reader on');
+  await click(p.x, p.y); await sleep(900);
+  ok(await ui.evaluate(() => !R.reading[focusedId()]), 'and off again');
+  await ui.evaluate(() => navigate('http://localhost:8765/p1.html')); await sleep(1400);
+  p = await at('split'); await click(p.x, p.y); await sleep(900);
+  ok(await ui.evaluate(() => R.split), 'the split button opens split view'); await click(p.x, p.y); await sleep(700);
+
   // ---------- drag a tool along the bar ----------
   const s0 = await at('split'), n0 = await at('note');
   ptr(`drag ${X0 + s0.x} ${Y0 + s0.y} ${X0 + n0.x - n0.w / 2 - 4} ${Y0 + s0.y} 0.3`); ptr('up'); await sleep(700);
