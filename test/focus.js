@@ -44,6 +44,17 @@ const FOCUS = 'down:Control_L down:Alt_L tap:f up:Alt_L up:Control_L';
   ok(await ov.evaluate(() => document.getElementById('cmd').classList.contains('on')), 'and the address works (opens the command bar)');
   K('tap:Escape'); await sleep(500);
   ok(!(await ov.evaluate(() => document.getElementById('cmd').classList.contains('on'))), 'Escape closes the command bar');
+  // the star brings the bookmarks bar out, in Focus mode too, and it stays while you use it
+  await ui.evaluate(() => { S.bookmarks.push({ type: 'bm', id: 'fbm1', title: 'Page two', url: 'http://localhost:8765/p2.html' }); bmChanged(); }); await sleep(300);
+  ptr(`move ${X0 + mid.x} ${Y0 + 2}`); await sleep(700);
+  const st = await ui.evaluate(() => { const r = document.getElementById('bStar').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  ptr(`move ${X0 + st.x} ${Y0 + st.y}`); await sleep(60); await ui.evaluate(() => B.bmHover(null)); await sleep(400);   // (the bar may already be out from resting on the top bar: start from hidden)
+  ptr(`move ${X0 + st.x + 1} ${Y0 + st.y}`); await ui.evaluate(() => document.getElementById('bStar').dispatchEvent(new PointerEvent('pointerenter'))); t0 = Date.now(); let bar = false;
+  while (Date.now() - t0 < 1500 && !(bar = await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on') && !document.getElementById('bmstrip').classList.contains('out')))) await sleep(40);
+  ok(bar, `resting on the star brings out the bookmarks bar in Focus mode (${Date.now() - t0}ms)`);
+  ptr(`move ${X0 + mid.x} ${Y0 + 52}`); await sleep(900);
+  ok(await ui.evaluate(() => document.body.classList.contains('peek')) && await ov.evaluate(() => document.getElementById('bmstrip').classList.contains('on') && !document.getElementById('bmstrip').classList.contains('out')), 'moving onto the bar keeps the bar and the top bar out');
+  await audit(ov, 'bookmarks bar in Focus mode'); shot('focus-bmbar');
   ptr(`move ${X0 + mid.x} ${Y0 + 500}`); t0 = Date.now();
   while (Date.now() - t0 < 2000 && await ui.evaluate(() => document.body.classList.contains('peek'))) await sleep(40);
   ok(!(await ui.evaluate(() => document.body.classList.contains('peek'))) && (await ui.evaluate(() => layout().stage.y)) <= 8, `moving back into the page puts it away (${Date.now() - t0}ms)`);

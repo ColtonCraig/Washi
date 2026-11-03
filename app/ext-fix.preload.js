@@ -79,6 +79,12 @@ const fix = () => {
   if (c.extension && typeof c.extension.isAllowedIncognitoAccess !== 'function') { try { c.extension.isAllowedIncognitoAccess = cb => later(false, cb); } catch {} }
   if (c.extension && typeof c.extension.isAllowedFileSchemeAccess !== 'function') { try { c.extension.isAllowedFileSchemeAccess = cb => later(false, cb); } catch {} }
   if (c.tabs && typeof c.tabs.highlight !== 'function' && typeof c.tabs.update === 'function') { try { c.tabs.highlight = (info, cb) => { const ix = [].concat(info && info.tabs).filter(x => x !== undefined); const p = c.tabs.query({ windowId: info && info.windowId }).then(ts => { const t = ts.find(t => t.index === ix[0]); return t ? c.tabs.update(t.id, { active: true }) : null; }).then(() => c.windows && c.windows.get && info && info.windowId ? c.windows.get(info.windowId) : undefined); if (typeof cb === 'function') { p.then(cb, () => cb()); return; } return p; }; } catch {} }
+  /* extension.getViews: the engine answers [] even for the page asking; Chrome lists it (popup code checks "am I the popup?") */
+  if (c.extension && typeof c.extension.getViews === 'function' && !c.extension.__washiViews && globalThis.window === globalThis) {
+    const gv = c.extension.getViews.bind(c.extension);
+    const mine = () => { try { const m = c.runtime.getManifest(), pop = ((m.action || m.browser_action || {}).default_popup || '').replace(/^\//, ''); return pop && location.pathname.replace(/^\//, '') === pop.split('?')[0] ? 'popup' : 'tab'; } catch { return 'tab'; } };
+    try { c.extension.getViews = f => { let v = []; try { v = gv(f) || []; } catch {} const t = f && f.type; if (!v.includes(window) && (!t || t === mine())) v = [...v, window]; return v; }; Object.defineProperty(c.extension, '__washiViews', { value: true }); } catch {}
+  }
   if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };

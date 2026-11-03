@@ -391,8 +391,8 @@ ON('focus:set', (_, d) => {
     if (!c.win.isFocused() || c.overlayOpen || c.menuOpen || c.dragging) { away = 0; return; }
     const p = screen.getCursorScreenPoint(), b = c.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y, inside = x >= 0 && x < b.width;
     if (!c.focusPeek) { if (inside && y >= -1 && y <= 5) { c.focusPeek = true; away = 0; focusLights(c); C = c; toUI('focus:peek', true); } return; }
-    if (inside && y >= -6 && y < TOP + 14) { away = 0; return; }
-    if ((away += 120) >= 360) { c.focusPeek = false; focusLights(c); C = c; toUI('focus:peek', false); }
+    C = c; if ((inside && y >= -6 && y < TOP + 14) || (c.bmShown && pointerNearBar())) { away = 0; return; }   // on the top bar, or on the bookmarks bar it brought out
+    if ((away += 120) >= 360) { if (c.bmShown) bmHide(); c.focusPeek = false; focusLights(c); C = c; toUI('focus:peek', false); }
   }, 120);
 });
 ON('sb:state', (_, s) => { C.lastLook = { theme: s.theme, pal: s.pal }; toSide('sb:state', s); });

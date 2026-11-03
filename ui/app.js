@@ -1027,7 +1027,12 @@ const topbar = $('.topbar'); let hoverT = 0;
 /* On hover: rest the pointer on an empty part of the top bar (not the address or a button), or touch its bottom edge
    just above the page. Passing through on the way to the menu bar or a button doesn't open it. */
 let barAt = null;
-const showBar = () => { if (!S.focusMode) B.bmHover({ items: light(), favs: bmFavs(), ...look() }); };
+const showBar = () => B.bmHover({ items: light(), favs: bmFavs(), ...look() });
+/* resting on the star always brings the bar out (whatever Settings › Bookmarks bar says, and in Focus mode), unless it's already on screen */
+const bStarEl = $('#bStar'); let starT = 0;
+bStarEl.addEventListener('pointerenter', () => { if (!S || !S.bookmarks.length || (barAlways() && !S.focusMode)) return; clearTimeout(starT); starT = setTimeout(showBar, 160); });
+bStarEl.addEventListener('pointerleave', () => clearTimeout(starT));
+bStarEl.addEventListener('pointerdown', () => clearTimeout(starT));
 topbar.addEventListener('pointermove', e => {
   if (!S || barMode() !== 'hover' || !S.bookmarks.length || window.__macDrag) return;   // (tests: on a Mac the drag area sends nothing)
   const edge = e.clientY >= TOP - 6, calm = !e.target.closest('#url,button,input,a');

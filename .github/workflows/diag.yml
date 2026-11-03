@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       ext: { description: 'Chrome Web Store extension id', required: true, default: 'glnpjglilkicbckjpbgcfkogebgllemb' }
+      look: { description: 'code to show from the extension, | separated', required: false, default: '' }
       runner: { description: 'macos-latest (Apple silicon) or macos-15-intel (often free sooner)', required: true, default: 'macos-15-intel' }
 jobs:
   diag:
@@ -15,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci && npm i --no-save playwright@1
-      - run: EXT_ID=${{ inputs.ext }} WASHI_SHOTS=$RUNNER_TEMP node test/diag-ext.js
+      - run: EXT_ID=${{ inputs.ext }} EXT_LOOK='${{ inputs.look }}' WASHI_SHOTS=$RUNNER_TEMP node test/diag-ext.js
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: diag, path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }
