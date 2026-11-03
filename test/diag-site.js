@@ -9,14 +9,15 @@ const SITES = (process.env.SITES || 'https://www.youtube.com/watch?v=jfKfPfyJRdk
 const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.stringify(v, null, 1)}`);
 (async () => {
   const b = await start({ sandbox: process.platform === 'darwin' }); const { ui } = b; await skipSetup(b);
-  for (const mode of ['standard', 'strict', 'off']) {
+  say('lists refresh', await ui.evaluate(() => B.setupAct({ type: 'lists:refresh' })).catch(e => e.message));   // the lists as they are after Washi updates them (not the ones it ships with)
+  for (const mode of (process.env.MODES || 'standard strict off').split(' ')) {
     await ui.evaluate(m => B.setupMsg({ type: 'prefs', patch: { blocking: m } }), mode); await sleep(800);
     for (const url of SITES) {
       await ui.evaluate(u => openTab(u), url); await sleep(9000);
       const p = b.pages().filter(x => x.url().startsWith(url.slice(0, 30))).pop();
       if (!p) { say(`${mode} ${url}`, 'page not found: ' + b.pages().map(x => x.url()).join(' | ')); continue; }
       const msgs = []; p.on('console', m => { if (/error|warn/.test(m.type())) msgs.push(m.type() + ': ' + m.text().slice(0, 300)); }); p.on('pageerror', e => msgs.push('pageerror: ' + e.message.slice(0, 300)));
-      await sleep(4000);
+      await sleep(+(process.env.WATCH_S || 4) * 1000);
       const info = await p.evaluate(() => {
         const v = document.querySelector('video'), mse = typeof MediaSource !== 'undefined';
         const can = t => { try { return MediaSource.isTypeSupported(t); } catch { return 'err'; } };
