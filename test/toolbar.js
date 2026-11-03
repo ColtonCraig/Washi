@@ -43,7 +43,8 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
     ['downloads', 'opens Downloads', () => ov.evaluate(() => /Downloads/.test((document.querySelector('.sheet') || {}).textContent || ''))]]) {
     await sleep(250); p = await at(id); await click(p.x, p.y); let r = false; for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); }
     if (!r && process.env.CI) { console.log(`  NOTE the click on ${id} didn't arrive (GitHub's virtual screen drops one now and then): clicked again`); await sleep(300); await click(p.x, p.y); for (let i = 0; i < 25 && !r; i++) { r = await check(); if (!r) await sleep(80); } }
-    ok(r, `the ${id} button ${what}`); await esc();
+    ok(r, `the ${id} button ${what}` + (r ? '' : ' ' + JSON.stringify(await ui.evaluate(id => { const e = document.querySelector(`#tools [data-tool="${id}"]`); const t = S.tabs[focusedId()]; return { dis: e.disabled, url: t && t.url, notice: R.notice[focusedId()] || null, panel: null }; }, id)) + ' ' + await ov.evaluate(() => document.querySelector('.panel').className)));
+    await esc();
   }
   await ui.evaluate(() => navigate('http://localhost:8765/article.html')); await sleep(2000);
   p = await at('reader'); await click(p.x, p.y); await sleep(1200);
@@ -137,6 +138,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const profile = b.profile; await b.stop();
   b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(2500);
   ok(JSON.stringify(await order()) === JSON.stringify(custom), 'after a restart the bar is just as you left it');
+  await ui.evaluate(() => B.setupAct({ type: 'test:focus' })); await sleep(300);   // (after a restart the virtual screen hasn't given the window the keyboard)
   K('down:Control_L tap:n up:Control_L'); await sleep(3000);
   if (b.pages().filter(x => x.url().endsWith('/index.html')).length < 2) { console.log('  NOTE the first ⌘N was lost by the virtual keyboard: pressed again'); K('down:Control_L tap:n up:Control_L'); await sleep(3000); }
   const w2 = b.pages().filter(x => x.url().endsWith('/index.html')).find(x => x !== ui);
