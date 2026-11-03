@@ -44,6 +44,18 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (0.17)
+- Fresh off the press: the first start after an update shows a paper sheet of what's new and how to use it (Try it buttons, your shortcuts); Help › What's New and Settings › Help any time (ui/whatsnew.js: one entry per release)
+- Focus mode (⌥⌘F): the page gets the whole window; the top edge brings the top bar back, the left edge the sidebar; remembered
+- Now playing: a paper ticket in the sidebar for music/video in another tab (song, artist, artwork from the page), play/pause, jump to it
+- Sticky note for every space (⇧⌘K), saved as you type
+- Swipe between spaces: two fingers sideways on the sidebar
+- Snapshot (⇧⌘S): drag a box or Enter for the whole page; copied straight away (a polaroid drops into the corner); Save to Downloads
+- Sites that always open in a space (Arc's Air Traffic Control): right-click a tab › Always Open … in; Settings › Spaces lists them
+- Automatic folder icons from a folder's name and sites; yours always wins
+- ⇧⌘T brings back a closed window or a deleted folder with its tabs, not just tabs
+- Fixed: Reader mode's ⌥⌘R did nothing (it wasn't on the menu); a test now checks every shortcut is
+
 ## Done and tested (0.16)
 - Okta Browser Plugin: no more "We're having trouble launching your app" on hudl.okta.com and other sign-in pages. Washi's extension engine ignored Chrome's event filters, so the plugin's "an Okta app is launching" listener heard every page and took it over; now filters (webNavigation url filters, tabs.onUpdated) and hasListener work like Chrome. Checked with the real plugin on GitHub's Mac
 - Reader mode (⌥⌘R, the book stamp on articles): the article as a sheet of Washi paper over the page (Mozilla Readability), text size and Serif/Sans, follows every look live, works on strict-CSP sites; Leave puts the page back untouched

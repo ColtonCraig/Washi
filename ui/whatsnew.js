@@ -12,6 +12,10 @@ window.WHATSNEW = [
       { icon: 'p:music', title: 'Now playing', text: 'Music or a video playing in another tab shows as a little ticket at the bottom of the sidebar.', how: 'Pause or play it there; click the ticket to jump to its tab.' },
       { icon: 'p:news', title: 'A sticky note for every space', text: 'Jot things down: each space keeps its own note, saved as you type.', how: 'The note stamp in the top bar.', keys: ['notes'], try: 'notes' },
       { icon: 'i:right', title: 'Swipe between spaces', text: 'Two fingers sideways on the sidebar goes to the next or previous space.', how: 'Swipe on the sidebar, like turning a page.' },
+      { icon: 'p:camera', title: 'Snapshot', text: 'Grab part of a page, or all of it. It\'s copied straight away, ready to paste; Save puts it in Downloads.', how: 'Drag a box, or press Enter for the whole page.', keys: ['snapshot'], try: 'snapshot' },
+      { icon: 'p:plane', title: 'Send a site to a space', text: 'Okta always in Work? Links to it open there and take you along, wherever you click them.', how: 'Right-click a tab › Always Open … in › pick a space. Settings › Spaces lists them.' },
+      { icon: 'p:palette', title: 'Folders pick their own icon', text: 'Name a folder "MDM" or "Budget", or fill it with GitHub tabs, and it gets a paper icon to match. One you choose yourself always stays.' },
+      { icon: 'i:reload', title: 'Bring back what you closed', text: 'Closed a whole window, or deleted a folder full of tabs? It comes back in one go.', keys: ['reopen'] },
       { icon: 'p:star', title: 'This page', text: 'From now on, Washi shows you what\'s new after each update.', how: 'Any time: Help › What\'s New.' }
     ]
   },
