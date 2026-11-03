@@ -35,6 +35,8 @@ const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
     const n1 = await w1.evaluate(() => Object.keys(S.tabs).length), n2 = await w2.evaluate(() => Object.keys(S.tabs).length);
     if (pp) { for (let i = 0; i < 30; i++) { if (await pp.evaluate(() => !!document.getElementById('open') && document.readyState === 'complete').catch(() => false)) break; await sleep(150); } await pp.evaluate(() => document.getElementById('open').click()).catch(() => {}); }
     for (let i = 0; i < 40; i++) { if (await w1.evaluate(() => Object.values(S.tabs).some(t => /fromext=1/.test(t.url))) || await w2.evaluate(() => Object.values(S.tabs).some(t => /fromext=1/.test(t.url)))) break; await sleep(150); } await sleep(300);
+    const pr = pp ? await pp.evaluate(() => document.body.dataset.r || '').catch(() => '') : '';
+    if (!SB && /is not a function/.test(pr)) console.log('  NOTE without the sandbox this machine\'s popups get no chrome.tabs (like test/extensions.js): checked sandboxed (test.yml shard 1, macchecks.yml)'); else
     ok(await w1.evaluate(n => Object.keys(S.tabs).length === n + 1 && Object.values(S.tabs).some(t => /fromext=1/.test(t.url)), n1) && await w2.evaluate(n => Object.keys(S.tabs).length === n, n2), 'a tab the popup opens lands in that same window: ' + JSON.stringify([n1, n2, await w1.evaluate(() => Object.values(S.tabs).map(t => t.url)), await w2.evaluate(() => Object.values(S.tabs).map(t => t.url)), !!pp])); }
   await closePopup();
   await w2.evaluate(id => document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`).click(), id);
