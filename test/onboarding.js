@@ -1,6 +1,6 @@
 'use strict';
 /* First launch: the welcome setup, every step, then Settings and the guide; then a second launch that must NOT show setup again. */
-const { start, sleep, ok, shot, done } = require('./lib');
+const { start, sleep, ok, shot, done, AUDIT } = require('./lib');
 (async () => {
   const b = await start(); const { ui, sb, ov } = b;
   await sleep(1200);
@@ -37,6 +37,10 @@ const { start, sleep, ok, shot, done } = require('./lib');
   await ov.click('text=Pinned'); await sleep(700);
   await ov.click('.next'); await sleep(1200); shot('onb-apps');
   ok(await ov.evaluate(() => document.querySelectorAll('.apptile').length >= 4 && !!document.querySelector('.bmi')), 'the "Your apps" step offers apps to sign in to and bringing your stuff over');
+  await ov.click('.next'); await sleep(1400); shot('onb-tour');
+  const tour = await ov.evaluate(() => [...document.querySelectorAll('.tourg .tc b')].map(e => e.firstChild.textContent));
+  ok(tour.length >= 14 && ['Focus mode', 'Reader', 'Sticky notes', 'Snapshot', 'Chrome extensions', 'Your top bar'].every(t => tour.includes(t)), 'a "What it does" step shows everything Washi offers: ' + tour.join(', '));
+  { const a = await ov.evaluate(AUDIT); ok(!a.length, 'and nothing on it is cut off' + (a.length ? '\n      ' + a.slice(0, 5).join('\n      ') : '')); }
   await ov.click('.next'); await sleep(2200); shot('onb-o3');
   await ov.hover('.gl[data-t="pair"]'); await sleep(300);
   ok(await ov.evaluate(() => document.querySelector('.mb [data-t="pair"]').classList.contains('lite')), 'hovering a guide note lights up its spot');

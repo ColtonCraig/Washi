@@ -446,3 +446,18 @@ html.motion-off .nw .nwfx{animation:none}
 html.scrapbook .nw .nwfx{transform:rotate(-.25deg)}
 @media (max-height:720px){.rail{gap:1px}.rail button{padding-top:6px;padding-bottom:6px}}
 .segs{display:flex;flex-direction:column;gap:14px}
+
+/* welcome › What it does */
+.pg.tour{overflow:auto}
+.tourg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px;padding-bottom:6px}
+.tourg .tc{display:flex;gap:11px;min-width:0;padding:12px 13px;border-radius:11px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .06),var(--cut-sm);animation:nwin .42s var(--spring,cubic-bezier(.3,1.4,.5,1)) both;animation-delay:calc(min(var(--i,0), 10) * 35ms + 80ms)}
+.tourg .nic{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--tape) 15%,var(--paper));color:var(--tape)}
+.tourg .nic svg{width:18px;height:18px}
+.tourg .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.tourg .tt b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:600 14px var(--font-ui);color:var(--ink)}
+.tourg .tt kbd{font-size:11px}
+.tourg .tt p{margin:0;font:12.5px/1.4 var(--font-ui);color:var(--ink2)}
+html.motion-off .tourg .tc{animation:none}
+@media (prefers-reduced-motion:reduce){.tourg .tc{animation:none}}
+html.scrapbook .tourg .tc:nth-child(3n){transform:rotate(.5deg)}
+html.scrapbook .tourg .tc:nth-child(3n+1){transform:rotate(-.4deg)}

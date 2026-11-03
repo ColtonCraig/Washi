@@ -11,7 +11,7 @@ window.SETUP = (() => {
   const hooks = { perms: null, update: null, arc: null, bm: null };
   B.onSetupEvent(e => { if (e && e.type === 'tools' && P && isOpen) { P.tools = e.tools; P.toolsOff = e.toolsOff; refresh(); } if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); if (e && e.type === 'bmDone' && hooks.bm) hooks.bm(e); });
   B.onPerms(l => hooks.perms && hooks.perms(l)); B.onUpdate(u => hooks.update && hooks.update(u));
-  const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['apps', 'Your apps'], ['guide', 'Quick start'], ['done', 'Done']];
+  const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['apps', 'Your apps'], ['tour', 'What it does'], ['guide', 'Quick start'], ['done', 'Done']];
   const curSp = () => SPACES.find(x => x.id === CUR) || SPACES[0];
   const retheme = () => applyTheme(P, palFor(curSp()));
   const send = m => B.setupMsg(m);
@@ -646,11 +646,11 @@ window.SETUP = (() => {
     // id, title, keys, text, side, label position [x, y, width], target point (drawing coords)
     ['side', 'Float the sidebar', '⌘S', 'Hover the left edge to bring it back.', 'top', [150, 4, 236], [23, 23]],
     ['url', 'Address label', '⌘L', 'Click it to type an address or search.', 'top', [430, 4, 230], [300, 23]],
-    ['split', 'Split view', '⌘\\', 'Or drag any tab onto the page.', 'top', [690, 4, 236], [477, 23]],
+    ['split', 'Your tools', '', 'Notes, Focus, bookmarks, split… Drag them into any order.', 'top', [690, 4, 236], [477, 23]],
     ['scrap', 'New scrap', '⌘T', 'Search, open a site, or find a tab.', 'left', [0, 160, 228], [14, 94]],
     ['pins', 'Pins', '⌘D', 'Favorites that stay put.', 'left', [0, 228, 228], [14, 125]],
     ['folder', 'Folders', '', 'Drag tabs in. Click its icon for an emoji and color.', 'left', [0, 298, 228], [14, 210]],
-    ['pair', 'Split cards', '', 'Split tabs stay together here.', 'left', [0, 368, 228], [14, 277]],
+    ['pair', 'Split view', '⌘\\', 'Drag a tab onto the page. The pair stays together here.', 'left', [0, 368, 228], [14, 277]],
     ['spaces', 'Spaces', '⌃1–5', 'A desk for each part of your life.', 'left', [0, 450, 228], [14, 379]],
     ['today', 'Today', '⇧⌘H', 'Your landing page: apps, pins and recent tabs. ☀︎ next to New scrap brings it back.', 'right', [772, 150, 228], [490, 96]],
     ['page', 'Your page', '', 'Every tab is a real web page.', 'right', [772, 286, 228], [490, 200]],
@@ -661,7 +661,7 @@ window.SETUP = (() => {
     const mb = mini('big'); mb.style.left = MX + 'px'; mb.style.top = MY + 'px'; stage.append(mb);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${GW} ${GH}`); svg.setAttribute('class', 'arrows'); stage.append(svg);
-    const KID = { side: 'sidebar', url: 'location', split: 'split', scrap: 'newtab', pins: 'pin', yours: 'settings', today: 'today' };
+    const KID = { side: 'sidebar', url: 'location', pair: 'split', scrap: 'newtab', pins: 'pin', yours: 'settings', today: 'today' };
     NOTES.forEach(([id, title, keys, text, side, [lx, ly, lw], [tx, ty]], i) => {
       if (KID[id] && KEYMAP[KID[id]] !== undefined) keys = BL.fmtKey(KEYMAP[KID[id]]);
       const lab = h('div', { class: 'gl ' + side, 'data-t': id, style: `left:${lx}px;top:${ly}px;width:${lw}px;--i:${i}` },
@@ -715,7 +715,7 @@ window.SETUP = (() => {
       h('div', { class: 'scraps', 'aria-hidden': 'true' }, [0, 1, 2, 3, 4, 5, 6].map(i => h('i', { style: `--i:${i}` }))),
       h('div', { class: 'wm' }, h('i', { class: 'tp a' }), h('i', { class: 'tp b' }), 'Washi'),
       h('p', { class: 'lead big' }, 'A browser made of paper scraps.'),
-      h('p', { class: 'lead' }, 'Let\'s pick your colors and a couple of settings, then take a quick look around. About a minute, and you can change all of it later in Settings (⌘,).'),
+      h('p', { class: 'lead' }, `Let's pick your colors and a couple of settings, then take a quick look around. About a minute, and you can change all of it later in Settings${kh('settings') ? ` (${kh('settings')})` : ''}.`),
       h('div', { class: 'cta' }, h('button', { class: 'btn primary big', onclick: () => go(1) }, 'Let\'s set it up'), h('button', { class: 'link', onclick: finish }, 'Skip, use the defaults')));
     if (id === 'look') return h('div', { class: 'pg two' },
       h('div', { class: 'col' }, h('h2', { class: 'ttl' }, 'Pick your look'), h('p', { class: 'lead' }, 'Everything changes as you click. This is your Home space; every space gets its own colors.'),
@@ -729,11 +729,32 @@ window.SETUP = (() => {
       return h('div', { class: 'pg' }, h('h2', { class: 'ttl' }, 'Your apps'), h('p', { class: 'lead' }, 'Pick the apps you use every day. They get pinned, and you sign in to each one once, from the Today page.'),
         h('div', { class: 'grid2 appsgrid' }, h('div', {}, field('Sign in to your apps', h('div', {}, pk.el, workToggle(pk.redraw)))), h('div', {}, importBox(true))));
     }
+    if (id === 'tour') {
+      const T = [
+        ['p:palette', 'Spaces', 'A desk for each part of your life, with its own colors. Swipe sideways on the sidebar to switch.', ''],
+        ['i:split', 'Split view', 'Two pages side by side. Or drag a tab onto the page.', 'split'],
+        ['i:focus', 'Focus mode', 'The page gets the whole window.', 'focus'],
+        ['p:book', 'Reader', 'An article as a clean sheet of paper.', 'reader'],
+        ['p:news', 'Sticky notes', 'A note for every space, saved as you type.', 'notes'],
+        ['p:camera', 'Snapshot', 'Grab part of a page: copied straight away.', 'snapshot'],
+        ['i:sun', 'Today', 'Your landing page: apps, pins, recent tabs.', 'today'],
+        ['i:plus', 'Little scraps', 'A small window for a quick look.', 'scrap'],
+        ['i:broom', 'Tidy up', 'Lots of tabs? One click sorts them into folders.', ''],
+        ['p:music', 'Now playing', 'Music in another tab, playable from the sidebar.', ''],
+        ['p:plane', 'Sites in their space', 'Okta always in Work: right-click a tab › Always Open in.', ''],
+        ['i:puzzle', 'Chrome extensions', 'From the Chrome Web Store, just like Chrome.', ''],
+        ['i:key', 'Passwords and passkeys', 'Saved safely on this Mac, filled in for you.', ''],
+        ['i:shield', 'Blocking', 'Ads and trackers blocked, dangerous sites flagged.', ''],
+        ['i:bolt', 'Your top bar', 'Drag its buttons into any order; right-click one to hide it.', ''],
+        ['i:gear', 'Lots of choices', 'Settings › Features: Focus, Reader, swiping and more.', 'settings']];
+      return h('div', { class: 'pg tour' }, h('h2', { class: 'ttl' }, 'What Washi can do'), h('p', { class: 'lead' }, 'A quick look at what\'s in here. Everything is in the menus too, with its shortcut.'),
+        h('div', { class: 'tourg' }, T.map(([icon, t, p, k], i) => h('div', { class: 'tc', style: `--i:${i}` }, h('span', { class: 'nic', html: newsIcon(icon) }), h('div', { class: 'tt' }, h('b', {}, t, kh(k) ? h('kbd', {}, kh(k)) : null), h('p', {}, p))))));
+    }
     if (id === 'guide') return h('div', { class: 'pg gpage' }, h('div', { class: 'ghead' }, h('h2', { class: 'ttl' }, 'Quick-start guide'), h('p', { class: 'lead' }, 'Here\'s what everything is. Point at a note to light up its spot.')), guide());
     if (id === 'done') {
       setTimeout(confetti, 250);
       return h('div', { class: 'pg done' }, h('h2', { class: 'ttl huge' }, 'You\'re all set!'),
-        h('div', { class: 'tips' }, [['⌘T', 'Open a new scrap', 'Type an address or anything to search.'], ['drag', 'Split two pages', 'Drag a tab from the sidebar onto the page.'], ['⌘,', 'Change anything', 'Colors, search, sidebar: all in Settings.']]
+        h('div', { class: 'tips' }, [[kh('newtab') || '⌘T', 'Open a new scrap', 'Type an address or anything to search.'], ['drag', 'Split two pages', 'Drag a tab from the sidebar onto the page.'], [kh('settings') || '⌘,', 'Change anything', 'Colors, the top bar, Focus mode: all in Settings.']]
           .map(([k, t, p], i) => h('div', { class: 'tip', style: `--i:${i}` }, h('kbd', {}, k), h('b', {}, t), h('p', {}, p)))),
         h('p', { class: 'lead' }, 'Lost? Help → Quick-Start Guide shows the map again.'),
         h('button', { class: 'btn primary big', onclick: finish }, 'Start browsing'));
