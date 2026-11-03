@@ -246,7 +246,7 @@ HANDLE('panes:set', (_, p, fp) => {
   const before = activeTab(); C.panes = p; if (p.space) C.curSpace = p.space; applyPanes();
   if (C.panelOpen === 'find' && activeTab() !== before) closeOverlay();
   vaultFollow();
-  const at = activeTab(); if (at) exts.selectTab(at.wc);
+  const at = activeTab(); if (at) { exts.selectTab(at.wc, C.win); toUI('ext:tab', at.wc.id); }   // the extension buttons act on this window's tab (not whichever window had focus last)
   if (fp) focusPage(); return true;
 });
 ON('tab:close', (_, id) => {
@@ -612,6 +612,7 @@ async function vaultGate(reason) {
 }
 /* ---------- Chrome extensions (app/extensions.js does the work; these connect it to Washi's tabs and windows) ---------- */
 const PERM_WORDS = { tabs: 'see your open tabs', history: 'read your browsing history', bookmarks: 'read and change your bookmarks', cookies: 'read and change cookies', downloads: 'manage your downloads', clipboardRead: 'read what you copy', clipboardWrite: 'change what you copy', geolocation: 'know your location', notifications: 'show notifications', nativeMessaging: 'talk to apps on your Mac', webRequest: 'see what pages load', declarativeNetRequest: 'block or change what pages load', management: 'manage your other extensions', privacy: 'change privacy settings', proxy: 'change how you connect to the internet', debugger: 'take control of pages' };
+let extMenuT = 0;
 exts.bind({
   createTab: (d, ses) => new Promise(res => {
     useMain(); const url = typeof d.url === 'string' && d.url ? d.url : 'about:blank';
@@ -632,7 +633,7 @@ exts.bind({
     if (r.response === 0) later(() => showFx({ type: 'toast', text: `Added ${name}`, short: true }), 600);
     return { action: r.response === 0 ? 'allow' : 'deny' };
   },
-  changed: () => { for (const c of W.values()) if (alive(c.win)) { c.win.webContents.send('ext:changed', exts.list()); if (c.overlay) c.overlay.webContents.send('ext:changed', exts.list()); } }
+  changed: () => { clearTimeout(extMenuT); extMenuT = setTimeout(() => { if (!recording) buildMenu(); }, 300); for (const c of W.values()) if (alive(c.win)) { c.win.webContents.send('ext:changed', exts.list()); if (c.overlay) c.overlay.webContents.send('ext:changed', exts.list()); } }
 });
 
 /* ---------- saved passwords and passkeys: the account menu, the "Save password?" card and the passkey card ----------
@@ -944,6 +945,8 @@ HANDLE('setup:act', async (_, a) => {
   }
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
+  if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
+  if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
   if (a.type === 'test:block' && !app.isPackaged) { let r = null; const hit = blocker.onRequest({ url: String(a.url), resourceType: 'xhr', referrer: String(a.page), webContentsId: null }, x => { r = x; }); return { blocked: !!(hit && r && (r.cancel || r.redirectURL)) }; }   // tests: would this request be blocked on that page?
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
   if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reloadIgnoringCache(); return { ok: true }; }   // not from the cache: ads that loaded while blocking was off mustn't come back
@@ -1018,7 +1021,7 @@ function createWindow(wid, o = {}) {
   });
   pin(c, c.win); pin(c, c.win.webContents);
   sec.trustUI(c.win.webContents); c.win.webContents.on('before-input-event', switchKeys);
-  c.win.on('focus', () => { lastMain = c; });
+  c.win.on('focus', () => { lastMain = c; try { const s = c.panes && (c.panes[c.panes.focus] || c.panes.a), t = s && c.tabs.get(s.id); if (t && !t.wc.isDestroyed()) exts.selectTab(t.wc, c.win); } catch {} });   // extensions: this is the current window now
   c.win.on('blur', () => { if (C.switching) { C.switching = false; toUI('cmd', 'switch:cancel'); } if (C.bmShown && !C.menuOpen) bmHide(); });
   c.win.loadURL(proto.url('index.html'));
   c.win.once('ready-to-show', () => { c.win.show(); if (o.cascade) c.win.focus(); });
@@ -1096,11 +1099,17 @@ function run(id) {
 function buildMenu() {
   const item = id => { const a = keys.ACTIONS.find(x => x.id === id), acc = keys.keyFor(id, P.keys); return { label: a.label, accelerator: acc || undefined, click: () => run(id) }; };
   const group = m => keys.ACTIONS.filter(a => a.menu === m).map(a => a.id);
+  /* extensions' own shortcuts (manifest "commands"), unless one would take a Washi shortcut */
+  const norm = a => { const p = String(a || '').split('+'); const k = p.pop().toUpperCase(); const mods = p.map(m => { m = m.toLowerCase(); return /^(cmdorctrl|commandorcontrol)$/.test(m) ? (process.platform === 'darwin' ? 'cmd' : 'ctrl') : /^(cmd|command|super|meta)$/.test(m) ? 'cmd' : /^(ctrl|control)$/.test(m) ? 'ctrl' : /^(alt|option)$/.test(m) ? 'alt' : m; }).sort(); return [...mods, k].join('+'); };
+  const taken = new Set(keys.ACTIONS.map(a => keys.keyFor(a.id, P.keys)).filter(Boolean).map(norm));
+  const ecmds = exts.commands().filter(c => { const n = norm(c.accel); if (taken.has(n)) return false; taken.add(n); return true; });
+  exts.noteShortcuts(ecmds);
+  const extItems = ecmds.map(c => ({ label: c.label, accelerator: c.accel, click: () => { const at = alive(C && C.win) ? activeTab() : null; if (c.action) toUI('ext:open', c.id); else exts.runCommand(c.id, c.name, at && at.wc); } }));
   const tpl = [
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { label: `Quit ${app.name}`, accelerator: 'CmdOrCtrl+Q', click: (_, __, ev) => askQuit(ev) }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
-    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), item('focus'), item('snapshot'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
+    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), item('focus'), item('snapshot'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }, ...(extItems.length ? [{ type: 'separator' }, { label: 'Extension Shortcuts', submenu: extItems }] : [])] },
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },

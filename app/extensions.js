@@ -124,8 +124,53 @@ async function remove(id) {
 }
 const forSession = ses => all.get(ses) || null;
 function addTab(wc, win, active) { const x = all.get(wc.session); if (!x) return; quiet++; try { x.addTab(wc, win); if (active && !active.isDestroyed() && active.session === wc.session && active !== wc) x.selectTab(active); } catch {} finally { quiet--; } }
-function selectTab(wc) { const x = wc && all.get(wc.session); if (!x) return; quiet++; try { x.selectTab(wc); } catch {} finally { quiet--; } }   // Washi telling it: no echo back
+/* Keyboard shortcuts extensions ask for in their manifest ("commands", e.g. Okta's ⇧⌘O to open its popup), like
+   Chrome: _execute_action opens the popup, anything else goes to chrome.commands.onCommand. main.js puts them on the
+   menu (View › Extension Shortcuts), skipping any that would take one of Washi's own shortcuts. */
+const MAC = process.platform === 'darwin';
+function accelOf(s) {
+  if (!s || typeof s !== 'string') return null;
+  const parts = s.split('+').map(x => x.trim()).filter(Boolean); if (!parts.length) return null;
+  const key = parts.pop(), mods = [];
+  for (const m of parts) {
+    const k = m.toLowerCase();
+    if (k === 'command') mods.push(MAC ? 'Command' : 'Super'); else if (k === 'ctrl') mods.push(MAC ? 'Command' : 'Ctrl'); else if (k === 'macctrl') mods.push('Control');
+    else if (k === 'alt') mods.push('Alt'); else if (k === 'shift') mods.push('Shift'); else if (k === 'search') return null; else return null;
+  }
+  if (!mods.length && !/^(F\d+|Media\w+)$/.test(key)) return null;
+  const K = { Comma: ',', Period: '.', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Space: 'Space', Insert: 'Insert', Delete: 'Delete', Up: 'Up', Down: 'Down', Left: 'Left', Right: 'Right', MediaNextTrack: 'MediaNextTrack', MediaPlayPause: 'MediaPlayPause', MediaPrevTrack: 'MediaPreviousTrack', MediaStop: 'MediaStop' };
+  return [...new Set(mods), K[key] || key.toUpperCase()].join('+');
+}
+function commands() {
+  const ses = session.defaultSession, out = [];
+  if (!ses.extensions) return out;
+  for (const e of ses.extensions.getAllExtensions()) {
+    const cmds = e.manifest && e.manifest.commands; if (!cmds || typeof cmds !== 'object') continue;
+    const m = e.manifest, nm = /^__MSG_/.test(m.name || '') ? e.name : (m.name || e.name);
+    for (const [name, d] of Object.entries(cmds)) {
+      const sk = d && d.suggested_key; if (!sk) continue;
+      const raw = typeof sk === 'string' ? sk : (MAC ? sk.mac : process.platform === 'win32' ? sk.windows : (sk.linux || sk.chromeos)) || sk.default;
+      const accel = accelOf(raw); if (!accel) continue;
+      const action = name === '_execute_action' || name === '_execute_browser_action' || name === '_execute_page_action';
+      let desc = d.description && !/^__MSG_/.test(d.description) ? String(d.description) : '';
+      out.push({ id: e.id, ext: String(nm || e.id).slice(0, 60), name, action, accel, label: action ? `Open ${String(nm || e.id).slice(0, 60)}` : `${String(nm || e.id).slice(0, 40)}: ${desc || name}` });
+    }
+  }
+  return out;
+}
+/* tell chrome.commands.getAll what each shortcut is, and run one */
+function noteShortcuts(list) {
+  for (const x of all.values()) { const map = x.api && x.api.commands && x.api.commands.commandMap; if (!map) continue;
+    for (const c of list) { const arr = map.get(c.id); const it = arr && arr.find(a => a.name === c.name); if (it) it.shortcut = c.accel.replace('Command', '⌘').replace('Shift', '⇧').replace('Alt', '⌥').replace('Control', '⌃').replace(/\+/g, ''); } }
+}
+function runCommand(id, name, wc) {
+  const x = wc && all.get(wc.session) || all.get(session.defaultSession); if (!x) return;
+  let tab = null; try { tab = wc ? x.ctx.store.tabDetailsCache.get(wc.id) || null : null; } catch {}
+  try { x.ctx.router.sendEvent(id, 'commands.onCommand', name, tab); } catch (e) { console.error('extensions: command', e.message); }
+}
+function selectTab(wc, win) { const x = wc && all.get(wc.session); if (!x) return; quiet++; try { if (win && !win.isDestroyed()) { const st = x.ctx.store; if (st.tabToWindow.get(wc) !== win) { st.tabToWindow.set(wc, win); st.addWindow(win); } if (win.isFocused()) st.lastFocusedWindowId = win.id; } x.selectTab(wc); } catch {} finally { quiet--; } }   // Washi telling it (and which window the tab is in now): no echo back   // Washi telling it: no echo back
 function menuItems(wc, params) { const x = all.get(wc.session); if (!x) return []; try { return x.getContextMenuItems(wc, params) || []; } catch { return []; } }
 const handleUI = ses => { if (ECE) try { ECE.handleCRXProtocol(ses); } catch (e) { console.error('extensions: crx protocol', e.message); } };
-module.exports = { enable, syncAll, list, remove, forSession, addTab, selectTab, menuItems, handleUI, partitionOf, available: () => !!(ECE && CWS), dir, P, DEFAULT_PART, bind: h => { ui = { ...ui, ...h }; } };
+const popupNow = () => { for (const x of all.values()) { const p = x.api && x.api.browserAction && x.api.browserAction.popup; if (p && !p.isDestroyed()) return p; } return null; };
+module.exports = { popupNow, commands, noteShortcuts, runCommand, accelOf, enable, syncAll, list, remove, forSession, addTab, selectTab, menuItems, handleUI, partitionOf, available: () => !!(ECE && CWS), dir, P, DEFAULT_PART, bind: h => { ui = { ...ui, ...h }; } };
 void fs;

@@ -443,6 +443,9 @@ function focusMode(on = !S.focusMode, quiet) {
   placePanes(); commit(false, !quiet, true); updateChrome(); save();
   if (!quiet && S.focusMode) B.fx({ type: 'toast', text: `Focus mode: point at the top for the bar · ${keyHint('focus') || '⌥⌘F'} to leave`, short: true });
 }
+/* extension buttons: they belong to this window's tab; an extension's own shortcut (View › Extension Shortcuts) opens its popup like a click */
+B.onExtTab(id => { const xl = document.getElementById('exts'); if (xl && +xl.getAttribute('tab') !== id) xl.setAttribute('tab', String(id)); });
+B.onExtOpen(id => { const xl = document.getElementById('exts'), b = xl && xl.shadowRoot && xl.shadowRoot.querySelector(`[id="${id}"]`); if (b && !b.hidden) b.click(); });
 B.onFocusPeek(p => { if (!S || !S.focusMode) return; R.focusPeek = !!p; document.body.classList.toggle('peek', R.focusPeek); placePanes(); commit(false, true, true); });
 
 /* ---------- pin, move, folders ---------- */
