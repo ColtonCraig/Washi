@@ -41,7 +41,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const pop = await page('popup.html');
   ok(!!pop, 'clicking the button opens its popup');
   if (pop) {
-    let pw = null; for (let i = 0; i < 20; i++) { pw = await pop.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight })); if (pw.w > 100) break; await sleep(200); }
+    let pw = null, last = ''; for (let i = 0; i < 30; i++) { pw = await pop.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight })); const k = JSON.stringify(pw); if (pw.w > 100 && pw.w < 800 && k === last) break; last = k; await sleep(200); }   // until it has settled at its own size
     const bx = await ui.evaluate(() => { const r = document.getElementById('exts').shadowRoot.querySelector('button').getBoundingClientRect(); return { r: r.right + screenX, b: r.bottom + screenY + (outerHeight - innerHeight) }; });
     console.log('  popup', JSON.stringify(pw), 'button', JSON.stringify(bx));
     const ww = await ui.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }));
