@@ -67,6 +67,10 @@ const LIVE = { prs: [1, 2, 3], items: ['a', 'b', 'c'], auth: '' };
 /* fake update server for test/update.js: files from $UPD_DIR, and a switch to serve broken update info */
 let updMode = 'good';
 const srv = http.createServer((q, r) => {
+  /* a sign-in "org" for extensions that call their own server with your session, like the Okta plugin: /org/login
+     sets session cookies (Lax, Strict and None), /org/me answers with which came back, and no CORS headers */
+  if (q.url.startsWith('/org/login')) { r.setHeader('set-cookie', ['sidl=L; Path=/; SameSite=Lax', 'sids=S; Path=/; SameSite=Strict', 'sidn=N; Path=/; SameSite=None; Secure']); r.setHeader('content-type', 'text/html'); return r.end('<title>Org</title><h1>Signed in</h1>'); }
+  if (q.url.startsWith('/org/me')) { r.setHeader('content-type', 'application/json'); return r.end(JSON.stringify({ cookie: q.headers.cookie || '', origin: q.headers.origin || '', site: q.headers['sec-fetch-site'] || '' })); }
   if (q.url.startsWith('/signin') && q.method === 'POST') {          // the sign-in form: right password → welcome, wrong → the form again
     let b = ''; q.on('data', c => { b += c; }); q.on('end', () => { const f = new URLSearchParams(b); r.setHeader('content-type', 'text/html');
       if (f.get('password') === 'hunter2') { r.statusCode = 303; r.setHeader('location', '/welcome'); return r.end(); }

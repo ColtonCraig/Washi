@@ -1,0 +1,25 @@
+# On demand: run named test files on GitHub's Mac (sandboxed like the real app), with the test server.
+#   gh api -X POST repos/ColtonCraig/Washi/actions/workflows/mac-test.yml/dispatches -f ref=main -f 'inputs[tests]=ext-org'
+name: Mac test
+on:
+  workflow_dispatch:
+    inputs:
+      tests: { description: 'test file names, space separated (without .js)', required: true, default: 'ext-org' }
+      runner: { description: 'macos-latest or macos-15-intel', required: true, default: 'macos-latest' }
+jobs:
+  mac:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm i --no-save playwright@1
+      - name: Tests
+        run: |
+          node test/server.js > server.log 2>&1 &
+          for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done
+          s=0; for t in ${{ inputs.tests }}; do echo "== $t"; WASHI_SHOTS=$RUNNER_TEMP node test/$t.js || s=1; done; exit $s
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: mac-test, path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }
