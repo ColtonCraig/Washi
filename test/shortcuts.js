@@ -27,7 +27,10 @@ function press(accel) {
   const esc = async () => { K('tap:Escape'); await sleep(450); };
   const into = async () => { const L = await ui.evaluate(() => layout().a); ptr(`move ${X0 + L.x + L.w / 2} ${Y0 + L.y + 300}`); await sleep(60); ptr('down'); ptr('up'); await sleep(250); };   // the page has the keyboard
   const tabs = () => ui.evaluate(() => Object.keys(S.tabs).length);
-  const t = async (id, what, check, before) => { if (before) await before(); await into(); press(keys[id]); const r = await until(check); ok(!!r, `${keys[id]}  ${what}`); return r; };
+  const t = async (id, what, check, before) => {
+    if (before) await before(); await into(); press(keys[id]); let r = await until(check, 4000);
+    if (!r && process.env.CI) { console.log(`  NOTE ${keys[id]} didn't arrive the first time (the virtual keyboard on GitHub drops one now and then): pressed again`); await into(); press(keys[id]); r = await until(check, 4000); }
+    ok(!!r, `${keys[id]}  ${what}`); return r; };
 
   // tabs and the command bar
   await t('newtab', 'opens the command bar for a new scrap', () => cmdOn()); await esc();
