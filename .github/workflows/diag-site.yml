@@ -1,0 +1,21 @@
+# On demand: open real sites (video) on GitHub's Mac and record what plays
+# (test/diag-site.js). Run: gh workflow run diag-site.yml
+name: Site diagnosis
+on:
+  workflow_dispatch:
+    inputs:
+      sites: { description: "URLs to open, space separated", required: true, default: "https://www.youtube.com/watch?v=jfKfPfyJRdk https://www.youtube.com/watch?v=dQw4w9WgXcQ" }
+      runner: { description: 'macos-latest (Apple silicon) or macos-15-intel (often free sooner)', required: true, default: 'macos-15-intel' }
+jobs:
+  diag:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm i --no-save playwright@1
+      - run: SITES="${{ inputs.sites }}" WASHI_SHOTS=$RUNNER_TEMP node test/diag-site.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: diag-site, path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }
