@@ -975,6 +975,15 @@ function uiView(page) {
 const WINS = () => { const w = store.readJSON('windows.json', null); return w && Array.isArray(w.order) ? w : { order: [], bounds: {} }; };
 const saveWins = w => store.writeJSON('windows.json', w);
 let appQuitting = false;
+/* ---------- reopen a closed window (⇧⌘T when the last thing you closed was a window) ---------- */
+HANDLE('win:closed', () => { const cw = store.readJSON('closed-windows.json', []); return cw[0] ? { at: cw[0].at } : null; });
+HANDLE('win:reopen', () => {
+  const cw = store.readJSON('closed-windows.json', []), x = cw.shift(); if (!x) return false;
+  store.writeJSON('closed-windows.json', cw);
+  const wid = W.has(x.wid) ? 'w' + Date.now().toString(36) : x.wid;
+  store.write(`win-${wid}.json`, x.data); const w = WINS(); if (x.bounds) w.bounds[wid] = x.bounds; saveWins(w);
+  createWindow(wid); return true;
+});
 function createWindow(wid, o = {}) {
   wid = wid || 'w' + Date.now().toString(36);
   const list = WINS(); if (!list.order.includes(wid)) { list.order.push(wid); saveWins(list); }
@@ -1004,7 +1013,9 @@ function createWindow(wid, o = {}) {
     c.win = null; c.overlay = null; c.sidebar = null; c.tabs.clear(); c.peek = null; W.delete(wid); known.delete(wid);
     if (lastMain === c) lastMain = [...W.values()].find(x => alive(x.win)) || null;
     if (!appQuitting && W.size) {                         // you closed this window on purpose: forget it (the last window is always kept)
-      const w = WINS(); w.order = w.order.filter(x => x !== wid); delete w.bounds[wid]; saveWins(w); store.remove(`win-${wid}.json`);
+      const w = WINS(), data = store.read(`win-${wid}.json`);
+      if (data && /"tabs":\{"/.test(data)) { const cw = store.readJSON('closed-windows.json', []); cw.unshift({ wid, at: Date.now(), data, bounds: w.bounds[wid] || null }); store.writeJSON('closed-windows.json', cw.slice(0, 5)); }   // ⇧⌘T can bring it back
+      w.order = w.order.filter(x => x !== wid); delete w.bounds[wid]; saveWins(w); store.remove(`win-${wid}.json`);
     }
   });
   c.pollB = setInterval(() => {                      // split view: which pane did the user click into?

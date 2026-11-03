@@ -13,7 +13,7 @@ const ACTIONS = [
   ['newspace', 'New Space', 'file', 'CmdOrCtrl+Shift+N'],
   ['newfolder', 'New Folder', 'file', 'CmdOrCtrl+Shift+F'],
   ['close', 'Close Tab', 'file', 'CmdOrCtrl+W'],
-  ['reopen', 'Reopen Closed Tab', 'file', 'CmdOrCtrl+Shift+T'],
+  ['reopen', 'Reopen Closed Tab, Folder or Window', 'file', 'CmdOrCtrl+Shift+T'],
   ['pin', 'Pin or Unpin Tab', 'file', 'CmdOrCtrl+D'],
   ['print', 'Print…', 'file', 'CmdOrCtrl+P'],
   ['find', 'Find on Page…', 'edit', 'CmdOrCtrl+F'],

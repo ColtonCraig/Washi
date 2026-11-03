@@ -323,7 +323,7 @@ function closeTab(id, o = {}) {
     commit(true); return;
   }
   const t = S.tabs[id], s = spaceOf(id);
-  S.closed.unshift({ url: t.url, title: t.title, space: s && s.id });
+  if (!o.inFolder) S.closed.unshift({ url: t.url, title: t.title, space: s && s.id, at: Date.now() });
   const next = partner || fallbackFor(id);
   const finish = () => {
     dissolve(id); dropFromLists(id); delete S.tabs[id]; B.tabClose(id); delete R.live[id];
@@ -333,7 +333,22 @@ function closeTab(id, o = {}) {
   if (o.noFx || !docked()) return finish();
   B.sbFx({ type: 'close', id }); setTimeout(finish, 280);
 }
-function reopenClosed() { const c = S.closed.shift(); if (!c) return; if (c.space && S.spaces.some(x => x.id === c.space) && c.space !== S.cur) switchSpace(c.space, { quiet: true }); openTab(c.url); }
+/* ⇧⌘T: whatever you closed last comes back: a tab, a folder with its tabs, or a whole window */
+async function reopenClosed() {
+  let w = null; try { w = await B.closedWin(); } catch {}
+  const c = S.closed[0];
+  if (w && (!c || (w.at || 0) > (c.at || 0))) { B.reopenWin(); return; }
+  S.closed.shift(); if (!c) return;
+  if (c.space && S.spaces.some(x => x.id === c.space) && c.space !== S.cur) switchSpace(c.space, { quiet: true });
+  if (c.kind === 'folder') {
+    const s = sp(), f = { id: uid('f'), name: c.folder.name || 'Folder', icon: c.folder.icon, color: c.folder.color, iconPicked: c.folder.iconPicked, open: true, tabs: [] };
+    for (const x of c.tabs || []) { const id = uid('t'); S.tabs[id] = { url: x.url, title: x.title || hostOf(x.url), seen: Date.now() }; f.tabs.push(id); }
+    s.folders.push(f); s.tabs.unshift('f:' + f.id); render(); save();
+    B.fx({ type: 'toast', text: `Brought back “${f.name}” (${f.tabs.length} tab${f.tabs.length === 1 ? '' : 's'})`, short: true });
+    return;
+  }
+  openTab(c.url);
+}
 
 /* ---------- spaces ---------- */
 function switchSpace(id, o = {}) {
@@ -500,7 +515,9 @@ function removeFolder(fid, closeTabs) {
   if (closeTabs) {
     const inside = flat(s, [key]), subs = new Set(); const mark = x => { subs.add(x.id); x.tabs.filter(k => k.startsWith('f:')).forEach(k => { const c = folderOf(s, k); if (c && !subs.has(c.id)) mark(c); }); }; mark(f);
     list.splice(i < 0 ? 0 : i, 1); s.folders = s.folders.filter(x => !subs.has(x.id));
-    for (const t of inside) closeTab(t, { noFx: true });
+    const urls = inside.filter(t => S.tabs[t] && !S.pins.includes(t)).map(t => ({ url: S.tabs[t].url, title: S.tabs[t].title }));
+    if (urls.length) S.closed.unshift({ kind: 'folder', at: Date.now(), space: s.id, folder: { name: f.name, icon: f.icon || null, color: f.color || null, iconPicked: !!f.iconPicked }, tabs: urls.slice(0, 200) });   // ⇧⌘T brings the folder back, tabs and all
+    for (const t of inside) closeTab(t, { noFx: true, inFolder: true });
     if (!inside.length) { render(); save(); }
   } else {                                                // ungroup: everything inside (tabs and folders) takes the folder's place
     list.splice(i < 0 ? 0 : i, 1, ...f.tabs); s.folders = s.folders.filter(x => x !== f); render(); save();
@@ -581,7 +598,7 @@ function openCmd(mode) {
   const tabs = [...new Set([...S.pins, ...spaceTabs(sp()), ...S.spaces.flatMap(spaceTabs)])].filter(id => S.tabs[id]).map(id => ({ id, title: label(S.tabs[id]), url: S.tabs[id].url, fav: S.tabs[id].fav || null, space: S.pins.includes(id) ? 'Pinned' : (spaceOf(id) || {}).name || '' }));
   const A = (id, label, key) => ({ id, label, hint: keyHint(key || id) });
   const actions = [
-    A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen closed tab'),
+    A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen what you closed last (tab, folder or window)'),
     A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('focus', 'Focus mode (hide the top bar and sidebar)'), A('notes', 'Sticky note for this space'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
