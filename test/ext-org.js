@@ -23,7 +23,7 @@ const { start, sleep, ok, done, skipSetup } = require('./lib');
   const pg = await ep.evaluate(() => fetch('http://127.0.0.1:8765/org/me', { credentials: 'include' }).then(r => r.json()).then(j => ({ ok: true, ...j }), e => ({ ok: false, err: String(e) })));
   console.log('  page:', JSON.stringify(pg));
   ok(pg && pg.ok && /sidl=L/.test(pg.cookie) && /sidn=N/.test(pg.cookie), 'and so do its pages (popup, options)');
-  const ck = await ep.evaluate(() => new Promise(r => chrome.cookies.getAll({ domain: '127.0.0.1' }, c => r((c || []).map(x => x.name).sort()))));
+  const ck = await ep.evaluate(() => !chrome.cookies ? ['(no chrome.cookies here: ' + location.href + ' ' + Object.keys(chrome).join(',') + ')'] : new Promise(r => chrome.cookies.getAll({ domain: '127.0.0.1' }, c => r((c || []).map(x => x.name).sort())))).catch(e => ['(' + e.message + ')']);
   ok(ck.join() === 'sidl,sidn,sids', 'chrome.cookies sees them: ' + ck);
   await ui.evaluate(() => openTab('http://localhost:8765/p1.html')); await sleep(2000);
   const pr = await ep.evaluate(() => new Promise(r => chrome.runtime.sendMessage('probe', r)));
