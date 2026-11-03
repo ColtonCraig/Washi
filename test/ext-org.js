@@ -5,7 +5,7 @@ const fs = require('fs'), os = require('os'), path = require('path'); const { ex
 const { start, sleep, ok, done, skipSetup } = require('./lib');
 (async () => {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-org-'));
-  const SB = process.platform === 'darwin';
+  const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
   let b = await start({ profile, sandbox: SB }); await skipSetup(b); await b.stop();
   const id = execSync(`node ${__dirname}/fixtures/make-extension.js ${profile}`).toString().trim();
   process.env.WASHI_EXT_POLICY = JSON.stringify({ [id]: { orgUrl: 'https://example.okta.com' } });   // what a company's Chrome policy (MDM) would give it

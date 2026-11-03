@@ -38,6 +38,8 @@ const partitionOf = ses => ses === session.defaultSession ? DEFAULT_PART : [...a
 
 async function enable(ses, { primary = false } = {}) {
   if (!ECE || !CWS || all.has(ses)) return all.get(ses) || null;
+  /* ours first, so it can finish chrome.* off before the engine's preload freezes it */
+  if ('registerPreloadScript' in ses) for (const type of ['frame', 'service-worker']) try { ses.registerPreloadScript({ id: 'washi-ext-fix-' + type, type, filePath: path.join(__dirname, 'ext-fix.preload.js') }); } catch (e) { console.error('extensions: fix preload', e.message); }
   const x = new ECE({
     session: ses,
     createTab: d => ui.createTab(d, ses),
@@ -48,7 +50,6 @@ async function enable(ses, { primary = false } = {}) {
   });
   all.set(ses, x);
   x.on('browser-action-popup-created', p => fitPopup(p));
-  if ('registerPreloadScript' in ses) for (const type of ['frame', 'service-worker']) try { ses.registerPreloadScript({ id: 'washi-ext-fix-' + type, type, filePath: path.join(__dirname, 'ext-fix.preload.js') }); } catch (e) { console.error('extensions: fix preload', e.message); }
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('console-message', (_, m) => console.error('ext-sw', JSON.stringify(m).slice(0, 3000)));
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) setTimeout(() => { try { console.error('ext-pre', JSON.stringify(ses.getPreloadScripts().map(p => [p.type, p.id, require('path').basename(p.filePath)]))); console.error('ext-run', JSON.stringify(ses.serviceWorkers.getAllRunning())); } catch (e) { console.error('ext-dbg', e.message); } }, 6000);
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('running-status-changed', d => console.error('ext-status', JSON.stringify(d)));

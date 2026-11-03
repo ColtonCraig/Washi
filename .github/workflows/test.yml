@@ -20,6 +20,13 @@ jobs:
       - run: npm ci
       - run: npx playwright install-deps chromium && npm i --no-save playwright@1 && sudo apt-get install -y xvfb imagemagick python3-xlib python3-pil
       - run: sudo CI=1 SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
+      - name: Extensions with the sandbox on, like the real app (background workers get their APIs only then)
+        if: matrix.shard == 1
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          node test/server.js > /tmp/srv-sb.log 2>&1 &
+          for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done
+          WASHI_SANDBOX=1 IDLE_S=35 xvfb-run -a -s '-screen 0 1440x900x24' node test/ext-org.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: 'screenshots-${{ matrix.shard }}', path: '${{ runner.temp }}/*.png', if-no-files-found: ignore }

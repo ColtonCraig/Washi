@@ -7,11 +7,14 @@ const { contextBridge } = require('electron');
 const fix = (policy) => {
   /* the engine finishes by freezing chrome; whichever of us runs first, fill the constants in just before that (or now, if it already ran) */
   const C0 = globalThis.chrome;
-  if (!C0 || !C0.tabs || !Object.isFrozen(C0)) { const freeze = Object.freeze; Object.freeze = function (o) { if (o && o === globalThis.chrome) { Object.freeze = freeze; try { apply(); } catch {} } return freeze.call(this, o); }; }
-  apply();
+  /* this preload runs before the engine's (extensions.js registers it first): wait for the engine to finish and fill
+     the gaps just before it freezes chrome, so nothing of ours gets in the way of what it adds. If the engine never
+     runs here, fill them in anyway once this script is done. */
+  if (!C0 || !Object.isFrozen(C0)) { const freeze = Object.freeze; let done = false; Object.freeze = function (o) { if (!done && o && o === globalThis.chrome) { done = true; Object.freeze = freeze; try { apply(); } catch {} } return freeze.call(this, o); }; setTimeout(() => { if (!done) { done = true; Object.freeze = freeze; try { apply(); } catch {} } }, 0); }
+  else apply();
   function apply() {
   const c = globalThis.chrome; if (!c) return;
-  const set = (o, k, v) => { try { if (o && o[k] === undefined) Object.defineProperty(o, k, { value: v, enumerable: true }); } catch {} };
+  const set = (o, k, v) => { try { if (o && o[k] === undefined) Object.defineProperty(o, k, { value: v, enumerable: true, configurable: true }); } catch (e) { if (globalThis.__washiDebugExt) console.log('washi-ext-fix set', k, e && e.message); } };
   set(c.tabs, 'TAB_ID_NONE', -1); set(c.tabs, 'TAB_INDEX_NONE', -1); set(c.tabs, 'MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND', 2);
   set(c.windows, 'WINDOW_ID_NONE', -1); set(c.windows, 'WINDOW_ID_CURRENT', -2);
   /* events: honour the filters Chrome supports (webNavigation's url filters, tabs.onUpdated's), and answer hasListener
@@ -105,6 +108,14 @@ const fix = (policy) => {
     const mine = () => { try { const m = c.runtime.getManifest(), pop = ((m.action || m.browser_action || {}).default_popup || '').replace(/^\//, ''); return pop && location.pathname.replace(/^\//, '') === pop.split('?')[0] ? 'popup' : 'tab'; } catch { return 'tab'; } };
     try { c.extension.getViews = f => { let v = []; try { v = gv(f) || []; } catch {} const t = f && f.type; if (!v.includes(window) && (!t || t === mine())) v = [...v, window]; return v; }; Object.defineProperty(c.extension, '__washiViews', { value: true }); } catch {}
   }
+  /* chrome.idle and chrome.identity aren't in the engine: an extension that asked for them (1Password asks for idle) got
+     undefined and could fall over. idle answers "active" (Washi doesn't track that); identity gives the standard
+     redirect URL and says interactive sign-in flows aren't supported, rather than leaving the extension hanging. */
+  let perms = []; try { const m = c.runtime.getManifest(); perms = [...(m.permissions || []), ...(m.optional_permissions || [])]; } catch {}
+  const ev = () => { const ls = new Set(); return { addListener: f => ls.add(f), removeListener: f => ls.delete(f), hasListener: f => ls.has(f), hasListeners: () => ls.size > 0 }; };
+  if (!c.idle) set(c, 'idle', { queryState: (t, cb) => later('active', cb), setDetectionInterval: () => {}, getAutoLockDelay: cb => later(0, cb), onStateChanged: ev(), IdleState: { ACTIVE: 'active', IDLE: 'idle', LOCKED: 'locked' } });
+  if (!c.identity) { const no = cb => { const e = new Error('Sign-in through chrome.identity isn\'t supported in Washi.'); if (typeof cb === 'function') { try { cb(); } catch {} return undefined; } return Promise.reject(e); };
+    set(c, 'identity', { getRedirectURL: p => `https://${c.runtime.id}.chromiumapp.org/${p || ''}`, launchWebAuthFlow: (d, cb) => no(cb), getAuthToken: (d, cb) => no(typeof d === 'function' ? d : cb), removeCachedAuthToken: (d, cb) => later(undefined, cb), clearAllCachedAuthTokens: cb => later(undefined, cb), getProfileUserInfo: (d, cb) => later({ email: '', id: '' }, typeof d === 'function' ? d : cb), getAccounts: cb => later([], cb), onSignInChanged: ev() }); }
   /* the engine also has Chrome's newer `browser` namespace, but only with its built-in APIs: no windows, commands, cookies,
      contextMenus… Extensions that prefer `browser` when it exists (1Password, uBlock Origin Lite) fell over at start
      ("Cannot read properties of undefined (reading 'WINDOW_ID_NONE')"), leaving blank popups. In Chrome `browser` is
