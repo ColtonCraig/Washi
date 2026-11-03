@@ -1073,7 +1073,7 @@ function buildMenu() {
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },
     { role: 'windowMenu' },
-    { role: 'help', submenu: [{ label: 'Quick-Start Guide', click: () => toUI('cmd', 'guide') }, { label: 'Keyboard Shortcuts', click: () => toUI('cmd', 'settings:keys') }, { label: 'Run Welcome Setup Again', click: () => toUI('cmd', 'setupagain') }] }
+    { role: 'help', submenu: [{ label: 'What\'s New in Washi', click: () => toUI('cmd', 'whatsnew') }, { label: 'Quick-Start Guide', click: () => toUI('cmd', 'guide') }, { label: 'Keyboard Shortcuts', click: () => toUI('cmd', 'settings:keys') }, { label: 'Run Welcome Setup Again', click: () => toUI('cmd', 'setupagain') }] }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
 }

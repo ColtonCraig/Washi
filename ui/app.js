@@ -572,6 +572,19 @@ async function openSheet(kind, extra) {
   B.overlayOpen({ mode: 'sheet', kind, items, ...look(), ...(extra || {}) });
 }
 /* ---------- welcome setup, settings and the quick-start guide (drawn in the overlay) ---------- */
+/* after an update: "Fresh off the press" shows what's new since the version you had (once, in the first window) */
+async function whatsNew() {
+  let v = ''; try { v = (await B.setupInfo()).version || ''; } catch {}
+  if (!v) return;
+  const seen = S.prefs.seenVer, news = window.WHATSNEW || [], vn = x => String(x || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const newer = (a, b) => { const x = vn(a), y = vn(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+  if (seen === v) return;
+  const wasSetUp = S.prefs.done; S.prefs.seenVer = v; save();
+  if (!wasSetUp) return;                                              // a new install gets the welcome instead
+  const since = seen || (news[1] && news[1].v) || '0.0.0';             // from before this page existed: show this release
+  if (!newer(v, since) || !news.some(r => newer(r.v, since) && !newer(r.v, v))) return;
+  setTimeout(() => openSetup('news', since), 900);
+}
 async function openSetup(page, section) {
   let info = {}; try { info = await B.setupInfo(); R.info = info; } catch {}
   B.overlayOpen({ mode: 'setup', page, section, apps: appsPresent(), keys: R.keys, prefs: S.prefs, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated })), cur: S.cur, dock: S.dock, info, ...look(), tabs: [], actions: [], history: [] });
@@ -712,7 +725,7 @@ async function adoptPeek() {                     // the peeked page becomes a re
 }
 B.onOverlayResult(r => {
   if (!S) return;
-  if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); else if (r.cmd === 'settings:passwords') openSetup('settings', 'passwords'); return; }
+  if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); else if (r.cmd === 'settings:passwords') openSetup('settings', 'passwords'); else if (/^[a-z]+$/.test(r.cmd || '')) runAction(r.cmd); return; }
   if (r.kind === 'setup') {
     const first = !S.prefs.done; S.prefs.done = true; save();
     B.setupInfo().then(i => { R.info = i; render(); }).catch(() => {});            // a GitHub token may have been added
@@ -847,7 +860,7 @@ B.onCmd(n => {
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
   if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes', 'focus'].includes(n)) return runAction(n);
   if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
-  if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
+  if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard'); if (n === 'whatsnew') return openSetup('news');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
   else if (n === 'split') toggleSplit(); else if (n === 'sidebar') toggleSide(); else if (n === 'newspace') addSpace();
@@ -1300,4 +1313,5 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   setTimeout(() => refreshLive(false), 4000);
   if (!S.prefs.done) setTimeout(() => openSetup('onboard'), 450);
   else if (S.prefs.startup === 'home' && S.prefs.home) openTab(toURL(S.prefs.home));
+  whatsNew();
 })();

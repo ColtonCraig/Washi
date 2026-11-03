@@ -727,7 +727,7 @@ window.SETUP = (() => {
       ['keys', 'Shortcuts', () => secKeys()],
       ['import', 'Import', () => secImport()],
       ['help', 'Help', () => [
-        field('Quick-start guide', h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => open({ page: 'guide' }, true) }, 'Show the guide'), h('button', { class: 'btn', onclick: () => open({ page: 'onboard' }, true) }, 'Run the welcome setup again'))),
+        field('Quick-start guide', h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => open({ page: 'guide' }, true) }, 'Show the guide'), h('button', { class: 'btn', onclick: () => open({ page: 'news' }, true) }, 'What\'s new'), h('button', { class: 'btn', onclick: () => open({ page: 'onboard' }, true) }, 'Run the welcome setup again'))),
         field('Start fresh', h('div', {}, h('p', { class: 'hint' }, 'Erase every tab, space, setting and cookie and start Washi as if it was just installed.'), h('button', { class: 'btn warn', onclick: () => B.setupAct({ type: 'startFresh' }) }, 'Start fresh…'))),
         secAbout(), secSpeed()]]
     ];
@@ -740,6 +740,30 @@ window.SETUP = (() => {
       h('div', { class: 'cols' }, rail, scroll));
     root.append(sheet); mark();
     if (startAt) requestAnimationFrame(() => scroll.querySelector('#sec-' + startAt)?.scrollIntoView());
+  }
+  /* ---------- What's new: "Fresh off the press", after an update (and Help › What's New) ---------- */
+  const vnum = v => String(v || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const newer = (a, b) => { const x = vnum(a), y = vnum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+  function newsIcon(icon) { const s = String(icon || ''); return s.startsWith('p:') ? BL.fIcon(s, 22) : BL.ic(s.replace(/^i:/, '') || 'star', 21); }
+  function newsCard(it, i) {
+    const keys = (it.keys || []).map(id => KEYMAP[id] ? BL.fmtKey(KEYMAP[id]) : '').filter(Boolean);
+    return h('article', { class: 'nwc', style: `--i:${i}` },
+      h('span', { class: 'nic', html: newsIcon(it.icon) }),
+      h('div', { class: 'nwt' }, h('h5', {}, it.title), h('p', {}, it.text),
+        it.how || keys.length ? h('p', { class: 'how' }, h('b', {}, 'How: '), it.how || '', ...keys.map(k => h('kbd', {}, k))) : null,
+        it.try ? h('button', { class: 'btn small', onclick: () => { finish(); setTimeout(() => B.overlayResult({ kind: 'cmd', cmd: it.try }), 250); } }, 'Try it') : null));
+  }
+  function buildNews(since) {
+    const all = window.WHATSNEW || [], fresh = since ? all.filter(r => newer(r.v, since)) : all.slice(0, 1), show = fresh.length ? fresh : all.slice(0, 1), older = all.filter(r => !show.includes(r));
+    let n = 0;
+    const rel = (r, first) => h('div', { class: 'nwr' }, first ? null : h('h3', { class: 'nwv' }, h('span', {}, 'Washi ' + r.v), h('small', {}, r.lead || '')), h('div', { class: 'nwg' }, r.items.map(it => newsCard(it, n++))));
+    const earlier = h('div', { class: 'nwold' });
+    const more = older.length ? h('button', { class: 'lnk', onclick: () => { more.remove(); n = 0; earlier.append(...older.map(r => rel(r, false))); } }, 'Earlier updates') : null;
+    sheet = h('div', { class: 'sheet nw' }, h('i', { class: 'tp l' }), h('i', { class: 'tp r' }),
+      h('header', { class: 'shead' }, h('span', { class: 'stampv' }, 'Washi ' + (show[0] ? show[0].v : INFO.version || '')), h('h2', { class: 'ttl' }, 'Fresh off the press'), h('p', { class: 'lead' }, (show[0] && show[0].lead) || 'What\'s new in Washi.'), h('button', { class: 'xx', 'aria-label': 'Close', onclick: finish }, '×')),
+      h('div', { class: 'body' }, h('div', { class: 'pg npage' }, ...show.map((r, i) => rel(r, i === 0)), earlier, more)),
+      h('footer', { class: 'nav' }, h('span', { class: 'hint' }, 'Any time: Help › What\'s New'), h('span', { class: 'fill' }), h('button', { class: 'btn primary', onclick: finish }, 'Got it')));
+    root.append(sheet);
   }
   function buildGuide() {
     syncs = [];
@@ -755,7 +779,7 @@ window.SETUP = (() => {
     if (!inPlace) { P = prefsOf(d.prefs); SPACES = (d.spaces || []).map(x => ({ ...x })); CUR = d.cur; DOCK = d.dock !== false; INFO = d.info || {}; KEYMAP = d.keys || {}; HAVE = d.apps || []; }
     PAGE = d.page || 'onboard';
     root.innerHTML = ''; retheme();
-    if (PAGE === 'settings') buildSettings(d.section); else if (PAGE === 'guide') buildGuide(); else buildOnboard();
+    if (PAGE === 'settings') buildSettings(d.section); else if (PAGE === 'guide') buildGuide(); else if (PAGE === 'news') buildNews(d.section); else buildOnboard();
     root.classList.add('on'); isOpen = true;
     sheet.tabIndex = -1; setTimeout(() => sheet.focus({ preventScroll: true }), 60);
   }
