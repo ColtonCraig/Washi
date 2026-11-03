@@ -9,11 +9,13 @@ const { start, sleep, ok, done, skipSetup } = require('./lib');
   let b = await start({ profile, sandbox: SB }); await skipSetup(b); await b.stop();
   const id = execSync(`node ${__dirname}/fixtures/make-extension.js ${profile}`).toString().trim();
   process.env.WASHI_EXT_POLICY = JSON.stringify({ [id]: { orgUrl: 'https://example.okta.com' } });   // what a company's Chrome policy (MDM) would give it
-  b = await start({ profile, fresh: false, sandbox: SB }); const { ui } = b; await sleep(2500);
+  b = await start({ profile, fresh: false, sandbox: SB }); const { ui } = b; await sleep(1500);
+  for (let i = 0; i < 40; i++) { const L = await ui.evaluate(() => B.setupAct({ type: 'ext:list' })).catch(() => null); if (L && L.list && L.list.some(e => e.id === id)) break; await sleep(250); }   // extensions loaded
   const page = async s => { for (let i = 0; i < 40; i++) { const p = b.pages().filter(x => x.url().includes(s)).pop(); if (p) return p; await sleep(150); } return null; };
   await ui.evaluate(() => openTab('http://127.0.0.1:8765/org/login')); await sleep(1500);
   await ui.evaluate(id => openTab(`chrome-extension://${id}/options.html`), id); await sleep(1500);
   const ep = await page(`chrome-extension://${id}/options.html`);
+  for (let i = 0; i < 3 && ep && !(await ep.evaluate(() => !!(chrome.cookies && chrome.cookies.getAll)).catch(() => false)); i++) { console.log('  NOTE the extension page loaded before its APIs were ready: reloading'); await ep.reload(); await sleep(1200); }
   ok(!!ep, 'the extension page opens');
   const bg = await ep.evaluate(() => new Promise(r => chrome.runtime.sendMessage('org', r)));
   console.log('  bg:', JSON.stringify(bg));

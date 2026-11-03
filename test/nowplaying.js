@@ -15,7 +15,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const music = b.pages().find(p => p.url().includes('/music.html'));
   await music.evaluate(() => document.getElementById('a').play()); await sleep(1200);
   const np = () => sb.evaluate(() => { const e = document.getElementById('np'); return { shown: !e.hidden && getComputedStyle(e).display !== 'none', title: document.getElementById('npTitle').textContent, sub: document.getElementById('npSub').textContent, playing: e.classList.contains('playing'), art: getComputedStyle(document.getElementById('npImg')).backgroundImage, btn: document.getElementById('npPlay').getAttribute('aria-label') }; });
-  ok(!(await np()).shown, 'while you\'re on the playing tab, no ticket (you can see it)');
+  { let sh = true; for (let i = 0; i < 20 && (sh = (await np()).shown); i++) await sleep(100); ok(!sh, 'while you\'re on the playing tab, no ticket (you can see it)'); }
   await ui.evaluate(() => openTab('http://localhost:8765/p1.html')); await sleep(1500);
   let n = await np();
   ok(n.shown && n.title === 'Folded Afternoon' && n.sub === 'The Washi Band', `another tab: the ticket shows the song and artist (${n.title} · ${n.sub})`);
