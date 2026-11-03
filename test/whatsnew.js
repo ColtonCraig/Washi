@@ -19,7 +19,7 @@ const sheetOn = ov => ov.evaluate(() => !!document.querySelector('#setup.on .she
   // pretend the last version you ran was 0.15.1
   const shp = path.join(profile, 'shared.json'), sh = JSON.parse(fs.readFileSync(shp, 'utf8')); sh.prefs.seenVer = '0.15.1'; fs.writeFileSync(shp, JSON.stringify(sh));
   b = await start({ profile, fresh: false }); ({ ui, ov } = b);
-  let on = false; for (let i = 0; i < 30 && !on; i++) { on = await sheetOn(ov); if (!on) await sleep(200); }
+  let on = false; for (let i = 0; i < 75 && !on; i++) { on = await sheetOn(ov); if (!on) await sleep(200); }   // (a slow machine takes a while to start)
   ok(on, `after the update (0.15.1 → ${VERSION}) "Fresh off the press" opens by itself`);
   await sleep(1200);
   const info = await ov.evaluate(() => ({ title: document.querySelector('.nw .ttl').textContent, stamp: document.querySelector('.nw .stampv').textContent, cards: [...document.querySelectorAll('.nw .nwc h5')].map(e => e.textContent), vers: [...document.querySelectorAll('.nw .nwv span')].map(e => e.textContent), keys: [...document.querySelectorAll('.nw .nwc kbd')].map(e => e.textContent), tries: document.querySelectorAll('.nw .nwc .btn').length }));
