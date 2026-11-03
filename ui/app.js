@@ -192,7 +192,7 @@ function updateChrome() {
   bStar.title = bk ? 'Edit this bookmark (⇧⌘D)' : 'Bookmark this page (⇧⌘D)';
   const rd = !!(id && R.reading[id]), ra = !!(id && (R.readable[id] || rd));
   if (bRead.hidden === ra) { bRead.hidden = !ra; if (ra && !calm()) bRead.animate([{ transform: 'scale(.5) rotate(-12deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
-  bRead.classList.toggle('on', rd); bRead.title = rd ? `Reader: text size and font (${keyHint('reader')} to leave)` : `Reader mode (${keyHint('reader')})`;
+  bRead.classList.toggle('on', rd); bRead.title = rd ? `Leave Reader (${keyHint('reader')} or esc) · right-click for text size` : `Reader mode (${keyHint('reader')})`;
   bBoost.disabled = !web; bBoost.classList.toggle('on', web && !!R.boosted[id]); bBoost.title = R.boosted[id] ? 'This site is boosted' : 'Boost this site: colors, font, hide things';
   const blocked = id ? R.blocked[id] || 0 : 0;
   bShield.querySelector('b').textContent = blocked > 99 ? '99+' : blocked || '';
@@ -697,7 +697,8 @@ function openNote() {
   B.panel('notes', { x: Math.round(Math.max(8, Math.min(innerWidth - 348, r.right - 300))), y: Math.round(r.bottom + 2), w: 340, h: 392 }, { text: s.note || '', name: s.name, ...look() });
 }
 bNote.addEventListener('click', openNote);
-bRead.addEventListener('click', () => { const id = focusedId(); if (id && R.reading[id]) readerPanel(); else readerToggle(true); });
+bRead.addEventListener('click', () => { const id = focusedId(); readerToggle(!(id && R.reading[id])); });   // the book stamp turns Reader on and off
+bRead.addEventListener('contextmenu', e => { e.preventDefault(); const id = focusedId(); if (id && R.reading[id]) readerPanel(); });
 B.onSetupMsg(m => {
   if (!S) return;
   if (m.type === 'prefs') {
@@ -950,6 +951,7 @@ B.onCmd(n => {
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
   if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes', 'focus', 'snapshot'].includes(n)) return runAction(n);
   if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
+  if (n === 'reader:look') return readerPanel();
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard'); if (n === 'whatsnew') return openSetup('news');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();

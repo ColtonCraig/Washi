@@ -557,7 +557,8 @@ ON('bm:hover', (_, d) => {
     if ((away += 100) >= 300 || !c.win.isFocused()) bmHide();
   }, 100);
 });
-require('electron').ipcMain.on('washi-page', (e, type) => {   // a page says the pointer left it through the top (page-preload.js)
+require('electron').ipcMain.on('washi-page', (e, type, d) => {   // a page says the pointer left it through the top, or Reader mode was asked to leave (page-preload.js)
+  if (type === 'reader') { for (const c of W.values()) for (const t of c.tabs.values()) if (t.wc === e.sender && alive(c.win)) { C = c; if (d && d.act === 'leave') reader.hide(t.wc).then(() => toUI('tab:event', { id: t.id, reading: false })); else if (d && d.act === 'look') toUI('cmd', 'reader:look'); return; } return; }
   if (type !== 'topExit') return;
   for (const c of W.values()) for (const t of c.tabs.values()) if (t.wc === e.sender && t.visible && alive(c.win) && c.win.isFocused()) {
     /* only if the pointer settles just above the page (the lower part of the top bar), not up at the address label you're about to click */

@@ -42,8 +42,11 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   shot('reader-light');
 
   // ---------- the Reader card: size and font, real clicks ----------
-  s = await btn(); await click(s.x, s.y); await sleep(800);
-  ok(await ov.evaluate(() => !!document.querySelector('.panel.on .readp')), 'clicking the stamp again opens the Reader card');
+  const inSheet = async (pg, sel) => { const o = await ui.evaluate(() => layout().a); const q = await pg.evaluate(s => { const e = document.querySelector('washi-reader').shadowRoot.querySelector(s), r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width }; }, sel); return { x: o.x + q.x, y: o.y + q.y, w: q.w }; };
+  const ctl = await art.evaluate(() => { const c = document.querySelector('washi-reader').shadowRoot.querySelector('.ctl'), r = c.getBoundingClientRect(), k = [...c.children].map(e => e.getBoundingClientRect()); return { r: [r.x, r.y, r.right, r.bottom], gaps: k.slice(1).map((b, i) => b.x - k[i].right), vw: innerWidth }; });
+  ok(ctl.r[0] > 0 && ctl.r[2] <= ctl.vw - 8 && ctl.r[1] >= 8 && ctl.gaps.every(g => g >= 4), `the sheet's Aa and × sit in the corner with room between them (${ctl.gaps})`);
+  s = await inSheet(art, '.aa'); await click(s.x, s.y); await sleep(800);
+  ok(await ov.evaluate(() => !!document.querySelector('.panel.on .readp')), 'clicking Aa on the sheet opens the Reader card');
   await audit(ov, 'Reader card'); shot('reader-card');
   const where = await ui.evaluate(() => { const r = document.getElementById('bRead').getBoundingClientRect(); return { x: Math.round(Math.max(8, r.right - 262)), y: Math.round(r.bottom + 2) }; });
   const pt = sel => ov.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, sel);
@@ -72,10 +75,17 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { wobble: false } })); await sleep(500);
 
   // ---------- leaving, and the keyboard ----------
-  s = await btn(); await click(s.x, s.y); await sleep(700);
-  p = await pt('#rexit'); await click(where.x + p.x, where.y + p.y); await sleep(700);
+  s = await btn(); await click(s.x, s.y); await sleep(800);
   ok(!(await sheet(art)) && await art.evaluate(() => !!document.querySelector('#topnav') && getComputedStyle(document.documentElement).overflow !== 'hidden' && window.siteScript === 1), 'Leave Reader puts the page back exactly as it was');
-  ok(!(await btn()).on && (await btn()).shown, 'the stamp is off (and still offered)');
+  ok(!(await btn()).on && (await btn()).shown, 'clicking the stamp again leaves it; the stamp is off (and still offered)');
+  s = await btn(); await click(s.x, s.y); await sleep(900);
+  ok(!!(await sheet(art)), 'and clicking it once more opens it');
+  s = await inSheet(art, '.lv'); await click(s.x, s.y); await sleep(900);
+  ok(!(await sheet(art)) && !(await btn()).on, 'the × on the sheet leaves Reader');
+  s = await btn(); await click(s.x, s.y); await sleep(900);
+  const o = await ui.evaluate(() => layout().a); await click(o.x + 200, o.y + 200); await sleep(200);
+  K('tap:Escape'); await sleep(900);
+  ok(!(await sheet(art)) && !(await btn()).on, 'Esc leaves Reader');
   await ui.evaluate(() => B.setupAct ? 0 : 0);
   K('down:Alt_L down:Control_L tap:r up:Control_L up:Alt_L'); await sleep(900);
   if (!(await sheet(art))) await ui.evaluate(() => readerToggle()), await sleep(700);      // (⌥⌘ on a Mac is ⌥⌃ here)

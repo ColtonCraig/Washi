@@ -130,4 +130,4 @@
 .pop.note #nsv{font:600 11px var(--font-ui);color:var(--ink3);opacity:0;transition:opacity .2s}
 .pop.note #nsv.on{opacity:1}
 html.scrapbook .pop.note{transform:rotate(-.8deg)}
-.stamp.note.has svg.i{color:var(--tape)}
+.stamp.nstamp.has svg.i{color:var(--tape)}

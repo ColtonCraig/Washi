@@ -13,6 +13,9 @@ if (window.top === window && /^https?:$/.test(location.protocol)) {
   /* the pointer leaving the page through its top edge: Washi brings down the bookmarks bar (on a Mac the top bar is
      a window-drag area, which doesn't report the pointer) */
   document.addEventListener('mouseout', e => { if (!e.relatedTarget && e.clientY <= 3 && e.clientX > 0 && e.clientX < innerWidth) send('topExit'); }, true);
+  /* Reader mode's own buttons and Esc (app/reader.js) */
+  document.addEventListener('washi-reader-leave', () => send('reader', { act: 'leave' }));
+  document.addEventListener('washi-reader-look', () => send('reader', { act: 'look' }));
   const sendNow = (t, d) => { try { ipcRenderer.sendSync('washi-page-now', t, d || {}); } catch {} };
 
   /* ---------- passkeys: ask Washi before the browser handles the request ---------- */

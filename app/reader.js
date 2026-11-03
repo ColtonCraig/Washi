@@ -37,6 +37,11 @@ const PAGE = `(() => {
     .c pre{padding:12px 14px;overflow:auto}.c code{padding:1px 4px}.c pre code{padding:0;background:none}
     .c table{border-collapse:collapse;max-width:100%;display:block;overflow:auto}.c td,.c th{border:1px solid \${l.line};padding:5px 8px}
     .c hr{border:0;border-top:1.5px dashed \${l.line};margin:2em 0}
+    .ctl{position:fixed;top:14px;right:18px;display:flex;gap:6px;z-index:2}
+    .ctl button{all:unset;box-sizing:border-box;height:32px;min-width:32px;padding:0 10px;display:grid;place-items:center;border-radius:9px;background:\${l.paper};color:\${l.ink2};font:700 14px/1 -apple-system,system-ui,sans-serif;box-shadow:0 0 0 1px \${l.line},0 4px 12px rgba(0,0,0,\${l.dark ? .4 : .1});cursor:pointer}
+    .ctl button:hover{color:\${l.ink};box-shadow:0 0 0 1.5px \${l.tape},0 4px 12px rgba(0,0,0,\${l.dark ? .4 : .12})}
+    .ctl .lv{font-size:19px;font-weight:500;padding:0}
+    .ctl small{align-self:center;font:500 11px -apple-system,system-ui,sans-serif;color:\${l.ink2};opacity:.8;margin-right:2px}
     ::selection{background:color-mix(in srgb,\${l.tape} 30%,transparent)}
     @media (max-width:760px){.sheet{margin:16px;padding:34px 26px 40px}}\`;
   R.show = l => {
@@ -48,7 +53,12 @@ const PAGE = `(() => {
     }
     if (!R.host) {
       R.host = document.createElement('washi-reader'); const sr = R.host.attachShadow({ mode: 'open' }); R.sr = sr;
-      sr.innerHTML = '<div class="sheet" role="article"><i class="tape"></i><p class="site"></p><h1 class="t"></h1><p class="by"></p><div class="c"></div></div>';
+      sr.innerHTML = '<div class="ctl"><small>esc to leave</small><button class="aa" title="Text size and font">Aa</button><button class="lv" title="Leave Reader (esc)" aria-label="Leave Reader">×</button></div><div class="sheet" role="article"><i class="tape"></i><p class="site"></p><h1 class="t"></h1><p class="by"></p><div class="c"></div></div>';
+      /* Washi hears these (page-preload.js): the buttons, and Esc anywhere on the page */
+      const tell = n => document.dispatchEvent(new Event('washi-reader-' + n));
+      sr.querySelector('.aa').addEventListener('click', () => tell('look')); sr.querySelector('.lv').addEventListener('click', () => tell('leave'));
+      R.key = e => { if (e.key === 'Escape' && R.host && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); tell('leave'); } };
+      document.addEventListener('keydown', R.key, true);
       const a = R.art, q = s => sr.querySelector(s);
       q('.site').textContent = a.siteName || location.hostname.replace(/^www\\./, '');
       const site = (a.siteName || '').trim(); let title = (a.title || document.title || '').trim();
@@ -67,7 +77,7 @@ const PAGE = `(() => {
     R.look = l; const sheet = new CSSStyleSheet(); sheet.replaceSync(css(l)); R.sr.adoptedStyleSheets = [sheet];
     return { ok: true, title: R.art.title || '', words: R.art.length || 0 };
   };
-  R.hide = () => { if (R.host) { R.host.remove(); R.host = null; R.sr = null; document.documentElement.style.overflow = R.prevOverflow || ''; } return { ok: true }; };
+  R.hide = () => { if (R.key) { document.removeEventListener('keydown', R.key, true); R.key = null; } if (R.host) { R.host.remove(); R.host = null; R.sr = null; document.documentElement.style.overflow = R.prevOverflow || ''; } return { ok: true }; };
   R.on = () => !!R.host;
 })();`;
 

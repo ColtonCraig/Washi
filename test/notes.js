@@ -15,6 +15,8 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const stamp = () => ui.evaluate(() => { const e = document.getElementById('bNote'), r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, has: e.classList.contains('has') }; });
   const open = async () => { const s = await stamp(); ptr(`move ${X0 + s.x} ${Y0 + s.y}`); await sleep(80); ptr('down'); ptr('up'); await sleep(800); };
   ok(!(await stamp()).has, 'no note yet: the stamp is plain');
+  const off = await ui.evaluate(() => [...document.querySelectorAll('.topbar .stamp')].filter(e => e.getBoundingClientRect().width > 0).map(e => { const r = e.getBoundingClientRect(), i = e.querySelector('svg.i').getBoundingClientRect(); return { id: e.id, w: Math.round(r.width), h: Math.round(r.height), dx: Math.round(i.x + i.width / 2 - (r.x + r.width / 2)), dy: Math.round(i.y + i.height / 2 - (r.y + r.height / 2)) }; }).filter(x => x.w !== 28 || x.h !== 28 || Math.abs(x.dx) > 1 || Math.abs(x.dy) > 1));
+  ok(!off.length, 'every top-bar stamp (the note too) is 28×28 with its icon in the middle' + (off.length ? ': ' + JSON.stringify(off) : ''));
   await open();
   const n = await ov.evaluate(() => { const p = document.querySelector('.panel.on .pop.note'); return p && { head: p.querySelector('.nh').textContent, focus: document.activeElement && document.activeElement.id === 'ntx' }; });
   ok(n && n.head === 'Home' && n.focus, 'clicking the note stamp opens the Home space\'s sticky note, ready to type');
