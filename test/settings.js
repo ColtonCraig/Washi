@@ -32,7 +32,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const secs = await ov.evaluate(() => [...document.querySelectorAll('.sheet.set .sec')].map(s => s.id));
   ok(secs.includes('sec-toolbar') && secs.includes('sec-features'), 'Settings has Top bar and Features: ' + secs.map(s => s.slice(4)).join(' '));
   for (const [nm, p] of [['light', {}], ['dark', { mode: 'dark' }], ['dark Scrapbook', { wobble: true }], ['light Scrapbook', { mode: 'light' }]]) {
-    if (Object.keys(p).length) { await ui.evaluate(x => B.setupMsg({ type: 'prefs', patch: x }), p); await sleep(400); }
+    if (Object.keys(p).length) { await ui.evaluate(x => B.setupMsg({ type: 'prefs', patch: x }), p); await sleep(400); await openSet(); }   // (opened again, in that look)
     let bad = [];
     for (const id of secs) { await ov.evaluate(i => document.getElementById(i).scrollIntoView(), id); await sleep(120); const a = await ov.evaluate(AUDIT); if (a.length) bad.push(id + ': ' + a.slice(0, 2).join(' / ')); if (nm === 'light' || nm === 'dark Scrapbook') shot(`set-${nm.replace(/ /g, '-')}-${id.slice(4)}`); }
     ok(!bad.length, `${nm}: every section of Settings, nothing cut off` + (bad.length ? '\n      ' + bad.slice(0, 6).join('\n      ') : ''));
