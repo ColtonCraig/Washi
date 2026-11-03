@@ -351,7 +351,8 @@ function closeTab(id, o = {}) {
     commit(true); return;
   }
   const t = S.tabs[id], s = spaceOf(id);
-  if (!o.inFolder) S.closed.unshift({ url: t.url, title: t.title, space: s && s.id, at: Date.now() });
+  if (!o.inFolder) { const fo = s && s.folders.find(f => f.tabs.includes(id)), list = fo ? fo.tabs : (s ? s.tabs : []);
+    S.closed.unshift({ url: t.url, title: t.title, name: t.name, space: s && s.id, folder: fo ? fo.id : null, pos: list.indexOf(id), at: Date.now() }); }   // so ⇧⌘T puts it back where it was
   const next = partner || fallbackFor(id);
   const finish = () => {
     dissolve(id); dropFromLists(id); delete S.tabs[id]; B.tabClose(id); delete R.live[id];
@@ -375,7 +376,11 @@ async function reopenClosed() {
     B.fx({ type: 'toast', text: `Brought back “${f.name}” (${f.tabs.length} tab${f.tabs.length === 1 ? '' : 's'})`, short: true });
     return;
   }
-  openTab(c.url);
+  const was = new Set(Object.keys(S.tabs)); openTab(c.url, { here: true });
+  const id = Object.keys(S.tabs).find(k => !was.has(k)), s = sp(); if (!id) return;
+  if (c.name) S.tabs[id].name = c.name;
+  const fo = c.folder && s.folders.find(f => f.id === c.folder);           // back into its folder, at its place
+  if (fo || Number.isInteger(c.pos)) { dropFromLists(id); const list = fo ? fo.tabs : s.tabs; list.splice(Math.max(0, Math.min(list.length, c.pos >= 0 ? c.pos : 0)), 0, id); if (fo) fo.open = true; render(); save(); }
 }
 
 /* ---------- spaces ---------- */
@@ -852,6 +857,13 @@ B.onOverlayResult(r => {
 B.onOverlayCancel(() => { R.promptCb = null; R.intoFolder = null; R.bmSheet = false; });
 
 /* ---------- native menus, requested from the sidebar ---------- */
+/* the loose tabs next to this one (in its folder, or in the space's list): what "Close Other Tabs" and "Close Tabs Below" act on */
+function siblingsOf(id) { const s = spaceOf(id) || sp(), fo = s.folders.find(f => f.tabs.includes(id)); return (fo ? fo.tabs : s.tabs).filter(k => !k.startsWith('f:') && S.tabs[k] && !pairOf(k)); }
+function closeMany(ids, what) {
+  if (!ids.length) return;
+  for (const k of ids) closeTab(k);
+  B.fx({ type: 'toast', text: `Closed ${ids.length} ${what}`, action: { label: 'Undo', cmd: 'closed:undo:' + ids.length } });
+}
 function tabMenu(id) { R.menuTab = id; B.popupMenu(tabMenuItems(id)); }
 function tabMenuItems(id) {
   const pinned = S.pins.includes(id), s = spaceOf(id) || sp(), items = [{ label: pinned ? 'Unpin' : 'Pin', id: 'pin' }, { label: 'Rename…', id: 'rename' }, ...(S.tabs[id] && S.tabs[id].name ? [{ label: 'Use the Page\'s Title', id: 'unname' }] : []), { label: 'Duplicate', id: 'dup' }, { label: 'Copy Address', id: 'copy' }, { type: 'separator' }];
@@ -868,7 +880,9 @@ function tabMenuItems(id) {
       { label: (S.prefs.muteSites || []).includes(host) ? `Unmute ${host}` : `Mute ${host}`, id: 'mutesite' });
   }
   if (pairOf(id)) items.push({ type: 'separator' }, { label: 'Separate Split', id: 'sep' });
+  const sib = siblingsOf(id), below = sib.slice(sib.indexOf(id) + 1);
   items.push({ type: 'separator' }, { label: pinned ? 'Unload' : 'Close', id: 'close' });
+  if (!pinned) items.push({ label: 'Close Other Tabs', id: 'closeothers', enabled: sib.length > 1 }, { label: 'Close Tabs Below', id: 'closebelow', enabled: below.length > 0 });
   return items;
 }
 function spaceMenu(id) {
@@ -883,6 +897,8 @@ function menuClick(id) {
   if (id.startsWith('tb:') && TOOLBAR.menu(id)) return;
   const t = R.menuTab, s = R.menuSpace;
   if (id === 'pin') pinToggle(t);
+  else if (id === 'closeothers') closeMany(siblingsOf(t).filter(k => k !== t), 'other tabs');
+  else if (id === 'closebelow') { const sib = siblingsOf(t); closeMany(sib.slice(sib.indexOf(t) + 1), 'tabs below'); }
   else if (id === 'sep') separate(t);
   else if (id.startsWith('fm:')) { const fid = R.menuFolder, f = sp().folders.find(x => x.id === fid); if (!f) return; const k = id.slice(3);
     if (k === 'new') { R.intoFolder = fid; openCmd('new'); } else if (k === 'toggle') { f.open = !f.open; render(); save(); }
@@ -971,6 +987,7 @@ const cycle = d => { const list = [...S.pins, ...spaceTabs(sp())]; if (!list.len
 B.onCmd(n => {
   if (!S) return;
   if (typeof n === 'string' && n.startsWith('tb:') && TOOLBAR.cmd(n)) return;
+  if (typeof n === 'string' && n.startsWith('closed:undo:')) { const k = Math.min(50, +n.slice(12) || 0); (async () => { for (let i = 0; i < k; i++) await reopenClosed(); })(); return; }
   if (n === 'boost:undo') { B.setupAct({ type: 'boost:undoLast' }); return; }
   if (n === 'switch:next' || n === 'switch:prev') return switcher(n === 'switch:next' ? 1 : -1);
   if (n === 'switch:commit') return switchEnd(); if (n === 'switch:cancel') return switchEnd(null);

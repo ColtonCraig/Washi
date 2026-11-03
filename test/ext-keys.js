@@ -23,6 +23,7 @@ const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
 
   // a second window, which now has focus
   K('down:Control_L tap:n up:Control_L'); await sleep(3000);
+  if (!shells().find(p => p !== w1)) { console.log('  NOTE the first ⌘N was lost by the virtual keyboard (happens on CI now and then): pressed again'); K('down:Control_L tap:n up:Control_L'); await sleep(3000); }
   const w2 = shells().find(p => p !== w1); ok(!!w2, 'a second window');
   await w2.evaluate(() => openTab('http://localhost:8765/p2.html')); await sleep(1800);
   const wid2 = await w2.evaluate(() => window.WID);
