@@ -615,7 +615,8 @@ const PERM_WORDS = { tabs: 'see your open tabs', history: 'read your browsing hi
 let extMenuT = 0;
 exts.bind({
   createTab: (d, ses) => new Promise(res => {
-    useMain(); const url = typeof d.url === 'string' && d.url ? d.url : 'about:blank';
+    useMain(); { const pp = exts.popupNow(), wid = d && typeof d.windowId === 'number' ? d.windowId : null; const c = [...W.values()].find(x => alive(x.win) && ((wid != null && wid >= 0 && x.win.id === wid) || (wid == null && pp && pp.parent === x.win))); if (c) C = c; }   // in the window the extension asked for, or the one its popup is in
+    const url = typeof d.url === 'string' && d.url ? d.url : 'about:blank';
     const fn = t => { clearTimeout(tm); res([t.wc, C.win]); };
     const tm = setTimeout(() => { const i = tabWaiters.indexOf(fn); if (i > -1) tabWaiters.splice(i, 1); res(null); }, 4000);
     tabWaiters.push(fn); toUI('tab:openRequest', { url, bg: d.active === false }); void ses;
@@ -946,6 +947,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
+  if (a.type === 'test:focus' && !app.isPackaged) { C.win.focus(); return { focused: BrowserWindow.getFocusedWindow() === C.win }; }
   if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
   if (a.type === 'test:block' && !app.isPackaged) { let r = null; const hit = blocker.onRequest({ url: String(a.url), resourceType: 'xhr', referrer: String(a.page), webContentsId: null }, x => { r = x; }); return { blocked: !!(hit && r && (r.cancel || r.redirectURL)) }; }   // tests: would this request be blocked on that page?
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
@@ -1104,7 +1106,7 @@ function buildMenu() {
   const taken = new Set(keys.ACTIONS.map(a => keys.keyFor(a.id, P.keys)).filter(Boolean).map(norm));
   const ecmds = exts.commands().filter(c => { const n = norm(c.accel); if (taken.has(n)) return false; taken.add(n); return true; });
   exts.noteShortcuts(ecmds);
-  const extItems = ecmds.map(c => ({ label: c.label, accelerator: c.accel, click: () => { const at = alive(C && C.win) ? activeTab() : null; if (c.action) toUI('ext:open', c.id); else exts.runCommand(c.id, c.name, at && at.wc); } }));
+  const extItems = ecmds.map(c => ({ label: c.label, accelerator: c.accel, click: () => { const fw = BrowserWindow.getFocusedWindow(), fc = fw && [...W.values()].find(x => x.win === fw); if (fc) C = fc; else useMain(); const at = alive(C && C.win) ? activeTab() : null; if (c.action) toUI('ext:open', c.id); else exts.runCommand(c.id, c.name, at && at.wc); } }));
   const tpl = [
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { label: `Quit ${app.name}`, accelerator: 'CmdOrCtrl+Q', click: (_, __, ev) => askQuit(ev) }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },

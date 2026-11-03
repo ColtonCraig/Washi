@@ -5,6 +5,14 @@
    your own shortcuts); try: an action to run from the sheet. */
 window.WHATSNEW = [
   {
+    v: '1.0.1',
+    lead: 'Extensions behave with more than one window, and their shortcuts work.',
+    items: [
+      { icon: 'p:tools', title: 'Popups stay in your window', text: 'With two windows open, an extension\'s popup opens in the window you clicked it in (it could jump to the other one, even on another desktop). Tabs it opens land there too.' },
+      { icon: 'i:bolt', title: 'Extension shortcuts', text: 'The shortcut an extension comes with works, like ⇧⌘O for Okta\'s plugin. They\'re listed under View › Extension Shortcuts. One that would take a Washi shortcut is left out.' }
+    ]
+  },
+  {
     v: '1.0.0',
     lead: 'Washi 1.0: your extensions work, and lots of little things got fixed.',
     items: [

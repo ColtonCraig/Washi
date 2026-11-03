@@ -1,7 +1,7 @@
 {
   "name": "washi",
   "productName": "Washi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Washi: a paper-collage browser for macOS with a vertical sidebar, spaces and split view. Built on Chromium.",
   "main": "main.js",
   "scripts": {

@@ -381,7 +381,7 @@
 .nw .nwv{display:flex;align-items:baseline;gap:12px;margin:0 2px 12px;padding-bottom:6px;border-bottom:1px dashed rgb(var(--inkc) / .2)}
 .nw .nwv span{font:700 24px/1.1 var(--font-hand);color:var(--ink)}
 .nw .nwv small{min-width:0;font:500 13px var(--font-ui);color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nw .nwc{position:relative;display:flex;gap:13px;min-width:0;padding:14px 16px 14px 14px;border-radius:12px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .06),var(--cut-sm);animation:nwin .42s var(--spring,cubic-bezier(.3,1.4,.5,1)) both;animation-delay:calc(var(--i,0) * 55ms + 120ms)}
+.nw .nwc{position:relative;display:flex;gap:13px;min-width:0;padding:14px 16px 14px 14px;border-radius:12px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .06),var(--cut-sm);animation:nwin .42s var(--spring,cubic-bezier(.3,1.4,.5,1)) both;animation-delay:calc(min(var(--i,0), 8) * 55ms + 120ms)}   /* the first few drop in one after another; the rest come with them (nobody waits for card 20) */
 @keyframes nwin{from{opacity:0;transform:translateY(12px) rotate(calc((var(--i,0) - 1.5) * .6deg))}}
 .nw .nic{flex:none;width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--tape) 15%,var(--paper));color:var(--tape)}
 .nw .nic svg{width:22px;height:22px}

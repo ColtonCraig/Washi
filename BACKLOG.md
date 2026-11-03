@@ -44,6 +44,10 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.0.1)
+- Extension popups open in the window whose button you clicked; the toolbar acts on that window's own tab, and the popup's window is the current one for chrome.tabs.create / windows.getCurrent (with two windows, the popup jumped to the one focused last, across Mac desktops). test/ext-keys.js
+- Extensions' own shortcuts from their manifest (Okta: ⇧⌘O) on View › Extension Shortcuts: _execute_action opens the popup in the window you're in, others reach chrome.commands.onCommand; ones that clash with a Washi shortcut are skipped; chrome.commands.getAll shows them
+
 ## Done and tested (1.0)
 - Chrome extensions, checked with the real ones on GitHub's Mac (Okta, 1Password, uBlock Origin Lite, Bitwarden, Dark Reader, Grammarly):
   - `browser.*` is `chrome.*`. The engine's own `browser` namespace lacked windows/commands/cookies…, and 1Password and uBlock Origin Lite fell over at start (blank popups).

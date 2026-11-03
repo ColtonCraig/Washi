@@ -31,6 +31,10 @@ const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
   await w1.evaluate(id => document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`).click(), id);
   let p = await waitPopup(true);
   ok(p.open && p.wid === wid1, `the first window's button opens the popup in the first window (${p.wid}, not ${wid2})`);
+  { let pp = null; for (let i = 0; i < 30 && !pp; i++) { pp = b.pages().find(x => x.url().includes(id + '/popup.html')); if (!pp) await sleep(150); }
+    const n1 = await w1.evaluate(() => Object.keys(S.tabs).length), n2 = await w2.evaluate(() => Object.keys(S.tabs).length);
+    if (pp) await pp.evaluate(() => document.getElementById('open').click()).catch(() => {}); await sleep(2000);
+    ok(await w1.evaluate(n => Object.keys(S.tabs).length === n + 1 && Object.values(S.tabs).some(t => /fromext=1/.test(t.url)), n1) && await w2.evaluate(n => Object.keys(S.tabs).length === n, n2), 'a tab the popup opens lands in that same window: ' + JSON.stringify([n1, n2, await w1.evaluate(() => Object.values(S.tabs).map(t => t.url)), await w2.evaluate(() => Object.values(S.tabs).map(t => t.url)), !!pp])); }
   await closePopup();
   await w2.evaluate(id => document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`).click(), id);
   p = await waitPopup(true);
@@ -42,6 +46,7 @@ const SB = process.platform === 'darwin' || process.env.WASHI_SANDBOX === '1';
   const cmds = await w1.evaluate(() => B.setupAct({ type: 'test:extcmds' }));
   ok(cmds.some(c => c.name === '_execute_action' && /Shift\+Y$/.test(c.accel)) && cmds.some(c => c.name === 'say-hi'), 'its shortcuts are on the menu (View › Extension Shortcuts): ' + cmds.map(c => c.label + ' ' + c.accel).join(', '));
   const L2 = await w2.evaluate(() => layout().stage); ptr(`move ${60 + L2.x + 300} ${57 + L2.y + 300}`); ptr('down'); ptr('up'); await sleep(500);
+  const fz = await w2.evaluate(() => B.setupAct({ type: 'test:focus' })); if (!fz.focused) console.log('  NOTE the virtual screen has no window manager, so Washi asked for the second window to be focused');
   K('down:Control_L down:Shift_L tap:y up:Shift_L up:Control_L');
   p = await waitPopup(true);
   ok(p.open && p.wid === wid2, `its shortcut opens its popup, in the window you're in (${p.wid})`);
