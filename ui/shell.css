@@ -88,3 +88,11 @@ body.bm-always .bmbar{display:flex}
 /* hover mode for the bookmarks bar: the bottom edge of the top bar listens for the pointer (not a drag area) */
 .bmedge{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:3;-webkit-app-region:no-drag}
 .stamp.read[hidden]{display:none}
+
+/* Focus mode: the top bar slides away; pointing at the top edge brings it back over the moved-down page */
+body.focus .topbar{transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .16s}
+body.focus.peek .topbar{transform:none;opacity:1;pointer-events:auto}
+body.focus .bmbar{display:none!important}
+body.focus .topbar .lights{visibility:hidden}
+body.focus.peek .topbar .lights{visibility:visible}
+html.motion-off body.focus .topbar{transition:none}

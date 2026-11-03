@@ -333,13 +333,14 @@ ON('menu:popup', (_, tpl, pos) => {
    The C.sidebar page itself reports pointer enter/leave (no polling). */
 const sbW = () => Math.max(200, Math.min(380, Math.round(C.sbW || SB_W)));   // you can drag the docked sidebar wider or narrower
 const sbFW = () => sbW() + SB_PAD;
+const sbTop = () => C.focus ? 0 : TOP;                  // Focus mode: no top bar, the floating sidebar runs the full height
 function sbBounds() {
-  const [, h] = C.win.getContentSize(), H = Math.max(0, h - TOP);
-  if (C.sbDocked) return { x: 0, y: TOP, width: sbW(), height: H };
-  return { x: C.sbShown || C.sbClosing ? 0 : EDGE - sbFW(), y: TOP, width: sbFW(), height: H };
+  const T = sbTop(), [, h] = C.win.getContentSize(), H = Math.max(0, h - T);
+  if (C.sbDocked) return { x: 0, y: T, width: sbW(), height: H };
+  return { x: C.sbShown || C.sbClosing ? 0 : EDGE - sbFW(), y: T, width: sbFW(), height: H };
 }
 function applySidebar() { if (!alive(C && C.win) || !C.sidebar) return; C.sidebar.setBounds(sbBounds()); C.sidebar.setVisible(true); }
-function sbMode() { toSide('sb:mode', { docked: C.sbDocked, open: C.sbDocked || C.sbShown }); toUI('cmd', C.sbShown ? 'edge:off' : 'edge:on'); }
+function sbMode() { toSide('sb:mode', { docked: C.sbDocked, open: C.sbDocked || C.sbShown, top: sbTop() }); toUI('cmd', C.sbShown ? 'edge:off' : 'edge:on'); }
 function showSb() {
   clearTimeout(C.sbHideT); if (C.sbShown) return;
   C.sbShown = true; clearTimeout(C.sbClosing); C.sbClosing = null; applySidebar(); sbMode();
@@ -351,7 +352,7 @@ function hideSb() {
 function pointerInSb() {
   if (!alive(C && C.win)) return false;
   const p = screen.getCursorScreenPoint(), b = C.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y;
-  return x >= -2 && x < sbFW() && y >= TOP - 4 && y < b.height + 2;
+  return x >= -2 && x < sbFW() && y >= sbTop() - 4 && y < b.height + 2;
 }
 function sbLeaveSoon(ms = 200) { clearTimeout(C.sbHideT); C.sbHideT = later(() => { if (!C.dragging && !C.menuOpen && !pointerInSb()) hideSb(); }, ms); }
 ON('sb:hover', (_, inside) => {
@@ -363,6 +364,23 @@ HANDLE('side:set', (_, m) => {
   if (Number.isFinite(m.w)) C.sbW = m.w;
   if (m.resize) { applySidebar(); return true; }                     // just the width, while you drag its edge
   C.sbDocked = !!m.docked; C.sbShown = false; applySidebar(); sbMode(); return true;
+});
+/* ---------- Focus mode: the page gets the whole window. Pointing at the top edge brings the top bar back (the page
+   moves down for it); moving away puts it away again. The traffic lights hide with the top bar. ---------- */
+function focusLights(c) { if (process.platform === 'darwin' && alive(c.win)) try { c.win.setWindowButtonVisibility(!c.focus || !!c.focusPeek); } catch {} }
+ON('focus:set', (_, d) => {
+  const c = C; c.focus = !!(d && d.on); c.focusPeek = false; clearInterval(c.focusPoll); c.focusPoll = null;
+  focusLights(c); applySidebar(); sbMode();
+  if (!c.focus) return;
+  let away = 0;
+  c.focusPoll = setInterval(() => {
+    if (!c.focus || !alive(c.win)) { clearInterval(c.focusPoll); return; }
+    if (!c.win.isFocused() || c.overlayOpen || c.menuOpen || c.dragging) { away = 0; return; }
+    const p = screen.getCursorScreenPoint(), b = c.win.getContentBounds(), x = p.x - b.x, y = p.y - b.y, inside = x >= 0 && x < b.width;
+    if (!c.focusPeek) { if (inside && y >= -1 && y <= 5) { c.focusPeek = true; away = 0; focusLights(c); C = c; toUI('focus:peek', true); } return; }
+    if (inside && y >= -6 && y < TOP + 14) { away = 0; return; }
+    if ((away += 120) >= 360) { c.focusPeek = false; focusLights(c); C = c; toUI('focus:peek', false); }
+  }, 120);
 });
 ON('sb:state', (_, s) => { C.lastLook = { theme: s.theme, pal: s.pal }; toSide('sb:state', s); });
 ON('sb:fx', (_, f) => toSide('sb:fx', f));
@@ -968,7 +986,7 @@ function createWindow(wid, o = {}) {
   c.win.on('moved', keepBounds); c.win.on('resized', keepBounds);
   c.win.on('close', keepBounds);
   c.win.on('closed', () => {
-    clearInterval(c.pollA); clearInterval(c.pollB);
+    clearInterval(c.pollA); clearInterval(c.pollB); clearInterval(c.focusPoll);
     for (const t of c.tabs.values()) try { if (!t.wc.isDestroyed()) t.wc.close(); } catch {}
     c.win = null; c.overlay = null; c.sidebar = null; c.tabs.clear(); c.peek = null; W.delete(wid); known.delete(wid);
     if (lastMain === c) lastMain = [...W.values()].find(x => alive(x.win)) || null;
@@ -1037,7 +1055,7 @@ function buildMenu() {
     { label: app.name, submenu: [{ role: 'about' }, { label: 'Check for Updates…', click: () => toUI('cmd', 'settings:updates') }, { type: 'separator' }, item('settings'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { label: 'Start Fresh…', click: startFresh }, { type: 'separator' }, { label: `Quit ${app.name}`, accelerator: 'CmdOrCtrl+Q', click: (_, __, ev) => askQuit(ev) }] },
     { label: 'File', submenu: [...['newtab', 'newwindow', 'scrap', 'scrapadopt', 'location', 'newspace', 'newfolder'].map(item), { type: 'separator' }, item('closewindow'), { type: 'separator' }, ...['close', 'reopen', 'pin'].map(item), { type: 'separator' }, item('print')] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, { type: 'separator' }, ...['find', 'findnext', 'findprev'].map(item), { type: 'separator' }, item('copyurl')] },
-    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
+    { label: 'View', submenu: [item('today'), item('reader'), item('notes'), item('focus'), { type: 'separator' }, ...['sidebar', 'split'].map(item), { type: 'separator' }, ...['reload', 'hardreload'].map(item), { type: 'separator' }, ...['zoomin', 'zoomout', 'zoomreset'].map(item), { type: 'separator' }, ...['mute', 'pip'].map(item), { type: 'separator' }, item('devtools'), { role: 'togglefullscreen' }] },
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },

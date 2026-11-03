@@ -4,7 +4,7 @@ const { esc, ic, favHTML, rot, PAL, palOf, applyTheme } = window.BL;
 BL.setup();
 const $ = (s, r = document) => r.querySelector(s);
 const body = document.body, sheet = $('#sheet'), tabsEl = $('#tabs'), pinsEl = $('#pins'), spacesEl = $('#spaces'), sname = $('#sname');
-const SB_W = 232, TOP = 38;
+const SB_W = 232; let TOP = 38;              // where this view starts in the window (0 in Focus mode)
 let ST = null, pending = null, dragging = false, hold = false, justDragged = false, swapping = true, slapId = null;
 setTimeout(() => { swapping = false; }, 900);
 let peekT;
@@ -127,6 +127,7 @@ function apply(s) {
 }
 B.onSbState(s => { if (dragging || hold) pending = s; else apply(s); });
 B.onSbMode(m => {
+  if (Number.isFinite(m.top)) TOP = m.top;
   const modeChange = body.classList.contains('docked') !== !!m.docked;
   body.classList.toggle('docked', !!m.docked); body.classList.toggle('float', !m.docked);
   if (modeChange) { body.classList.add('still'); requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('still'))); }

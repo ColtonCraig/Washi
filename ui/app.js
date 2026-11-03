@@ -42,7 +42,7 @@ const save = () => { if (saveT) return; saveT = setTimeout(() => { saveT = 0; do
 const smallFav = f => (f && f.length > 2500 ? null : f || null);
 const META = x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated, note: x.note || '' });   // the space's sticky note travels with it to every window
 const doSave = () => {
-  const mine = { tabs: S.tabs, pins: S.pins, pairs: S.pairs, ratios: S.ratios || {}, cur: S.cur, dock: S.dock, spaces: Object.fromEntries(S.spaces.map(x => [x.id, { tabs: x.tabs, folders: x.folders, act: x.act || null }])) };
+  const mine = { tabs: S.tabs, pins: S.pins, pairs: S.pairs, ratios: S.ratios || {}, cur: S.cur, dock: S.dock, focus: !!S.focusMode, spaces: Object.fromEntries(S.spaces.map(x => [x.id, { tabs: x.tabs, folders: x.folders, act: x.act || null }])) };
   const shared = { prefs: S.prefs, spaces: S.spaces.map(META), closed: S.closed.slice(0, 25), archive: S.archive.slice(0, 300), bookmarks: S.bookmarks || [] };
   B.stateSave(JSON.stringify(mine), JSON.stringify(shared));
 };
@@ -130,10 +130,12 @@ const keyHint = id => fmtKey(R.keys[id] || '');
 const stage = $('#stage'), pa = $('#pa'), pb = $('#pb'), gutter = $('#gutter');
 const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bNote = $('#bNote'), bmbar = $('#bmbar');
 
+/* Focus mode floats the sidebar for a while without changing your choice to dock it */
+const docked = () => S.dock && !S.focusMode;
 /* Layout is plain math, shared by the card frames here and the page views in the main process. */
 function layout() {
   const W = innerWidth, H = innerHeight;
-  const x = S.dock ? sbW() + 4 : M + 4, y = TOP + (barAlways() ? BMH : 0), w = W - x - M, h = H - y - M;
+  const x = docked() ? sbW() + 4 : M + 4, y = S.focusMode ? (R.focusPeek ? TOP : M - 2) : TOP + (barAlways() ? BMH : 0), w = W - x - M, h = H - y - M;
   const L = { stage: { x, y, w, h }, split: R.split };
   if (R.split) { const room = w - GAP, r = Math.min(Math.max(R.ratio || .5, MIN_PANE / room), 1 - MIN_PANE / room), pa = Math.round(room * r); L.a = { x, y, w: pa, h }; L.b = { x: x + pa + GAP, y, w: room - pa, h }; L.gap = { x: x + pa, y, w: GAP, h }; }
   else { L.a = { x, y, w, h }; L.b = { x: x + w, y, w: 0, h }; }
@@ -198,7 +200,7 @@ function updateChrome() {
   const ld = !!(id && R.loading[id]);
   urlEl.classList.toggle('loading', ld);
   bReload.innerHTML = ic(ld ? 'close' : 'reload'); bReload.title = ld ? 'Stop loading' : 'Reload (⌘R)';
-  bSplit.classList.toggle('on', R.split); bSide.classList.toggle('on', S.dock); $('#edge').hidden = S.dock;
+  bSplit.classList.toggle('on', R.split); bSide.classList.toggle('on', S.dock); $('#edge').hidden = docked();
   pa.classList.toggle('has', !!R.a); pb.classList.toggle('has', !!(R.split && R.b));
   pa.classList.toggle('focus', R.focus === 'a'); pb.classList.toggle('focus', R.focus === 'b');
   $('#emptyTitle').textContent = `Nothing taped up in ${sp().name}`;
@@ -282,7 +284,7 @@ function closeTab(id, o = {}) {
     if (shown) { R.split = false; R.b = null; R.a = null; R.focus = 'a'; if (next && S.tabs[next]) showTab(next); placePanes(); }   // the other half takes the whole window
     commit(true); save();
   };
-  if (o.noFx || !S.dock) return finish();
+  if (o.noFx || !docked()) return finish();
   B.sbFx({ type: 'close', id }); setTimeout(finish, 280);
 }
 function reopenClosed() { const c = S.closed.shift(); if (!c) return; if (c.space && S.spaces.some(x => x.id === c.space) && c.space !== S.cur) switchSpace(c.space, { quiet: true }); openTab(c.url); }
@@ -338,9 +340,20 @@ function separate(id) {
   dissolve(id); if (keep) { unsplit(keep); placePanes(); commit(true); } else render(); save();
 }
 function toggleSide() {
+  if (S.focusMode) { S.dock = true; return focusMode(false); }        // docking the sidebar is a way out of Focus mode
   S.dock = !S.dock; B.sbMode({ docked: S.dock, w: sbW() });
   placePanes(); commit(false, true, true); save();
 }
+/* ---------- Focus mode (⌥⌘F): the page gets the whole window; point at the top for the top bar ---------- */
+function focusMode(on = !S.focusMode, quiet) {
+  if (!!S.focusMode === !!on && !quiet) return;
+  S.focusMode = !!on; R.focusPeek = false;
+  document.body.classList.toggle('focus', S.focusMode); document.body.classList.remove('peek');
+  B.focusSet({ on: S.focusMode }); B.sbMode({ docked: docked(), w: sbW() });
+  placePanes(); commit(false, !quiet, true); updateChrome(); save();
+  if (!quiet && S.focusMode) B.fx({ type: 'toast', text: `Focus mode: point at the top for the bar · ${keyHint('focus') || '⌥⌘F'} to leave`, short: true });
+}
+B.onFocusPeek(p => { if (!S || !S.focusMode) return; R.focusPeek = !!p; document.body.classList.toggle('peek', R.focusPeek); placePanes(); commit(false, true, true); });
 
 /* ---------- pin, move, folders ---------- */
 function pinToggle(id) {
@@ -431,7 +444,7 @@ function folderMenu(fid) {
 /* a sidebar folder's emoji and color, picked in a small paper card next to it; changes show as you pick */
 function folderLook(fid, at) {
   const f = sp().folders.find(x => x.id === fid); if (!f || f.live) return;
-  const x = at && Number.isFinite(at.x) ? Math.round(at.x) : (S.dock ? 16 : 24), y = at && Number.isFinite(at.y) ? Math.round(at.y + TOP) : TOP + 120;
+  const x = at && Number.isFinite(at.x) ? Math.round(at.x) : (docked() ? 16 : 24), y = at && Number.isFinite(at.y) ? Math.round(at.y + TOP) : TOP + 120;
   const h = 372, top = Math.min(y, innerHeight - h - 8);
   B.panel('flook', { x: Math.max(4, x - 6), y: Math.max(TOP, top), w: 300, h }, { id: fid, name: f.name, icon: f.icon || null, color: f.color || null, ...look() });
 }
@@ -523,7 +536,7 @@ function openCmd(mode) {
   const A = (id, label, key) => ({ id, label, hint: keyHint(key || id) });
   const actions = [
     A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen closed tab'),
-    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('notes', 'Sticky note for this space'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
+    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('focus', 'Focus mode (hide the top bar and sidebar)'), A('notes', 'Sticky note for this space'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
     A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('today', 'Show Today'), A('apps', 'Add apps to sign in to', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
@@ -537,7 +550,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), notes: openNote, tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), focus: () => focusMode(), notes: openNote, tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -785,12 +798,12 @@ B.onIntent(m => {
     case 'tidy': tidy(S.cur); break;
     case 'tabpeek': { const t = m.id && S.tabs[m.id]; if (!t || S.prefs.tabPeek === false || m.id === focusedId()) { B.tabPeek(null); break; } B.tabPeek({ id: m.id, y: (+m.y || 0) + TOP, h: +m.h || 36, title: label(t), url: t.url, fav: t.fav || null, live: !!R.live[m.id], ...look() }); break; }
     case 'rename': if (S.tabs[m.id]) { R.menuTab = m.id; menuClick('rename'); } break;
-    case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: S.dock, w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
+    case 'sbw': { const w = Math.max(200, Math.min(380, Math.round(+m.w || SB_W))); if (w !== S.prefs.sbW) { S.prefs.sbW = w; B.sbMode({ docked: docked(), w, resize: true }); stage.classList.add('instant'); placePanes(); commit(false, false, true); clearTimeout(rzT); rzT = setTimeout(() => stage.classList.remove('instant'), 150); } if (m.done) { save(); syncMain(); } break; }
     case 'folderLook': folderLook(m.id, m); break;
     case 'pinOrder': { const ids = Array.isArray(m.ids) ? m.ids.filter(id => S.pins.includes(id)) : []; if (ids.length === S.pins.length && new Set(ids).size === ids.length) { S.pins = ids; render(); save(); } break; }
   }
 });
-B.onSbReady(() => { if (!S) return; B.sbMode({ docked: S.dock, w: sbW() }); pushState(); });   // before boot finishes, boot pushes the first state itself
+B.onSbReady(() => { if (!S) return; B.sbMode({ docked: docked(), w: sbW() }); pushState(); });   // before boot finishes, boot pushes the first state itself
 /* ---------- Ctrl-Tab: recent tabs as a row of cards. A quick tap flips back to the last tab without showing anything. ---------- */
 let SW = null;
 function switcher(d) {
@@ -823,7 +836,7 @@ B.onCmd(n => {
   if (n.startsWith('switch:pick:')) return switchEnd(+n.slice(12));
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
-  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes'].includes(n)) return runAction(n);
+  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes', 'focus'].includes(n)) return runAction(n);
   if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
@@ -899,7 +912,7 @@ const topbar = $('.topbar'); let hoverT = 0;
 /* On hover: rest the pointer on an empty part of the top bar (not the address or a button), or touch its bottom edge
    just above the page. Passing through on the way to the menu bar or a button doesn't open it. */
 let barAt = null;
-const showBar = () => B.bmHover({ items: light(), favs: bmFavs(), ...look() });
+const showBar = () => { if (!S.focusMode) B.bmHover({ items: light(), favs: bmFavs(), ...look() }); };
 topbar.addEventListener('pointermove', e => {
   if (!S || barMode() !== 'hover' || !S.bookmarks.length || window.__macDrag) return;   // (tests: on a Mac the drag area sends nothing)
   const edge = e.clientY >= TOP - 6, calm = !e.target.closest('#url,button,input,a');
@@ -1251,7 +1264,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   const sh = J(raw.shared), mine = J(raw.win) || {}, legacy = J(raw.legacy);
   let start;
   if (sh && Array.isArray(sh.spaces) && sh.spaces.length) {
-    start = { tabs: mine.tabs || {}, pins: mine.pins || [], pairs: mine.pairs || [], ratios: mine.ratios || {}, cur: mine.cur || sh.spaces[0].id, dock: mine.dock, prefs: sh.prefs, closed: sh.closed || [], archive: sh.archive || [], bookmarks: sh.bookmarks || [],
+    start = { tabs: mine.tabs || {}, pins: mine.pins || [], pairs: mine.pairs || [], ratios: mine.ratios || {}, cur: mine.cur || sh.spaces[0].id, dock: mine.dock, focusMode: !!mine.focus, prefs: sh.prefs, closed: sh.closed || [], archive: sh.archive || [], bookmarks: sh.bookmarks || [],
       spaces: sh.spaces.map(m => ({ ...m, ...((mine.spaces || {})[m.id] || { tabs: [], folders: [], act: null }) })) };
   } else start = legacy || fresh();                     // first launch, or an older profile (one window, everything in state.json)
   try { S = sanitize(start); } catch { S = fresh(); }
@@ -1262,7 +1275,8 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   if (!(Array.isArray(H) && H.length) && S.history.length) B.histOp({ t: 'set', list: S.history });
   if (!sh) save();                                      // write the new split files right away
   theme(); syncMain();
-  await B.sbMode({ docked: S.dock, w: sbW() });
+  if (S.focusMode) { document.body.classList.add('focus'); B.focusSet({ on: true }); }
+  await B.sbMode({ docked: docked(), w: sbW() });
   stage.classList.add('instant'); placePanes();
   const s = sp(), list = spaceTabs(s);
   const want = (s.act && list.includes(s.act) ? s.act : list[0]) || null;
