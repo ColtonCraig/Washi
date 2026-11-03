@@ -40,6 +40,20 @@ window.PANELS = (() => {
     if (sw) sw.onclick = async () => { const block = !sw.classList.contains('on'); sw.classList.toggle('on', block); await B.setupAct({ type: 'blocking:site', host: d.host, block }); setTimeout(() => B.overlayCancel(), 350); };
     document.getElementById('toset').onclick = () => B.overlayResult({ kind: 'cmd', cmd: 'settings:privacy' });
   }
+  /* ---------- a sticky note for the space ---------- */
+  function notes() {
+    panel.innerHTML = `<div class="pop note" role="dialog" aria-label="Sticky note"><i class="tp"></i>
+      <h5 class="nh">${esc(data.name || 'Notes')}</h5>
+      <textarea id="ntx" spellcheck="true" placeholder="Jot something down: it stays with this space." aria-label="Note for ${esc(data.name || 'this space')}"></textarea>
+      <div class="nf"><span id="nsv"></span><span class="fill"></span><small>${(data.text || '').length ? '' : ''}</small></div></div>`;
+    const t = panel.querySelector('#ntx'), sv = panel.querySelector('#nsv'); let tm = 0;
+    t.value = data.text || '';
+    const put = () => { clearTimeout(tm); B.setupMsg({ type: 'note', text: t.value }); sv.textContent = 'Saved'; sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 900); };
+    t.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(put, 350); });
+    t.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); put(); B.overlayCancel(); } e.stopPropagation(); });
+    t.addEventListener('blur', () => { if (tm) put(); });
+    setTimeout(() => { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 30);
+  }
   /* ---------- Reader: text size and font ---------- */
   function readerp() {
     let size = +data.size || 19, face = data.face === 'sans' ? 'sans' : 'serif';
@@ -118,13 +132,14 @@ window.PANELS = (() => {
   }
   addEventListener('blur', () => {
     if (kind === 'flook') { const g = panel.querySelector('.emos'); if (g && Date.now() - (+g.dataset.picking || 0) < 120000) return; }   // the Mac emoji picker took focus: stay open
-    if (kind === 'shield' || kind === 'boost' || kind === 'flook' || kind === 'reader') { kind = null; panel.classList.remove('on'); B.overlayCancel(); }
+    if (kind === 'notes') { const t = panel.querySelector('#ntx'); if (t) B.setupMsg({ type: 'note', text: t.value }); }
+    if (kind === 'shield' || kind === 'boost' || kind === 'flook' || kind === 'reader' || kind === 'notes') { kind = null; panel.classList.remove('on'); B.overlayCancel(); }
   });
 
   function open(d) {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
-    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp();
+    if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp(); else if (kind === 'notes') notes();
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

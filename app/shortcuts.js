@@ -22,6 +22,7 @@ const ACTIONS = [
   ['copyurl', 'Copy Page Address', 'edit', 'CmdOrCtrl+Shift+C'],
   ['today', 'Today', 'view', 'CmdOrCtrl+Shift+H'],
   ['reader', 'Reader Mode', 'view', 'CmdOrCtrl+Alt+R'],
+  ['notes', 'Sticky Note', 'view', 'CmdOrCtrl+Shift+K'],
   ['sidebar', 'Pin or Float Sidebar', 'view', 'CmdOrCtrl+S'],
   ['split', 'Split View', 'view', 'CmdOrCtrl+\\'],
   ['reload', 'Reload', 'view', 'CmdOrCtrl+R'],

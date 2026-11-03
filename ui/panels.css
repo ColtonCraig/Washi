@@ -120,3 +120,14 @@
 .readp .rseg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:10px;background:rgb(var(--inkc) / .06)}
 .readp .rseg button{height:30px;border-radius:8px;font:600 13px var(--font-ui);color:var(--ink2)}
 .readp .rseg button.on{background:var(--white);color:var(--ink);box-shadow:0 1px 2px rgb(var(--sh) / .14)}
+
+/* the space's sticky note: lined paper tinted with the space's colour */
+.pop.note{gap:6px;padding:14px 14px 10px;background:color-mix(in srgb,var(--tape) 14%,var(--white));border-radius:4px 4px 10px 4px}
+.pop.note .nh{margin:0;font:700 24px/1.1 var(--font-hand);color:var(--ink)}
+.pop.note textarea{flex:1;min-height:0;resize:none;border:0;outline:0;padding:2px 2px 0;background:repeating-linear-gradient(to bottom,transparent 0 25px,color-mix(in srgb,var(--tape) 30%,transparent) 25px 26px);background-attachment:local;color:var(--ink);font:500 14px/26px var(--font-ui)}
+.pop.note textarea::placeholder{color:var(--ink3)}
+.pop.note .nf{display:flex;align-items:center;height:16px}
+.pop.note #nsv{font:600 11px var(--font-ui);color:var(--ink3);opacity:0;transition:opacity .2s}
+.pop.note #nsv.on{opacity:1}
+html.scrapbook .pop.note{transform:rotate(-.8deg)}
+.stamp.note.has svg.i{color:var(--tape)}

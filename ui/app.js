@@ -40,7 +40,7 @@ const save = () => { if (saveT) return; saveT = setTimeout(() => { saveT = 0; do
    window shares (settings, the list of spaces, archive, recently closed, bookmarks). History is kept by the main
    process and changed in small steps, so a long history never slows down a click. */
 const smallFav = f => (f && f.length > 2500 ? null : f || null);
-const META = x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated });
+const META = x => ({ id: x.id, name: x.name, h: x.h, custom: x.custom || null, isolated: !!x.isolated, note: x.note || '' });   // the space's sticky note travels with it to every window
 const doSave = () => {
   const mine = { tabs: S.tabs, pins: S.pins, pairs: S.pairs, ratios: S.ratios || {}, cur: S.cur, dock: S.dock, spaces: Object.fromEntries(S.spaces.map(x => [x.id, { tabs: x.tabs, folders: x.folders, act: x.act || null }])) };
   const shared = { prefs: S.prefs, spaces: S.spaces.map(META), closed: S.closed.slice(0, 25), archive: S.archive.slice(0, 300), bookmarks: S.bookmarks || [] };
@@ -77,7 +77,7 @@ B.onShared(ch => {
       const s = S.spaces.find(x => x.id === m.id);
       if (!s) return { ...m, tabs: [], folders: [], act: null };
       if (!!s.isolated !== !!m.isolated) for (const t of spaceTabs(s)) { B.tabClose(t); R.live[t] = false; }   // the login jar changed: pages reopen in the new one
-      return Object.assign(s, { name: m.name, h: m.h, custom: m.custom || null, isolated: !!m.isolated });
+      return Object.assign(s, { name: m.name, h: m.h, custom: m.custom || null, isolated: !!m.isolated, note: m.note || '' });
     });
     if (!S.spaces.some(x => x.id === S.cur)) { S.cur = S.spaces[0].id; switchSpace(S.cur, { boot: true }); }
     theme();
@@ -128,7 +128,7 @@ const keyHint = id => fmtKey(R.keys[id] || '');
 
 /* ---------- dom refs + layout ---------- */
 const stage = $('#stage'), pa = $('#pa'), pb = $('#pb'), gutter = $('#gutter');
-const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bmbar = $('#bmbar');
+const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bNote = $('#bNote'), bmbar = $('#bmbar');
 
 /* Layout is plain math, shared by the card frames here and the page views in the main process. */
 function layout() {
@@ -165,6 +165,7 @@ function pushState() {
 /* the extension buttons talk to the session of the space you're in */
 const extPart = () => { const s = sp(); return s && s.isolated ? 'persist:space-' + s.id : 'washi-pages'; };
 function updateChrome() {
+  bNote.classList.toggle('has', !!(sp().note || '').trim()); bNote.title = `Sticky note for ${sp().name} (${keyHint('notes')})`;
   const xl = document.getElementById('exts'); if (xl && S && xl.getAttribute('partition') !== extPart()) xl.setAttribute('partition', extPart());
   const id = focusedId(), t = id && S.tabs[id];
   if (!t) { urlTxt.innerHTML = '<span class="ph">Type an address or search</span>'; $('#lk').innerHTML = ic('search', 15); }
@@ -522,7 +523,7 @@ function openCmd(mode) {
   const A = (id, label, key) => ({ id, label, hint: keyHint(key || id) });
   const actions = [
     A('split', 'Toggle split view'), A('sidebar', 'Pin or float the sidebar'), A('pin', 'Pin or unpin this tab'), A('reopen', 'Reopen closed tab'),
-    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
+    A('find', 'Find on this page'), A('copyurl', 'Copy page address'), A('history', 'Show history'), A('archive', 'Show archived tabs'), A('downloads', 'Show downloads'), A('reader', 'Reader mode'), A('notes', 'Sticky note for this space'), A('tidy', 'Tidy up tabs'), A('clear', 'Clear tabs (keeps pins and folders)'),
     A('newspace', 'New space'), A('rename', 'Rename this space'), A('delspace', 'Delete this space'), A('newfolder', 'New folder'),
     A('mute', 'Mute or unmute this tab'), A('pip', 'Picture in picture'), A('print', 'Print this page'), A('devtools', 'Open developer tools'),
     A('livegh', 'New live folder: GitHub pull requests', 'none'), A('livefeed', 'New live folder: RSS or Atom feed', 'none'), A('boost', 'Boost this site (colors, font, hide things)', 'none'), A('today', 'Show Today'), A('apps', 'Add apps to sign in to', 'none'), A('bookmark', 'Bookmark this page'), A('bookmarks', 'Show bookmarks'), A('bookmarkbar', 'Always show the bookmarks bar'), A('bmimport', 'Import bookmarks from another browser', 'none'), A('scrap', 'New little scrap'), A('arc', 'Import from Arc', 'none'), A('settings', 'Settings'), A('keys', 'Change keyboard shortcuts', 'none'), A('guide', 'Show the quick-start guide', 'none'), A('setupagain', 'Run the welcome setup again', 'none')
@@ -536,7 +537,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), notes: openNote, tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -572,6 +573,12 @@ function readerPanel() {
   const r = bRead.getBoundingClientRect(), p = S.prefs.reader || {};
   B.panel('reader', { x: Math.round(Math.max(8, r.right - 262)), y: Math.round(r.bottom + 2), w: 280, h: 196 }, { face: p.face || 'serif', size: p.size || 19, ...look() });
 }
+/* ---------- a sticky note for each space ---------- */
+function openNote() {
+  const r = bNote.getBoundingClientRect(), s = sp();
+  B.panel('notes', { x: Math.round(Math.max(8, Math.min(innerWidth - 348, r.right - 300))), y: Math.round(r.bottom + 2), w: 340, h: 392 }, { text: s.note || '', name: s.name, ...look() });
+}
+bNote.addEventListener('click', openNote);
 bRead.addEventListener('click', () => { const id = focusedId(); if (id && R.reading[id]) readerPanel(); else readerToggle(true); });
 B.onSetupMsg(m => {
   if (!S) return;
@@ -593,6 +600,7 @@ B.onSetupMsg(m => {
   } else if (m.type === 'sheet') sheetAct(m);
   else if (m.type === 'arcImport') importArc(m).then(r => B.setupReply({ type: 'arcDone', ...r }));
   else if (m.type === 'peekAdopt') adoptPeek();
+  else if (m.type === 'note') { const s = sp(); s.note = String(m.text || '').slice(0, 20000); bNote.classList.toggle('has', !!s.note.trim()); save(); }
   else if (m.type === 'reader') {
     if (m.exit) return readerToggle(false);
     const r = S.prefs.reader = { ...(S.prefs.reader || {}) };
@@ -815,7 +823,7 @@ B.onCmd(n => {
   if (n.startsWith('switch:pick:')) return switchEnd(+n.slice(12));
   if (n === 'edge:off' || n === 'edge:on') { $('#edge').classList.toggle('away', n === 'edge:off'); return; }
   if (n === 'settings') return openSetup('settings'); if (n === 'settings:updates') return openSetup('settings', 'help'); if (n === 'settings:keys') return openSetup('settings', 'keys'); if (n === 'guide') return openSetup('guide');
-  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader'].includes(n)) return runAction(n);
+  if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes'].includes(n)) return runAction(n);
   if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
   if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard');
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');

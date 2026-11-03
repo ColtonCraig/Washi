@@ -65,6 +65,7 @@
 <symbol id="pi-cloud" viewBox="0 0 24 24"><path style="fill:var(--white)" d="M7.5 18.5h9.5a3.8 3.8 0 0 0 .4-7.6A5.5 5.5 0 0 0 6.8 10a4.3 4.3 0 0 0 .7 8.5z"/><path style="stroke:var(--tape)" fill="none" d="M9.3 12.2a2.8 2.8 0 0 1 2.4-1.9"/></symbol>
 <symbol id="i-reader" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5v13"/></symbol>
 <symbol id="i-broom" viewBox="0 0 24 24"><path d="M14.5 3.5l-4 7.5M7 11.5l6.5 3.5-2 5.5c-2.6-.5-5.4-2-7.5-4.2zM9.2 12.7l-1 3.6M11.6 14l-.8 3.8"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5zM14 20v-5h5M8.5 9h7M8.5 12.5h4"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2L18.5 7.8"/></symbol>
 <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4.5M12 17.6v.1"/></symbol>
 <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/></symbol>
