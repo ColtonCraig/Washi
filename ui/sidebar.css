@@ -176,3 +176,33 @@ body.sizing,body.sizing *{cursor:col-resize!important;user-select:none}
 @keyframes sweep{30%{transform:rotate(-16deg) translateX(-2px)}65%{transform:rotate(10deg) translateX(2px)}}
 html.motion-off .tidy:hover svg{animation:none}
 html.scrapbook .tidy{transform:rotate(-.6deg)}
+
+/* ---------- Now playing: a little paper ticket above the spaces ---------- */
+.np{flex:none;position:relative;display:flex;align-items:center;gap:4px;margin:6px 2px 6px;padding:5px 5px 5px 5px;border-radius:10px;background:var(--white);box-shadow:0 0 0 1px rgb(var(--inkc) / .07),var(--cut-sm)}
+.np[hidden]{display:none}
+.np.in{animation:npin .34s var(--spring,cubic-bezier(.3,1.4,.5,1)) both}
+.np.out{animation:npout .18s ease-in both}
+@keyframes npin{from{opacity:0;transform:translateY(10px) scale(.96)}}
+@keyframes npout{to{opacity:0;transform:translateY(6px) scale(.97)}}
+.np .npo{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:0 2px;text-align:left;border-radius:7px}
+.np .npimg{flex:none;width:32px;height:32px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--tape) 14%,var(--paper));background-size:cover;background-position:center;overflow:hidden}
+.np .npimg .fav{width:20px;height:20px;box-shadow:none}
+.np .npt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.np .npt b{font:600 12.5px/1.2 var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np .npt small{font:500 11px/1.2 var(--font-ui);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np .eq{flex:none;display:none;align-items:flex-end;gap:2px;width:11px;height:12px;margin-right:2px}
+.np.playing .eq{display:flex}
+.np .eq i{flex:1;height:30%;border-radius:1px;background:var(--tape);animation:npeq .9s ease-in-out infinite alternate}
+.np .eq i:nth-child(2){animation-delay:-.3s;animation-duration:.7s}
+.np .eq i:nth-child(3){animation-delay:-.6s;animation-duration:1.1s}
+@keyframes npeq{to{height:100%}}
+.np .npb{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--tape);color:#fff;transition:transform .12s var(--ease)}
+.np .npb svg{width:14px;height:14px}
+.np .npb:hover{transform:scale(1.06)}
+.np .npx{position:absolute;left:-5px;top:-5px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--white);color:var(--ink2);box-shadow:0 0 0 1px rgb(var(--inkc) / .14),0 1px 3px rgb(var(--sh) / .18);opacity:0;transform:scale(.8);transition:opacity .12s,transform .16s var(--ease)}
+.np .npx svg{width:10px;height:10px;stroke-width:2.6}
+.np:hover .npx,.np .npx:focus-visible{transform:none}
+.np:hover .npx,.np .npx:focus-visible{opacity:1}
+body.float .np{background:var(--white)}
+html.motion-off .np,html.motion-off .np .eq i{animation:none!important}
+@media (prefers-reduced-motion:reduce){.np,.np .eq i{animation:none!important}}

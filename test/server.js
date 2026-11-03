@@ -112,6 +112,17 @@ const srv = http.createServer((q, r) => {
     r.setHeader('content-type', 'application/atom+xml');
     return r.end(`<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Atom Log</title><entry><title type="html">First &lt;b&gt;post&lt;/b&gt;</title><link rel="alternate" href="/p3.html?a=1"/><id>urn:1</id></entry><entry><title>Second</title><link href="http://localhost:8765/p3.html?a=2"/><id>urn:2</id></entry></feed>`);
   }
+  if (q.url.startsWith('/tone.wav')) {                  // 20 seconds of a quiet tone, for Now playing
+    const rate = 8000, n = rate * 20, b = Buffer.alloc(44 + n * 2);
+    b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(rate, 24); b.writeUInt32LE(rate * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+    for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin(i / rate * 2 * Math.PI * 330) * 1200), 44 + i * 2);
+    r.setHeader('content-type', 'audio/wav'); return r.end(b);
+  }
+  if (q.url.startsWith('/music.html')) {
+    r.setHeader('content-type', 'text/html');
+    return r.end(`<!doctype html><title>Paper Radio</title><body style="background:#f3e9ff;font:20px system-ui"><h1>Paper Radio</h1><audio id="a" src="/tone.wav" loop></audio><button id="go" onclick="a.play()">Play</button>
+<script>navigator.mediaSession.metadata = new MediaMetadata({ title: 'Folded Afternoon', artist: 'The Washi Band', artwork: [{ src: 'http://localhost:8765/icon/mail.png', sizes: '96x96', type: 'image/png' }] });</script></body>`);
+  }
   if (q.url.startsWith('/dlslow')) {                    // a download that takes ~2.4s, so its progress can be seen
     const name = (q.url.match(/name=([\w.-]+)/) || [, 'washi-slow.pdf'])[1], chunk = Buffer.alloc(16384, 97), n = 8;
     r.setHeader('content-disposition', `attachment; filename="${name}"`); r.setHeader('content-type', 'application/octet-stream'); r.setHeader('content-length', String(chunk.length * n));

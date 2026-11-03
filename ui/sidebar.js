@@ -112,6 +112,7 @@ function apply(s) {
   ST = s; applyTheme(s.theme, s.pal); PLAN = plan(s);
   if (sname.textContent !== s.name) sname.textContent = s.name;
   $('#td').classList.toggle('on', !s.a);                                // the sun lights up while you're on Today
+  drawNp(s.np);
   syncList(pinsEl, s.pins, mkPin, upPin);
   syncList(tabsEl, PLAN.root, mkItem, upItem);
   const loose = PLAN.root.filter(k => !k.startsWith('f:') && s.tabs[k] && !(s.pairs || []).some(p => p.includes(k))).length, td = $('#tidy');
@@ -327,6 +328,23 @@ grip.addEventListener('pointermove', e => {
 const sizeEnd = () => { if (!sz) return; const w = sz.w; cancelAnimationFrame(sz.raf); sz = null; body.classList.remove('sizing'); B.intent({ type: 'sbw', w, done: true }); };
 grip.addEventListener('pointerup', sizeEnd); grip.addEventListener('pointercancel', sizeEnd);
 grip.addEventListener('dblclick', () => B.intent({ type: 'sbw', w: SB_W, done: true }));
+
+/* ---------- Now playing: a little paper ticket for whatever another tab is playing ---------- */
+const npEl = $('#np'); let npKey = '';
+function drawNp(n) {
+  if (!n) { if (!npEl.hidden) { npEl.classList.add('out'); setTimeout(() => { if (npEl.classList.contains('out')) { npEl.hidden = true; npEl.classList.remove('out'); } }, 180); } npKey = ''; return; }
+  const key = [n.id, n.title, n.artist, n.art, n.fav].join('|'); npEl.dataset.id = n.id;
+  if (npEl.hidden || npEl.classList.contains('out')) { npEl.classList.remove('out'); npEl.hidden = false; npEl.classList.remove('in'); void npEl.offsetWidth; npEl.classList.add('in'); }
+  if (key !== npKey) {
+    npKey = key; $('#npTitle').textContent = n.title; $('#npSub').textContent = n.artist; npEl.title = n.title + (n.artist ? ' · ' + n.artist : '');
+    const img = $('#npImg'); img.innerHTML = n.art ? '' : favHTML({ title: n.title, url: n.url, fav: n.fav }); img.style.backgroundImage = n.art ? `url("${String(n.art).replace(/["\\]/g, '')}")` : ''; img.classList.toggle('art', !!n.art);
+  }
+  npEl.classList.toggle('playing', !!n.playing);
+  const b = $('#npPlay'); b.setAttribute('aria-label', n.playing ? 'Pause' : 'Play'); b.title = n.playing ? 'Pause' : 'Play'; b.querySelector('use').setAttribute('href', n.playing ? '#i-pause' : '#i-play');
+}
+$('#npOpen').addEventListener('click', () => B.intent({ type: 'np', act: 'open', id: npEl.dataset.id }));
+$('#npPlay').addEventListener('click', () => { B.intent({ type: 'np', act: 'toggle', id: npEl.dataset.id }); const b = $('#npPlay'); b.animate([{ transform: 'scale(.82)' }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.3,1.6,.5,1)' }); });
+$('#npX').addEventListener('click', () => B.intent({ type: 'np', act: 'hide', id: npEl.dataset.id }));
 
 /* ---------- two fingers sideways on the sidebar: the next or previous space (like Arc). The tabs follow your fingers a
    little, then the space changes; at the first or last space they stretch and spring back. ---------- */

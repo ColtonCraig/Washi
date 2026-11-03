@@ -143,10 +143,11 @@ function hook(t) {
   });
   wc.on('did-navigate', (_, url) => { if (!pages.isNotice(url)) { t.failed = null; t.notice = null; web.upgraded.delete(wc.id); } send({ ...(pages.isNotice(url) ? {} : { url, notice: null }), ...nav(wc), blocked: 0 }); });
   wc.on('did-navigate-in-page', (_, url, isMain) => { if (isMain) { send({ url, ...nav(wc) }); reader.isOn(wc).then(on => { if (!on) later(() => reader.able(wc).then(a => { if (!wc.isDestroyed()) send({ readable: a }); }), 700); }); } });
-  wc.on('did-start-navigation', d => { if (d.isMainFrame && !d.isSameDocument) send({ reading: false, readable: false }); });
-  wc.on('media-started-playing', () => { t.playing = true; send({ audible: true }); });
+  wc.on('did-start-navigation', d => { if (d.isMainFrame && !d.isSameDocument) send({ reading: false, readable: false, media: null }); });
+  wc.on('media-started-playing', () => { t.playing = true; send({ audible: true }); mediaInfo(t, send); });
   wc.on('did-navigate', (_, url) => { let h = ''; try { h = new URL(url).host.replace(/^www\./, ''); } catch {} const m = (P.muteSites || []).includes(h); if (m !== t.siteMuted) { t.siteMuted = m; wc.setAudioMuted(m); send({ muted: m }); } });   // "Mute this site" covers every tab on it
-  wc.on('media-paused', () => { t.playing = false; send({ audible: false }); });
+  wc.on('media-paused', () => { t.playing = false; send({ audible: false }); later(() => mediaInfo(t, send), 150); });
+  wc.on('page-title-updated', () => { if (t.playing) later(() => mediaInfo(t, send), 400); });   // the next song
   wc.on('audio-state-changed', e => send({ audible: !!e.audible }));
   wc.on('found-in-page', (_, r) => { if (C.panelOpen === 'find' && activeTab() === t) toOverlay('find:result', { active: r.activeMatchOrdinal, total: r.matches }); });
   wc.on('zoom-changed', () => later(() => showZoom(wc), 0));
@@ -256,6 +257,17 @@ ON('tab:close', (_, id) => {
 });
 ON('tab:nav', (_, id, url) => { const t = C.tabs.get(id); if (t) { t.notice = null; go(t.wc, url).catch(() => {}); } });
 ON('tab:act', (_, id, a) => tabAct(C.tabs.get(id), a));
+/* ---------- Now playing: what a tab is playing (the page's media session if it has one), and play/pause from the sidebar ---------- */
+const MEDIA_INFO = `(() => { const m = navigator.mediaSession && navigator.mediaSession.metadata, all = [...document.querySelectorAll('video,audio')], v = all.find(e => !e.paused) || all.find(e => e.currentTime > 0) || all[0];
+  if (!v && !m) return null; const art = m && m.artwork && m.artwork.length ? String(m.artwork[m.artwork.length - 1].src || '') : '';
+  return { title: String(m && m.title || '').slice(0, 140), artist: String(m && (m.artist || m.album) || '').slice(0, 140), art: /^https?:/.test(art) ? art.slice(0, 2000) : '', playing: !!(v && !v.paused), video: !!(v && v.tagName === 'VIDEO') }; })()`;
+function mediaInfo(t, send) { const wc = t.wc; if (!wc || wc.isDestroyed()) return; wc.executeJavaScript(MEDIA_INFO).then(m => { if (!wc.isDestroyed()) send({ media: m ? { ...m, playing: m.playing || !!t.playing } : (t.playing ? { title: '', artist: '', art: '', playing: true } : null) }); }).catch(() => {}); }
+const MEDIA_TOGGLE = `(() => { const all = [...document.querySelectorAll('video,audio')], p = all.find(e => !e.paused); if (p) { p.pause(); return 'paused'; } const v = all.find(e => e.currentTime > 0) || all[0]; if (v) { v.play(); return 'playing'; } return 'none'; })()`;
+async function mediaToggle(t) {
+  const wc = t.wc; if (!wc || wc.isDestroyed()) return;
+  let r = await wc.executeJavaScript(MEDIA_TOGGLE, true).catch(() => 'none');
+  if (r === 'none') for (const f of wc.mainFrame.framesInSubtree) { if (f === wc.mainFrame) continue; r = await f.executeJavaScript(MEDIA_TOGGLE, true).catch(() => 'none'); if (r !== 'none') break; }   // a player in a frame
+}
 function tabAct(t, a) {
   if (!t) return; const wc = t.wc;
   if (a === 'back') goBack(wc); else if (a === 'forward') goFwd(wc);
@@ -264,6 +276,7 @@ function tabAct(t, a) {
   else if (a === 'mute') { wc.setAudioMuted(!wc.isAudioMuted()); toUI('tab:event', { id: t.id, muted: wc.isAudioMuted() }); }
   else if (a === 'pip') wc.executeJavaScript(`document.pictureInPictureElement ? (document.exitPictureInPicture(), 'off') : ${PIP_ON}`, true).then(r => { if (r === false) showFx({ type: 'toast', text: 'No playing video on this page', short: true }); }).catch(() => {});
   else if (a === 'print') wc.print({}, () => {});
+  else if (a === 'mediaToggle') mediaToggle(t);
   else if (a === 'zoomin' || a === 'zoomout' || a === 'zoomreset') { const steps = [.25, .33, .5, .67, .75, .8, .9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5], z = wc.getZoomFactor(); const i = steps.findIndex(s => s >= z - .001); wc.setZoomFactor(a === 'zoomreset' ? 1 : a === 'zoomin' ? steps[Math.min(steps.length - 1, (steps[i] > z + .001 ? i : i + 1))] : steps[Math.max(0, i - 1)]); showZoom(wc); }
 }
 ON('copy', (_, s) => clipboard.writeText(String(s)));

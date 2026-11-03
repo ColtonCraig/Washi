@@ -10,7 +10,7 @@ const sbW = () => Math.max(200, Math.min(380, Math.round((S && S.prefs.sbW) || S
 
 /* ---------- state ---------- */
 let S;                                    // persisted
-const R = { a: null, b: null, focus: 'a', split: false, readable: {}, reading: {}, loading: {}, audible: {}, muted: {}, blocked: {}, boosted: {}, notice: {}, canBack: {}, canFwd: {}, live: {}, menuTab: null, menuSpace: null, promptCb: null, keys: {}, downloads: [] };
+const R = { a: null, b: null, focus: 'a', split: false, media: {}, npHide: null, readable: {}, reading: {}, loading: {}, audible: {}, muted: {}, blocked: {}, boosted: {}, notice: {}, canBack: {}, canFwd: {}, live: {}, menuTab: null, menuSpace: null, promptCb: null, keys: {}, downloads: [] };
 const fresh = () => ({ tabs: {}, pins: [], pairs: [], cur: 'home', history: [], closed: [], archive: [], dock: true, prefs: prefsOf({}),
   spaces: [{ id: 'home', name: 'Home', h: 40, tabs: [], folders: [], act: null }, { id: 'work', name: 'Work', h: 255, tabs: [], folders: [] }, { id: 'play', name: 'Play', h: 340, tabs: [], folders: [] }] });
 function sanitize(s) {
@@ -155,13 +155,21 @@ function placePanes() {
 
 /* ---------- state for the sidebar view ---------- */
 let pushQ = false;
+/* the card at the bottom of the sidebar: the most recent tab with something playing (or paused a moment ago),
+   unless it's the one you're looking at */
+function nowPlaying() {
+  const shown = new Set([R.a, R.split ? R.b : null]); let best = null;
+  for (const id in R.media) { const m = R.media[id], t = S.tabs[id]; if (!t) { delete R.media[id]; continue; } if (shown.has(id) || id === R.npHide) continue; if (!m.playing && Date.now() - m.at > 20 * 60 * 1000) continue; if (!best || (m.playing && !best.m.playing) || (m.playing === best.m.playing && m.at > best.m.at)) best = { id, m }; }
+  if (!best) return null; const t = S.tabs[best.id];
+  return { id: best.id, title: best.m.title || label(t), artist: best.m.artist || hostOf(t.url), art: best.m.art || '', fav: t.fav || null, url: t.url, playing: !!best.m.playing, video: !!best.m.video };
+}
 function pushState() {
   if (pushQ || !S) return; pushQ = true;
   requestAnimationFrame(() => {
     pushQ = false;
     const s = sp(), ids = new Set([...S.pins, ...spaceTabs(s)]), tabs = {};
     for (const id of ids) { const t = S.tabs[id]; if (t) tabs[id] = { title: label(t), url: t.url, fav: t.fav || null, loading: !!R.loading[id], audible: !!R.audible[id], muted: !!R.muted[id], live: !!R.live[id], unread: !!t.unread, notice: R.notice[id] || null }; }
-    B.sbState({ h: s.h, pal: palFor(s), theme: S.prefs, cur: S.cur, name: s.name, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, pal: palFor(x) })), pins: S.pins, order: s.tabs, pairs: S.pairs.filter(p => spaceOf(p[0]) === s), folders: s.folders, tabs, a: R.a, b: R.split ? R.b : null, focus: R.focus, split: R.split, docked: S.dock });
+    B.sbState({ h: s.h, pal: palFor(s), theme: S.prefs, cur: S.cur, name: s.name, spaces: S.spaces.map(x => ({ id: x.id, name: x.name, h: x.h, pal: palFor(x) })), np: nowPlaying(), pins: S.pins, order: s.tabs, pairs: S.pairs.filter(p => spaceOf(p[0]) === s), folders: s.folders, tabs, a: R.a, b: R.split ? R.b : null, focus: R.focus, split: R.split, docked: S.dock });
   });
 }
 /* the extension buttons talk to the session of the space you're in */
@@ -783,6 +791,7 @@ B.onIntent(m => {
     case 'newtab': openCmd('new'); break;
     case 'folder': { const f = sp().folders.find(x => x.id === m.id); if (f) { f.open = !f.open; render(); save(); } break; }
     case 'space': switchSpace(m.id); break;
+    case 'np': { const id = m.id; if (!S.tabs[id]) break; if (m.act === 'toggle') { B.tabAct(id, 'mediaToggle'); if (R.media[id]) { R.media[id].playing = !R.media[id].playing; R.media[id].at = Date.now(); } pushState(); } else if (m.act === 'open') selectTab(id); else if (m.act === 'hide') { R.npHide = id; pushState(); } break; }
     case 'addspace': addSpace(); break;
     case 'ctxTab': tabMenu(m.id); break;
     case 'ctxSpace': spaceMenu(m.id); break;
@@ -868,6 +877,7 @@ B.onTab(({ id, ...p }) => {
   if (p.fav !== undefined) { t.fav = p.fav; const h = S.history.find(x => x.url === t.url), f = smallFav(p.fav); if (h && h.fav !== f) hist({ t: 'upd', url: t.url, fav: f }); }
   if (p.notice !== undefined) R.notice[id] = p.notice;
   for (const k of ['loading', 'audible', 'muted', 'blocked', 'boosted', 'canBack', 'canFwd', 'readable', 'reading']) if (p[k] !== undefined) R[k][id] = p[k];
+  if (p.media !== undefined) { if (p.media) { R.media[id] = { ...p.media, at: Date.now() }; if (p.media.playing && R.npHide === id) R.npHide = null; } else delete R.media[id]; pushState(); }
   render(); save();
 });
 

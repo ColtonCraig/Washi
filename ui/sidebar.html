@@ -15,6 +15,11 @@
   <div class="pins" id="pins"></div>
   <div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div>
   <button class="tidy" id="tidy" hidden title="Group tabs from the same site and archive ones you haven't opened today (you can undo)"><svg class="i" viewBox="0 0 24 24"><use href="#i-broom"/></svg><span>Tidy up</span><small id="tidyN"></small></button>
+  <div class="np" id="np" hidden aria-live="polite">
+    <button class="npo" id="npOpen" title="Go to this tab"><span class="npimg" id="npImg"></span><span class="npt"><b id="npTitle"></b><small id="npSub"></small></span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></button>
+    <button class="npb" id="npPlay" aria-label="Pause"><svg class="i" viewBox="0 0 24 24"><use href="#i-pause"/></svg></button>
+    <button class="npx" id="npX" aria-label="Hide" title="Hide"><svg class="i" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+  </div>
   <div class="spaces" id="spaces"></div>
   <div class="grip" id="grip" title="Drag to resize · double-click to reset" aria-hidden="true"></div>
 </div>

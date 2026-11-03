@@ -34,3 +34,7 @@ html.scrapbook .tcard:nth-of-type(even)::before{right:22px;top:-6px;width:42px;h
 
 @media (prefers-reduced-motion:reduce){html.scrapbook .stamp:hover svg.i{animation:none}}
 html.motion-off.scrapbook .stamp:hover svg.i{animation:none}
+
+/* Now playing: a ticket stub, taped on */
+html.scrapbook .np{transform:rotate(-1deg)}
+html.scrapbook .np::before{content:"";position:absolute;right:16px;top:-5px;width:30px;height:11px;background:var(--tape-strip);opacity:.82;transform:rotate(6deg);pointer-events:none;clip-path:polygon(0 18%,6% 0,30% 10%,52% 0,76% 8%,100% 0,96% 50%,100% 100%,72% 90%,48% 100%,24% 92%,0 100%,4% 50%)}
