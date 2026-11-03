@@ -786,12 +786,14 @@ window.SETUP = (() => {
       h('span', { class: 'nic', html: newsIcon(it.icon) }),
       h('div', { class: 'nwt' }, h('h5', {}, it.title), h('p', {}, it.text),
         it.how || keys.length ? h('p', { class: 'how' }, h('b', {}, 'How: '), it.how || '', ...keys.map(k => h('kbd', {}, k))) : null,
-        it.try ? h('button', { class: 'btn small', onclick: () => { finish(); setTimeout(() => B.overlayResult({ kind: 'cmd', cmd: it.try }), 250); } }, 'Try it') : null));
+        it.point ? h('button', { class: 'btn small', onclick: () => { finish(); setTimeout(() => B.overlayResult({ kind: 'coach', point: it.point, title: it.title, tip: it.tip || it.how || '', keys: it.keys || [] }), 260); } }, 'Show me')
+          : it.try ? h('button', { class: 'btn small', onclick: () => { finish(); setTimeout(() => B.overlayResult({ kind: 'cmd', cmd: it.try }), 250); } }, 'Try it') : null));
   }
   function buildNews(since) {
     const all = window.WHATSNEW || [], fresh = since ? all.filter(r => newer(r.v, since)) : all.slice(0, 1), show = fresh.length ? fresh : all.slice(0, 1), older = all.filter(r => !show.includes(r));
     let n = 0;
-    const rel = (r, first) => h('div', { class: 'nwr' }, first ? null : h('h3', { class: 'nwv' }, h('span', {}, 'Washi ' + r.v), h('small', {}, r.lead || '')), h('div', { class: 'nwg' }, r.items.map(it => newsCard(it, n++))));
+    const fixes = r => (r.fixes || []).length ? h('div', { class: 'nwfx', style: `--i:${n++}` }, h('h4', {}, (r.items || []).length ? 'Also fixed and polished' : 'Fixes and polish'), h('ul', {}, r.fixes.map(f => h('li', { html: BL.ic('check', 14) + '<span>' + BL.esc(f) + '</span>' })))) : null;
+    const rel = (r, first) => h('div', { class: 'nwr' }, first ? null : h('h3', { class: 'nwv' }, h('span', {}, 'Washi ' + r.v), h('small', {}, r.lead || '')), (r.items || []).length ? h('div', { class: 'nwg' }, r.items.map(it => newsCard(it, n++))) : null, fixes(r));
     const earlier = h('div', { class: 'nwold' });
     const more = older.length ? h('button', { class: 'lnk', onclick: () => { more.remove(); n = 0; earlier.append(...older.map(r => rel(r, false))); } }, 'Earlier updates') : null;
     sheet = h('div', { class: 'sheet nw' }, h('i', { class: 'tp l' }), h('i', { class: 'tp r' }),

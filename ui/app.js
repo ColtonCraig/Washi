@@ -450,6 +450,20 @@ function focusMode(on = !S.focusMode, quiet) {
 /* extension buttons: they belong to this window's tab; an extension's own shortcut (View › Extension Shortcuts) opens its popup like a click */
 B.onExtTab(id => { const xl = document.getElementById('exts'); if (xl && +xl.getAttribute('tab') !== id) xl.setAttribute('tab', String(id)); });
 B.onExtOpen(id => { const xl = document.getElementById('exts'), b = xl && xl.shadowRoot && xl.shadowRoot.querySelector(`[id="${id}"]`); if (b && !b.hidden) b.click(); });
+/* "Show me" from What's new: the thing to click glows, and a note points at it (click it, Got it, or ⌥⌘U back to What's new) */
+function coach(r) {
+  const el = r.point && document.querySelector(r.point); if (!el) return;
+  if (S.focusMode && el.closest('.topbar')) { R.focusPeek = true; document.body.classList.add('peek'); placePanes(); commit(false, true, true); }
+  if (el.closest('#tools') && el.hasAttribute('data-off')) { TOOLBAR.save({ toolsOff: (S.prefs.toolsOff || []).filter(x => x !== el.dataset.tool) }); }
+  coachEnd(); R.coachEl = el; el.classList.add('coached');
+  const go = () => { const q = el.getBoundingClientRect(); B.coachShow({ rect: { x: q.x, y: q.y, w: q.width, h: q.height }, title: r.title, tip: r.tip, keys: (r.keys || []).map(keyHint).filter(Boolean), back: keyHint('whatsnew'), ...look() }); };
+  setTimeout(go, 60);
+  const end = () => { coachEnd(); B.coachHide(); };
+  el.addEventListener('pointerdown', end, { once: true }); R.coachEnd = end;
+  clearTimeout(R.coachT); R.coachT = setTimeout(end, 30000);
+}
+function coachEnd() { if (R.coachEl) R.coachEl.classList.remove('coached'); R.coachEl = null; clearTimeout(R.coachT); }
+B.onCoachHide(() => coachEnd());
 /* the update postcard, bottom right over the page */
 B.onUpdateCard(d => { if (!S || !d) return; const L = layout().stage, w = 380, h = d.notes ? 268 : 214; R.updRect = { x: Math.round(L.x + L.w - w - 10), y: Math.round(L.y + L.h - h - 10), w, h }; B.panel('update', R.updRect, { ...d, ...look() }); });
 B.onFocusPeek(p => { if (!S || !S.focusMode) return; R.focusPeek = !!p; document.body.classList.toggle('peek', R.focusPeek); placePanes(); commit(false, true, true); });
@@ -651,7 +665,7 @@ function runAction(id) {
     split: toggleSplit, sidebar: toggleSide, pin: () => pinToggle(f), reopen: reopenClosed, newspace: addSpace, newfolder: () => newFolder(null),
     rename: () => promptFor('Rename this space', sp().name, n => { sp().name = n.slice(0, 12); render(); save(); }),
     delspace: () => deleteSpace(S.cur), copyurl, devtools: () => f && B.tabAct(f, 'devtools'), settings: () => openSetup('settings'), guide: () => openSetup('guide'), setupagain: () => openSetup('onboard'),
-    keys: () => openSetup('settings', 'keys'), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), focus: () => focusMode(), snapshot: () => snapshot(), notes: openNote, tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
+    keys: () => openSetup('settings', 'keys'), whatsnew: () => openSetup('news', R.newsSince), boost: openBoost, livegh: () => newLiveFolder('github'), today: showToday, reader: () => readerToggle(), focus: () => focusMode(), snapshot: () => snapshot(), notes: openNote, tidy: () => tidy(S.cur), clear: () => clearTabs(S.cur), apps: () => openSetup('settings', 'apps'), bookmark: bmStar, bookmarks: () => openSheet('bookmarks'), bookmarkbar: bmToggleBar, bmimport: () => openSetup('settings', 'bookmarks'), livefeed: () => newLiveFolder('feed'), scrap: () => B.scrapOpen(''), arc: () => openSetup('settings', 'import'), find: openFind, history: () => openSheet('history'), archive: () => openSheet('archive'), downloads: () => openSheet('downloads'),
     mute: () => f && B.tabAct(f, 'mute'), pip: () => f && B.tabAct(f, 'pip'), print: () => f && B.tabAct(f, 'print')
   })[id]?.();
 }
@@ -676,7 +690,7 @@ async function whatsNew() {
   if (!wasSetUp || S.prefs.showNews === false) return;               // a new install gets the welcome instead; or you said not to (Settings › Help)
   const since = seen || (news[1] && news[1].v) || '0.0.0';             // from before this page existed: show this release
   if (!newer(v, since) || !news.some(r => newer(r.v, since) && !newer(r.v, v))) return;
-  setTimeout(() => openSetup('news', since), 900);
+  R.newsSince = since; setTimeout(() => openSetup('news', since), 900);
 }
 async function openSetup(page, section) {
   let info = {}; try { info = await B.setupInfo(); R.info = info; } catch {}
@@ -820,6 +834,7 @@ async function adoptPeek() {                     // the peeked page becomes a re
 }
 B.onOverlayResult(r => {
   if (!S) return;
+  if (r.kind === 'coach') return coach(r);
   if (r.kind === 'cmd') { if (r.cmd === 'settings:privacy') openSetup('settings', 'privacy'); else if (r.cmd === 'settings:passwords') openSetup('settings', 'passwords'); else if (/^[a-z]+$/.test(r.cmd || '')) runAction(r.cmd); return; }
   if (r.kind === 'setup') {
     const first = !S.prefs.done; S.prefs.done = true; save();
@@ -964,7 +979,7 @@ B.onCmd(n => {
   if (['find', 'copyurl', 'history', 'archive', 'downloads', 'newfolder', 'bookmark', 'bookmarks', 'bookmarkbar', 'today', 'reader', 'notes', 'focus', 'snapshot'].includes(n)) return runAction(n);
   if (n === 'tidy:undo') { const sn = tidySnap; tidySnap = null; if (sn) restoreSnap(sn); return; }
   if (n === 'reader:look') return readerPanel();
-  if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard'); if (n === 'whatsnew') return openSetup('news');
+  if (n === 'bm:undo') return bmUndo(); if (n === 'setupagain') return openSetup('onboard'); if (n === 'whatsnew') return openSetup('news', R.newsSince);
   if (n === 'newtab') openCmd('new'); else if (n === 'location') openCmd('this');
   else if (n === 'close') closeTab(focusedId()); else if (n === 'reopen') reopenClosed();
   else if (n === 'split') toggleSplit(); else if (n === 'sidebar') toggleSide(); else if (n === 'newspace') addSpace();

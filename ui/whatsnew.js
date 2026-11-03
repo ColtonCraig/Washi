@@ -1,26 +1,38 @@
 'use strict';
 /* What's new in each release, newest first. Shown on a "Fresh off the press" sheet the first time Washi starts after an
    update (ui/setup.js buildNews), and any time from Help › What's New. Every release adds its own entry here.
-   icon: a paper icon (p:<name>) or a sidebar symbol (i:<name>); keys: action ids whose shortcut is shown (they follow
-   your own shortcuts); try: an action to run from the sheet. */
+   items are the big new things, one card each; fixes are the small things, a short list. icon: a paper icon (p:<name>)
+   or a sidebar symbol (i:<name>); keys: action ids whose shortcut is shown (they follow your own shortcuts); point: what
+   "Show me" points at (a selector in the window) with tip; try: an action "Try it" runs. */
 window.WHATSNEW = [
   {
-    v: '1.0.1',
-    lead: 'Extensions behave with more than one window, and their shortcuts work.',
+    v: '1.1.0',
+    lead: 'Washi, arranged your way.',
     items: [
-      { icon: 'p:tools', title: 'Popups stay in your window', text: 'With two windows open, an extension\'s popup opens in the window you clicked it in (it could jump to the other one, even on another desktop). Tabs it opens land there too.' },
-      { icon: 'i:bolt', title: 'Extension shortcuts', text: 'The shortcut an extension comes with works, like ⇧⌘O for Okta\'s plugin. They\'re listed under View › Extension Shortcuts. One that would take a Washi shortcut is left out.' }
+      { icon: 'i:focus', title: 'Your top bar, your way', text: 'Drag any button along the top bar to put it where you like. Right-click one you never use to hide it. Settings › Top bar has them all, with a reset.', point: '#tools', tip: 'Drag any of these along the bar. Right-click one to hide it.' },
+      { icon: 'i:focus', title: 'A Focus mode button', text: 'Focus mode has its own stamp in the top bar now: one click and the page gets the whole window.', point: '#bFocus', tip: 'Click it for Focus mode. Point at the very top of the window to bring the bar back.', keys: ['focus'] },
+      { icon: 'p:news', title: 'Updates on a postcard', text: 'When an update has downloaded, a little card offers to restart now or later. Rather not be asked? Settings › Help › Stay quiet, and it installs when you quit.' }
+    ],
+    fixes: []
+  },
+  {
+    v: '1.0.1',
+    lead: 'Extensions behave with more than one window.',
+    fixes: [
+      'With two windows open, an extension\'s popup opens in the window you clicked it in (it could jump to the other one, even on another desktop), and tabs it opens land there too.',
+      'The shortcut an extension comes with works, like ⇧⌘O for Okta\'s plugin (View › Extension Shortcuts).'
     ]
   },
   {
     v: '1.0.0',
     lead: 'Washi 1.0: your extensions work, and lots of little things got fixed.',
-    items: [
-      { icon: 'p:tools', title: 'Your Chrome extensions work', text: 'Okta\'s plugin shows your apps once you\'re signed in, and 1Password, uBlock Origin Lite, Bitwarden, Dark Reader and Grammarly open and work properly. Settings your company sets for an extension (through Chrome\'s managed policy) reach it too.', how: 'Right-click inside an extension\'s popup for Reload and Inspect.' },
-      { icon: 'i:play', title: 'YouTube plays, blocking on', text: 'No more blank white player: YouTube\'s own player is left alone, while ads are still stripped from the page and other ad companies stay blocked.' },
-      { icon: 'p:book', title: 'Leaving Reader is easy', text: 'Click the book stamp again, press Esc, or use the × on the sheet. Aa on the sheet changes the text size and font.', keys: ['reader'] },
-      { icon: 'p:star', title: 'Bookmarks from the star', text: 'Rest the pointer on the star and the bookmarks bar comes out, in Focus mode too.' },
-      { icon: 'i:bolt', title: 'Sleeping tabs keep their colours', text: 'Tabs resting to save memory (Settings › Performance) look like any other tab, and wake the moment you click them.' }
+    fixes: [
+      'Chrome extensions work properly: Okta\'s plugin shows your apps once you\'re signed in, and 1Password, uBlock Origin Lite, Bitwarden, Dark Reader and Grammarly open and work.',
+      'Settings your company sets for an extension (Chrome\'s managed policy) reach it. Right-click in an extension\'s popup for Reload and Inspect.',
+      'YouTube plays with blocking on: no more blank white player.',
+      'Leaving Reader is easy: the book stamp again, Esc, or the × on the sheet. Aa on the sheet sets text size and font.',
+      'Resting on the star brings out the bookmarks bar, in Focus mode too.',
+      'Sleeping tabs keep their colours.'
     ]
   },
   {

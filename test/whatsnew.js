@@ -6,6 +6,7 @@
 const { execSync } = require('child_process'); const fs = require('fs'), path = require('path');
 const { start, sleep, ok, done, skipSetup, AUDIT, shot } = require('./lib');
 const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a);
+const K = a => execSync('python3 ' + __dirname + '/ptr.py keys ' + JSON.stringify(a));
 const X0 = 60, Y0 = 57;
 const VERSION = require('../package.json').version;
 const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.length, what + ': nothing cut off' + (a.length ? '\n      ' + a.slice(0, 6).join('\n      ') : '')); };
@@ -23,7 +24,7 @@ const sheetOn = ov => ov.evaluate(() => !!document.querySelector('#setup.on .she
   ok(on, `after the update (0.15.1 → ${VERSION}) "Fresh off the press" opens by itself`);
   await sleep(1200);
   const info = await ov.evaluate(() => ({ title: document.querySelector('.nw .ttl').textContent, stamp: document.querySelector('.nw .stampv').textContent, cards: [...document.querySelectorAll('.nw .nwc h5')].map(e => e.textContent), vers: [...document.querySelectorAll('.nw .nwv span')].map(e => e.textContent), keys: [...document.querySelectorAll('.nw .nwc kbd')].map(e => e.textContent), tries: document.querySelectorAll('.nw .nwc .btn').length }));
-  const want = await ov.evaluate(v => window.WHATSNEW.filter(r => { const n = x => x.split('.').map(Number); const a = n(r.v), s = n('0.15.1'), c = n(v); const gt = (p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]; return gt(a, s) > 0 && gt(a, c) <= 0; }).flatMap(r => r.items.map(i => i.title)), VERSION);
+  const want = await ov.evaluate(v => window.WHATSNEW.filter(r => { const n = x => x.split('.').map(Number); const a = n(r.v), s = n('0.15.1'), c = n(v); const gt = (p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]; return gt(a, s) > 0 && gt(a, c) <= 0; }).flatMap(r => (r.items || []).map(i => i.title)), VERSION);
   ok(info.title === 'Fresh off the press' && info.stamp === 'Washi ' + VERSION, `titled "${info.title}", stamped ${info.stamp}`);
   ok(want.length && JSON.stringify(info.cards) === JSON.stringify(want), `it shows everything new since 0.15.1 (${info.cards.length} cards, ${info.vers.length + 1} releases)`);
   ok(info.keys.length >= 2 && info.keys.every(k => k.length >= 2), 'with the shortcuts, as you have them set: ' + info.keys.join(' '));
@@ -46,6 +47,31 @@ const sheetOn = ov => ov.evaluate(() => !!document.querySelector('#setup.on .she
     const t2 = await ov.evaluate(() => { const r = [...document.querySelectorAll('.nw .nwc')].find(x => /sticky note/i.test(x.textContent)).querySelector('.btn').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }); ptr(`move ${X0 + t2.x} ${Y0 + t2.y}`); await sleep(100); ptr('down'); ptr('up'); await sleep(1400); }
   ok(!!tr && await ov.evaluate(() => !!document.querySelector('.panel.on .pop.note')), '"Try it" on the sticky note opens it');
   await ov.keyboard.press('Escape'); await sleep(500);
+  // the small things are a list, not cards
+  await ui.evaluate(() => openSetup('news', '0.17.0')); await sleep(1400);
+  const fx = await ov.evaluate(() => ({ boxes: document.querySelectorAll('.nw .nwfx').length, li: document.querySelectorAll('.nw .nwfx li').length, want: window.WHATSNEW.filter(r => r.v !== '0.17.0' && r.v !== '0.16.0').reduce((a, r) => a + (r.fixes || []).length, 0) }));
+  ok(fx.boxes >= 2 && fx.li === fx.want, `fixes show as a short list per release, not cards (${fx.li} of ${fx.want})`);
+  await audit(ov, 'What\'s new with fixes'); shot('news-fixes');
+  // "Show me": points at what to click, with the way back
+  const sm = await ov.evaluate(() => { const c = [...document.querySelectorAll('.nw .nwc')].find(x => /Focus mode button/.test(x.textContent)); if (!c) return null; const b = [...c.querySelectorAll('.btn')].find(x => x.textContent === 'Show me'); b.scrollIntoView({ block: 'center' }); return !!b; });
+  ok(sm, 'the Focus mode button card has "Show me"');
+  await sleep(500);
+  { const q = await ov.evaluate(() => { const b = [...[...document.querySelectorAll('.nw .nwc')].find(x => /Focus mode button/.test(x.textContent)).querySelectorAll('.btn')].find(x => x.textContent === 'Show me').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }); ptr(`move ${X0 + q.x} ${Y0 + q.y}`); await sleep(100); ptr('down'); ptr('up'); }
+  let co = null; for (let i = 0; i < 30 && !co; i++) { co = await ov.evaluate(() => { const e = document.getElementById('coach'); return e.classList.contains('on') ? e.innerText : null; }); if (!co) await sleep(100); }
+  ok(!(await sheetOn(ov)) && await ui.evaluate(() => document.getElementById('bFocus').classList.contains('coached')), '"Show me" closes the sheet and the Focus stamp glows');
+  ok(co && /Focus mode/.test(co) && /What.s new/.test(co), 'a note points at it, with the way back to What\'s new: ' + (co || '').replace(/\s+/g, ' ').slice(0, 120));
+  await sleep(500); await audit(ov, 'the "Show me" note'); shot('news-coach');
+  { const q = await ui.evaluate(() => { const r = R.coachEl.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height + 20 }; }); }
+  await ov.evaluate(() => document.getElementById('cback').click()); await sleep(1500);
+  ok(await sheetOn(ov) && await ui.evaluate(() => !document.querySelector('.coached')), '"← What\'s new" goes back to the sheet');
+  await ov.evaluate(() => { const b = [...document.querySelectorAll('.nw .btn')].find(x => x.textContent === 'Show me'); b.click(); }); await sleep(900);
+  const st = await ui.evaluate(() => { const r = document.getElementById('bFocus').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  ptr(`move ${X0 + st.x} ${Y0 + st.y}`); await sleep(80); ptr('down'); ptr('up'); await sleep(900);
+  ok(await ui.evaluate(() => S.focusMode && !document.querySelector('.coached')) && !(await ov.evaluate(() => document.getElementById('coach').classList.contains('on'))), 'clicking the thing it points at does it, and the note goes');
+  await ui.evaluate(() => focusMode(false)); await sleep(600);
+  K('down:Control_L down:Alt_L tap:u up:Alt_L up:Control_L'); let back = false; for (let i = 0; i < 30 && !back; i++) { back = await sheetOn(ov); if (!back) await sleep(100); }
+  ok(back, 'its shortcut (⌥⌘U) brings What\'s new back any time');
+  await ov.keyboard.press('Escape'); await sleep(600);
   // Got it, and it doesn't come back
   await ui.evaluate(() => openSetup('news')); await sleep(1300);
   const more = await ov.evaluate(() => { const l = [...document.querySelectorAll('.nw .lnk')].find(x => /Earlier/.test(x.textContent)); if (!l) return 0; l.click(); return document.querySelectorAll('.nw .nwold .nwc').length; });

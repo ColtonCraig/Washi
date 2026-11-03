@@ -458,7 +458,7 @@ function offerUpdate(s, tries = 0) {
   C = c; toUI('update:card', { version: s.version, notes: s.notes || '' });
 }
 function showFx(f) {
-  C.tabPeekOn = false;
+  C.tabPeekOn = false; C.coachOn = false;
   if (f.type === 'switchEnd') { if (!C.overlayOpen && !C.dragging && C.overlay) { toOverlay('overlay:fx', f); C.overlay.setVisible(false); } return; }
   if (C.overlayOpen || C.dragging || !C.overlay || !alive(C && C.win)) return;
   if (C.bmShown) bmHide();
@@ -482,6 +482,18 @@ function closeOverlay() {
   C.overlayOpen = false; C.panelOpen = null; C.overlay.setVisible(false); toOverlay('overlay:closed'); focusPage();
 }
 ON('fx', (_, f) => showFx(f));
+/* "Show me" from What's new: a paper note pointing at the thing to click (it doesn't take the keyboard or the page) */
+ON('coach:show', (_, d) => {
+  if (!d || !d.rect || C.overlayOpen || C.dragging || !alive(C.win)) return;
+  if (C.bmShown) bmHide(true);
+  const [w, h] = C.win.getContentSize(), cw = 352, ch = 184, r = d.rect;   // room around the note for its shadow
+  let x = Math.round(Math.min(Math.max(0, r.x + r.w / 2 - cw * .75), w - cw)), y = Math.round(r.y + r.h - 6);
+  if (y + ch > h) y = Math.max(0, Math.round(r.y - ch + 6));
+  clearTimeout(C.fxTimer); C.toastUntil = 0; C.coachOn = true;
+  C.overlay.setBounds({ x, y, width: cw, height: ch }); C.overlay.setVisible(true);
+  toOverlay('overlay:init', { mode: 'coach', ...d, ax: Math.round(r.x + r.w / 2 - x), up: r.y < y });
+});
+ON('coach:hide', () => { toUI('coach:hide'); if (!C.coachOn) return; C.coachOn = false; if (!C.overlayOpen && !C.dragging) C.overlay.setVisible(false); toOverlay('coach:hide'); });
 /* ---------- Snapshot: freeze the page, drag a box (or the whole page), copied straight away; Save from the toast ---------- */
 HANDLE('snap:capture', async () => {
   const t = activeTab(); if (!t || !t.rect || t.wc.isDestroyed()) return null;
@@ -504,7 +516,7 @@ function snapSave() {
 HANDLE('overlay:open', (_, payload) => {
   vaultYield();
   if (C.peek) closePeek(true); bmHide(true);
-  C.overlayOpen = true; C.panelOpen = null; clearTimeout(C.fxTimer);
+  C.overlayOpen = true; C.panelOpen = null; C.coachOn = false; clearTimeout(C.fxTimer);
   fitOverlay(); C.overlay.setVisible(true); C.overlay.webContents.focus();
   toOverlay('overlay:init', payload);
   return true;
@@ -514,7 +526,7 @@ HANDLE('overlay:panel', (_, kind, rect, data) => {
   if (C.dragging) return false;
   vaultYield();
   if (C.peek) closePeek(true); bmHide(true);
-  C.overlayOpen = true; C.panelOpen = kind; clearTimeout(C.fxTimer);
+  C.overlayOpen = true; C.panelOpen = kind; C.coachOn = false; clearTimeout(C.fxTimer);
   if (kind === 'find') placeFind(); else C.overlay.setBounds(rr({ x: rect.x, y: rect.y, width: rect.w, height: rect.h }));
   C.overlay.setVisible(true); C.overlay.webContents.focus();
   toOverlay('overlay:init', { mode: 'panel', kind, data });
@@ -1128,7 +1140,7 @@ function buildMenu() {
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },
     { role: 'windowMenu' },
-    { role: 'help', submenu: [{ label: 'What\'s New in Washi', click: () => toUI('cmd', 'whatsnew') }, { label: 'Quick-Start Guide', click: () => toUI('cmd', 'guide') }, { label: 'Keyboard Shortcuts', click: () => toUI('cmd', 'settings:keys') }, { label: 'Run Welcome Setup Again', click: () => toUI('cmd', 'setupagain') }] }
+    { role: 'help', submenu: [item('whatsnew'), { label: 'Quick-Start Guide', click: () => toUI('cmd', 'guide') }, { label: 'Keyboard Shortcuts', click: () => toUI('cmd', 'settings:keys') }, { label: 'Run Welcome Setup Again', click: () => toUI('cmd', 'setupagain') }] }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
 }

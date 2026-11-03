@@ -107,3 +107,10 @@ html.motion-off body.focus .topbar{transition:none}
 body.arranging .label{opacity:.7;transition:opacity .2s}
 body.arranging .topbar,body.arranging .topbar *{-webkit-app-region:no-drag}
 .stamp.fstamp.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}
+
+/* "Show me": the thing to click glows */
+.coached{position:relative;z-index:6}
+.coached::after{content:"";position:absolute;inset:-4px;border-radius:10px;box-shadow:0 0 0 2px var(--tape);pointer-events:none;animation:coachring 1.4s var(--ease) infinite}
+@keyframes coachring{0%{box-shadow:0 0 0 2px var(--tape),0 0 0 0 color-mix(in srgb,var(--tape) 45%,transparent)}70%{box-shadow:0 0 0 2px var(--tape),0 0 0 10px transparent}100%{box-shadow:0 0 0 2px var(--tape),0 0 0 0 transparent}}
+html.motion-off .coached::after{animation:none}
+@media (prefers-reduced-motion:reduce){.coached::after{animation:none}}

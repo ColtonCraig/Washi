@@ -41,6 +41,7 @@ const ACTIONS = [
   ['archive', 'Show Archived Tabs', 'history', 'Alt+CmdOrCtrl+A'],
   ['downloads', 'Show Downloads', 'history', 'Alt+CmdOrCtrl+L'],
   ['bookmark', 'Bookmark This Page…', 'bookmarks', 'CmdOrCtrl+Shift+D'],
+  ['whatsnew', 'What\'s New in Washi', 'help', 'Alt+CmdOrCtrl+U'],
   ['bookmarks', 'Show All Bookmarks', 'bookmarks', 'Alt+CmdOrCtrl+B'],
   ['bookmarkbar', 'Always Show Bookmarks Bar', 'bookmarks', 'CmdOrCtrl+Shift+B'],
   ['nexttab', 'Next Tab in Sidebar', 'spaces', 'Alt+CmdOrCtrl+Down'],

@@ -20,6 +20,8 @@ B.onBmHide(hideStrip);
 B.onOverlayInit(d => {
   applyTheme(d.theme, d.pal);
   if (d.mode === 'bmbar') { window.PANELS.closeAll(); window.SHEETS.close(true); window.VAULTUI.close(); close(); showStrip(d); return; }
+  if (d.mode === 'coach') { coach(d); return; }
+  coachEl.classList.remove('on');
   hideStrip(); window.VAULTUI.close();
   if (d.mode === 'vault') { toast.classList.remove('on'); window.PANELS.closeAll(); window.SHEETS.close(true); close(); window.VAULTUI.open(d); return; }
   if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'panel' && d.mode !== 'peek' && d.mode !== 'sheet' && d.mode !== 'setup') close();
@@ -37,6 +39,19 @@ B.onOverlayInit(d => {
   q.focus(); if (d.mode !== 'new') q.select();
 });
 function close() { cmd.classList.remove('on'); D = null; }
+/* "Show me" (What's new): a paper note pointing at what to click, with the way back to What's new */
+const coachEl = document.getElementById('coach');
+function coach(d) {
+  toast.classList.remove('on'); window.PANELS.closeAll(); window.SHEETS.close(true); close();
+  const k = (d.keys || []).map(x => `<kbd>${BL.esc(x)}</kbd>`).join(' ');
+  coachEl.className = 'coach on' + (d.up ? ' up' : ' down');
+  coachEl.style.setProperty('--ax', Math.max(36, Math.min(316, d.ax || 176)) + 'px');
+  coachEl.innerHTML = `<i class="tp"></i><i class="arw" aria-hidden="true"></i><b>${BL.esc(d.title || '')}</b><p>${BL.esc(d.tip || '')}${k ? ' ' + k : ''}</p>
+    <div class="cb"><button class="lnk" id="cback">← What's new${d.back ? ` <kbd>${BL.esc(d.back)}</kbd>` : ''}</button><span class="fill"></span><button class="btn small primary" id="cok">Got it</button></div>`;
+  document.getElementById('cok').onclick = () => B.coachHide();
+  document.getElementById('cback').onclick = () => { B.coachHide(); B.overlayResult({ kind: 'cmd', cmd: 'whatsnew' }); };
+}
+B.onCoachHide(() => coachEl.classList.remove('on'));
 function pick(r) { close(); B.overlayResult(r); }
 function cancel() { if (!D) return; close(); B.overlayCancel(); }
 

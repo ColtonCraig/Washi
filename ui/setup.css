@@ -433,3 +433,14 @@ html.scrapbook .nw .nwc::before{content:"";position:absolute;left:50%;top:-6px;w
 .tbrow.before::before,.tbrow.after::after{content:"";position:absolute;left:10px;right:10px;height:3px;border-radius:2px;background:var(--tape)}
 .tbrow.before::before{top:-5px}.tbrow.after::after{bottom:-5px}
 html.scrapbook .tbrow.drag{transform:rotate(-1.2deg)}
+
+/* What's new: the small things, as a list */
+.nw .nwfx{margin-top:14px;padding:14px 18px 12px;border-radius:12px;background:color-mix(in srgb,var(--tape) 7%,var(--white));box-shadow:0 0 0 1px rgb(var(--inkc) / .06),var(--cut-sm);animation:nwin .42s var(--spring,cubic-bezier(.3,1.4,.5,1)) both;animation-delay:calc(min(var(--i,0), 8) * 55ms + 120ms)}
+.nw .nwr>.nwfx:first-child{margin-top:0}
+.nw .nwfx h4{margin:0 0 8px;font:700 20px/1.1 var(--font-hand);color:var(--ink)}
+.nw .nwfx ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 22px}
+.nw .nwfx li{display:flex;align-items:flex-start;gap:8px;min-width:0;font:500 13px/1.45 var(--font-ui);color:var(--ink2)}
+.nw .nwfx li svg{flex:none;margin-top:2px;color:var(--tape)}
+html.motion-off .nw .nwfx{animation:none}
+@media (prefers-reduced-motion:reduce){.nw .nwfx{animation:none}}
+html.scrapbook .nw .nwfx{transform:rotate(-.25deg)}
