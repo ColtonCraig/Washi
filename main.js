@@ -977,6 +977,10 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
   if (a.type === 'test:focus' && !app.isPackaged) { C.win.focus(); return { focused: BrowserWindow.getFocusedWindow() === C.win }; }
   if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
+  if (a.type === 'test:zoom' && !app.isPackaged) { const t = activeTab(); return { zoom: t ? +t.wc.getZoomFactor().toFixed(2) : null }; }
+  if (a.type === 'test:devtools' && !app.isPackaged) { const t = activeTab(); if (t && a.close) t.wc.closeDevTools(); return { open: !!(t && t.wc.isDevToolsOpened()) }; }
+  if (a.type === 'test:scraps' && !app.isPackaged) return { n: scraps.size };
+  if (a.type === 'test:menu' && !app.isPackaged) { const out = {}; const walk = items => { for (const i of items) { if (i.submenu) walk(i.submenu.items); else if (i.label) out[i.label] = i.accelerator || ''; } }; walk(Menu.getApplicationMenu().items); return { items: out, recording, focused: (BrowserWindow.getFocusedWindow() || {}).id, mains: [...W.values()].map(c => c.win.id), scraps: scraps.size }; }
   if (a.type === 'test:block' && !app.isPackaged) { let r = null; const hit = blocker.onRequest({ url: String(a.url), resourceType: 'xhr', referrer: String(a.page), webContentsId: null }, x => { r = x; }); return { blocked: !!(hit && r && (r.cancel || r.redirectURL)) }; }   // tests: would this request be blocked on that page?
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
   if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reloadIgnoringCache(); return { ok: true }; }   // not from the cache: ads that loaded while blocking was off mustn't come back
@@ -1143,7 +1147,7 @@ function buildMenu() {
     { label: 'History', submenu: [...['back', 'forward'].map(item), { type: 'separator' }, ...['history', 'archive', 'downloads'].map(item)] },
     { label: 'Bookmarks', submenu: [...['bookmark', 'bookmarks', 'bookmarkbar'].map(item)] },
     { label: 'Spaces', submenu: [...['nexttab', 'prevtab'].map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('space:')).map(item), { type: 'separator' }, ...group('spaces').filter(i => i.startsWith('pin:')).map(item)] },
-    { role: 'windowMenu' },
+    { label: 'Window', role: 'window', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }] },   // (not the standard Window menu: its ⌘W would close the window instead of the tab)
     { role: 'help', submenu: [item('whatsnew'), { label: 'Quick-Start Guide', click: () => toUI('cmd', 'guide') }, { label: 'Keyboard Shortcuts', click: () => toUI('cmd', 'settings:keys') }, { label: 'Run Welcome Setup Again', click: () => toUI('cmd', 'setupagain') }] }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
