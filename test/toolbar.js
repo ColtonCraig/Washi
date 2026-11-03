@@ -119,6 +119,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   const w2 = b.pages().filter(x => x.url().endsWith('/index.html')).find(x => x !== ui);
   ok(w2 && JSON.stringify(await w2.evaluate(() => [...document.getElementById('tools').children].map(e => e.dataset.tool))) === JSON.stringify(custom), 'a new window has the same bar');
   await ui.evaluate(() => TOOLBAR.save({ toolsOff: ['note'] })); await sleep(900);
-  ok(w2 && await w2.evaluate(() => document.querySelector('#tools [data-tool="note"]').hasAttribute('data-off')), 'and follows changes made in the other window');
+  let fol = false; for (let i = 0; i < 25 && w2 && !fol; i++) { fol = await w2.evaluate(() => document.querySelector('#tools [data-tool="note"]').hasAttribute('data-off')); if (!fol) await sleep(100); }
+  ok(fol, 'and follows changes made in the other window');
   await b.stop(); done();
 })().catch(e => { console.error(e); process.exit(1); });

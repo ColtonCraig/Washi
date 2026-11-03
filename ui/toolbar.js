@@ -14,10 +14,21 @@ window.TOOLBAR = (() => {
     if (!S) return;
     const order = BL.toolOrder(S.prefs.tools), off = new Set(S.prefs.toolsOff || []);
     const key = order.join() + '|' + [...off].join();
-    for (const id of order) { const el = byId(id); if (el) el.toggleAttribute('data-off', off.has(id)); }
-    if (key === applied || drag) return; applied = key;
-    const now = [...box.children].map(e => e.dataset.tool).filter(Boolean);
-    if (now.join() !== order.join()) for (const id of order) { const el = byId(id); if (el) box.appendChild(el); }
+    if (key === applied || drag) return;
+    const first = !applied; applied = key;
+    const before = rects(visible()), anim = !first && motionOK(), going = [], coming = [];
+    for (const id of order) { const el = byId(id); if (!el) continue; const was = el.hasAttribute('data-off'), now = off.has(id); if (was === now) continue; (now ? going : coming).push(el); }
+    const settle = () => {
+      for (const el of going) el.setAttribute('data-off', '');
+      for (const el of coming) el.removeAttribute('data-off');
+      const now = [...box.children].map(e => e.dataset.tool).filter(Boolean);
+      if (now.join() !== order.join()) for (const id of order) { const el = byId(id); if (el) box.appendChild(el); }
+      if (!anim) return;
+      slide(before, null);                                                     // the rest glide to their new places
+      for (const el of coming) el.animate([{ transform: `scale(.4) rotate(${scrap() ? -14 : -6}deg)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.3,1.5,.5,1)' });
+    };
+    if (anim && going.length) { for (const el of going) el.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.4)', opacity: 0 }], { duration: 150, easing: 'cubic-bezier(.5,0,.9,.5)', fill: 'forwards' }).finished.then(a => a.cancel(), () => {}); setTimeout(settle, 150); }   // (a timer, not onfinish: a window in the background may never finish its animations)
+    else settle();
   }
   function setTools(patch) {
     for (const k in patch) S.prefs[k] = patch[k];
