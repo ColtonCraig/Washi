@@ -9,7 +9,7 @@ window.SETUP = (() => {
   let P = null, SPACES = [], CUR = null, DOCK = true, INFO = {}, KEYMAP = {}, PAGE = 'onboard', step = 0, syncs = [], isOpen = false, sheet = null, body = null, HAVE = [], appsCommit = null;
 
   const hooks = { perms: null, update: null, arc: null, bm: null };
-  B.onSetupEvent(e => { if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); if (e && e.type === 'bmDone' && hooks.bm) hooks.bm(e); });
+  B.onSetupEvent(e => { if (e && e.type === 'tools' && P && isOpen) { P.tools = e.tools; P.toolsOff = e.toolsOff; refresh(); } if (e && e.type === 'arcDone' && hooks.arc) hooks.arc(e); if (e && e.type === 'bmDone' && hooks.bm) hooks.bm(e); });
   B.onPerms(l => hooks.perms && hooks.perms(l)); B.onUpdate(u => hooks.update && hooks.update(u));
   const STEPS = [['hello', 'Hello'], ['look', 'Look'], ['basics', 'Basics'], ['apps', 'Your apps'], ['guide', 'Quick start'], ['done', 'Done']];
   const curSp = () => SPACES.find(x => x.id === CUR) || SPACES[0];
@@ -182,6 +182,28 @@ window.SETUP = (() => {
     return field('Downloads', seg([{ v: false, label: 'Save to Downloads', sub: 'No questions asked' }, { v: true, label: 'Ask where to save', sub: 'Pick a folder each time' }], () => P.askDownload, v => setPref({ askDownload: v }), 'wide'));
   }
   const ARCHIVE_OPTS = [{ v: 0, label: 'Never' }, { v: 12, label: 'After 12 hours' }, { v: 24, label: 'After a day' }, { v: 168, label: 'After a week' }, { v: 720, label: 'After 30 days' }];
+  /* ---------- Top bar: which tools show, in what order (drag the rows, or the buttons in the bar itself) ---------- */
+  function secToolbar() {
+    const box = h('div', { class: 'tbset' });
+    const draw = () => {
+      const order = BL.toolOrder(P.tools), off = new Set(P.toolsOff || []);
+      const preview = h('div', { class: 'tbprev', 'aria-hidden': 'true' }, h('span', { class: 'tbaddr' }), order.filter(id => !off.has(id)).map(id => { const t = BL.TOOLS.find(x => x.id === id); return h('span', { class: 'tbpi', 'data-tool': id, html: BL.ic(t.icon, 16) }); }));
+      const list = h('div', { class: 'tblist', role: 'list', 'aria-label': 'Top bar tools, drag to reorder' }, order.map((id, i) => {
+        const t = BL.TOOLS.find(x => x.id === id), on = !off.has(id), k = t.key && KEYMAP[t.key] ? BL.fmtKey(KEYMAP[t.key]) : '';
+        const move = d => { const o = order.slice(), j = i + d; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; setPref({ tools: o }); };
+        return h('div', { class: 'tbrow' + (on ? '' : ' off'), role: 'listitem', 'data-id': id, style: `--i:${i}` },
+          h('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'), h('span', { class: 'tbi', html: BL.ic(t.icon, 18) }),
+          h('span', { class: 'tbn' }, h('b', {}, t.name), t.sub ? h('small', {}, t.sub) : null), k ? h('kbd', {}, k) : null,
+          h('span', { class: 'tbmv' }, h('button', { class: 'mv', 'data-a': '1', 'aria-label': `Move ${t.name} left`, title: 'Move left', disabled: i === 0 ? '' : null, onclick: () => move(-1), html: BL.ic('up', 14) }), h('button', { class: 'mv', 'data-a': '1', 'aria-label': `Move ${t.name} right`, title: 'Move right', disabled: i === order.length - 1 ? '' : null, onclick: () => move(1), html: BL.ic('down', 14) })),
+          h('button', { class: 'sw' + (on ? ' on' : ''), 'data-a': '1', role: 'switch', 'aria-checked': String(on), 'aria-label': `Show ${t.name} in the top bar`, onclick: () => { const n = new Set(P.toolsOff || []); on ? n.add(id) : n.delete(id); setPref({ toolsOff: [...n] }); } }, h('i')));
+      }));
+      BMK.dragSort(list, '.tbrow', 'y', m => { const o = order.filter(x => x !== m.id), j = o.indexOf(m.target); o.splice(m.before ? j : j + 1, 0, m.id); setPref({ tools: o }); });
+      const dflt = !P.tools && !(P.toolsOff || []).length;
+      box.replaceChildren(preview, list, h('div', { class: 'row' }, h('button', { class: 'btn small', disabled: dflt ? '' : null, onclick: () => setPref({ tools: null, toolsOff: [] }) }, 'Reset to the standard order')));
+    };
+    sync(draw);
+    return [field('Tools on the right', box, 'Drag a row to move it (or drag the buttons in the top bar itself). Right-click a button in the bar to hide it. Reader only shows on articles, Downloads once you\'ve downloaded something.')];
+  }
   function secTabs(brief) {
     const arch = field('Tidy up old tabs', seg(ARCHIVE_OPTS, () => +P.archive, v => setPref({ archive: v }), 'grid'),
       'Tabs you haven\'t opened in a while move to the Archive (⌥⌘A), so your sidebar stays clean. Pinned tabs and folders are never touched.');
@@ -725,6 +747,7 @@ window.SETUP = (() => {
     syncs = [];
     const secs = [
       ['look', 'Look', () => secLook()],
+      ['toolbar', 'Top bar', () => secToolbar()],
       ['spaces', 'Spaces', () => SPACES.map(x => field(x.name + (x.id === CUR ? ' (current)' : ''), h('div', {}, spaceColors(x.id), h('div', { class: 'tgls' }, toggle('Keep this space\'s logins separate', 'Its own cookies and sign-ins, like a separate browser profile: handy for work and personal accounts', () => !!x.isolated, v => { x.isolated = v; send({ type: 'isolate', id: x.id, on: v }); refresh(); })), routesFor(x.id))))],
       ['search', 'Search & startup', () => [...secSearch(), secStartup()]],
       ['tabs', 'Tabs', () => secTabs()],

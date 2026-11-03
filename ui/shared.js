@@ -72,6 +72,8 @@
 <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4.5M12 17.6v.1"/></symbol>
 <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/></symbol>
 <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+<symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M5 7h3.5a2 2 0 1 1 4 0H16v3.5a2 2 0 1 1 0 4V18h-3.5a2 2 0 1 0-4 0H5v-3.5a2 2 0 1 0 0-4z"/></symbol>
+<symbol id="i-focus" viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 0 1 2-2h3M20 9V6a2 2 0 0 0-2-2h-3M4 15v3a2 2 0 0 0 2 2h3M20 15v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="2.4"/></symbol>
 <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
 <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
 <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
@@ -121,6 +123,15 @@
     search: 'google', customSearch: '', startup: 'restore', home: '', gpc: true, askDownload: false,
     blocking: 'standard', httpsFirst: true, safety: true, dns: 'auto', clearOnExit: false, suggest: true,
     archive: 0, sleep: 60, autoPip: true, scrapLinks: false, newTabPos: 'top', bookmarkBar: 'hover', keys: {} };
+  /* the tools on the right of the top bar, in their standard order (Settings › Top bar, or drag them in the bar) */
+  const TOOLS = [
+    { id: 'exts', name: 'Extensions', icon: 'puzzle', sub: 'Your extensions\' buttons' }, { id: 'note', name: 'Sticky note', icon: 'note', key: 'notes' },
+    { id: 'focus', name: 'Focus mode', icon: 'focus', key: 'focus' }, { id: 'reader', name: 'Reader', icon: 'reader', key: 'reader', sub: 'Shows on articles' },
+    { id: 'star', name: 'Bookmark', icon: 'star', key: 'bookmark' }, { id: 'boost', name: 'Boost', icon: 'bolt' },
+    { id: 'shield', name: 'Blocking', icon: 'shield' }, { id: 'downloads', name: 'Downloads', icon: 'download', key: 'downloads' }, { id: 'split', name: 'Split view', icon: 'split', key: 'split' }
+  ];
+  const toolOrder = order => { const ids = TOOLS.map(t => t.id), o = (Array.isArray(order) ? order : []).filter((x, i, a) => ids.includes(x) && a.indexOf(x) === i);
+    ids.forEach((id, i) => { if (o.includes(id)) return; const before = ids.slice(0, i).reverse().find(x => o.includes(x)); o.splice(before ? o.indexOf(before) + 1 : 0, 0, id); }); return o; };
   const prefsOf = p => { p = p || {}; return { ...DEF, ...p, light: { ...DEF.light, ...(p.light || {}) }, dark: { ...DEF.dark, ...(p.dark || {}) }, keys: { ...(p.keys || {}) } }; };
   const ENGINES = [
     { id: 'google', n: 'Google', url: 'https://www.google.com/search?q=%s' }, { id: 'duckduckgo', n: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
@@ -219,5 +230,5 @@
   const PAPER_ICONS = [['star', 'Star'], ['case', 'Work'], ['home', 'Home'], ['book', 'Reading'], ['tools', 'Tools'], ['palette', 'Art'], ['music', 'Music'], ['game', 'Games'], ['search', 'Research'], ['plane', 'Travel'], ['bulb', 'Ideas'], ['news', 'News'], ['money', 'Money'], ['heart', 'Favorites'], ['sprout', 'Growing'], ['code', 'Code'], ['chart', 'Numbers'], ['cal', 'Plans'], ['camera', 'Photos'], ['cloud', 'Cloud']];
   const fIcon = (icon, size = 16) => !icon ? ic('folder', size) : /^p:[a-z]+$/.test(icon) && PAPER_ICONS.some(([k]) => 'p:' + k === icon) ? `<svg class="i pi" viewBox="0 0 24 24" style="width:${size + 2}px;height:${size + 2}px"><use href="#pi-${icon.slice(2)}"/></svg>` : `<span class="emo">${esc(icon)}</span>`;
   const menuIcon = icon => icon && !/^p:/.test(icon) ? icon + '  ' : '';   // native menus can only show emoji
-  window.BL = { PAPER_ICONS, fIcon, menuIcon, appsFor, appIcon, icons, loadIcons, PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
+  window.BL = { TOOLS, toolOrder, PAPER_ICONS, fIcon, menuIcon, appsFor, appIcon, icons, loadIcons, PAL, KEYS: Object.keys(PAL).map(Number), palOf, applyPal, hx, toHex, mix, PRESETS, DEF, prefsOf, ENGINES, searchTpl, suggestTpl, SUGGEST, BANGS, bang, fmtKey, palFor, isDark, applyTheme, motion: mode, esc, hostOf, hueOf, chip, rot, ic, favHTML, spring, SP, setup, zones, zoneAt };
 })();

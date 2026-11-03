@@ -125,10 +125,11 @@ function toURL(v) {
 }
 const spaceInfo = s => s && s.isolated ? { id: s.id, isolated: true } : null;
 const keyHint = id => fmtKey(R.keys[id] || '');
+const tip = (text, id) => { const k = keyHint(id); return k ? `${text} (${k})` : text; };
 
 /* ---------- dom refs + layout ---------- */
 const stage = $('#stage'), pa = $('#pa'), pb = $('#pb'), gutter = $('#gutter');
-const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bNote = $('#bNote'), bmbar = $('#bmbar');
+const urlEl = $('#url'), urlTxt = $('#urlTxt'), bBack = $('#bBack'), bFwd = $('#bFwd'), bReload = $('#bReload'), bSplit = $('#bSplit'), bSide = $('#bSide'), bShield = $('#bShield'), bDl = $('#bDl'), bBoost = $('#bBoost'), bStar = $('#bStar'), bRead = $('#bRead'), bNote = $('#bNote'), bFocus = $('#bFocus'), bmbar = $('#bmbar');
 
 /* Focus mode floats the sidebar for a while without changing your choice to dock it */
 const docked = () => S.dock && !S.focusMode;
@@ -189,7 +190,7 @@ function updateChrome() {
   }
   const web = !!(t && /^https?:/.test(t.url) && !R.notice[id]);
   const bk = !!(web && bmByUrl(t.url)); bStar.disabled = !web; if (bStar.classList.contains('on') !== bk) { bStar.classList.toggle('on', bk); if (bk && !calm()) bStar.firstElementChild.animate([{ transform: 'scale(.6) rotate(-30deg)' }, { transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.34,1.5,.64,1)' }); }
-  bStar.title = bk ? 'Edit this bookmark (⇧⌘D)' : 'Bookmark this page (⇧⌘D)';
+  bStar.title = tip(bk ? 'Edit this bookmark' : 'Bookmark this page', 'bookmark') + ' · rest here for the bookmarks bar';
   const rd = !!(id && R.reading[id]), ra = !!(id && (R.readable[id] || rd));
   if (bRead.hidden === ra) { bRead.hidden = !ra; if (ra && !calm()) bRead.animate([{ transform: 'scale(.5) rotate(-12deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
   bRead.classList.toggle('on', rd); bRead.title = rd ? `Leave Reader (${keyHint('reader')} or esc) · right-click for text size` : `Reader mode (${keyHint('reader')})`;
@@ -201,13 +202,16 @@ function updateChrome() {
   const act = R.downloads.filter(d => d.state === 'progressing' || d.state === 'paused');
   bDl.querySelector('b').textContent = act.length > 1 ? String(act.length) : '';
   bDl.classList.toggle('new', !act.length && R.downloads.some(d => d.state === 'completed' && d.at > (S.prefs.dlSeen || 0)));
-  bDl.title = act.length ? `Downloading ${act.length === 1 ? act[0].name : act.length + ' files'}` : 'Downloads';
+  bDl.title = act.length ? `Downloading ${act.length === 1 ? act[0].name : act.length + ' files'}` : tip('Downloads', 'downloads');
   const tot = act.reduce((a, d) => a + (d.total || 0), 0), got = act.reduce((a, d) => a + (d.received || 0), 0);
   bDl.style.setProperty('--p', act.length && tot ? (got / tot).toFixed(3) : act.length ? .15 : 0); bDl.classList.toggle('busy', !!act.length);
   bBack.disabled = !id || !R.canBack[id]; bFwd.disabled = !id || !R.canFwd[id]; bReload.disabled = !id;
   const ld = !!(id && R.loading[id]);
   urlEl.classList.toggle('loading', ld);
-  bReload.innerHTML = ic(ld ? 'close' : 'reload'); bReload.title = ld ? 'Stop loading' : 'Reload (⌘R)';
+  bReload.innerHTML = ic(ld ? 'close' : 'reload'); bReload.title = ld ? 'Stop loading' : tip('Reload', 'reload');
+  /* every tooltip shows your shortcut, as you've set it */
+  bBack.title = tip('Back', 'back'); bFwd.title = tip('Forward', 'forward'); bSide.title = tip(S.dock ? 'Float the sidebar' : 'Pin the sidebar', 'sidebar'); urlEl.title = tip('Go to address', 'location');
+  bSplit.title = tip(R.split ? 'Close split view' : 'Split view', 'split'); bFocus.classList.toggle('on', !!S.focusMode); bFocus.title = tip(S.focusMode ? 'Leave Focus mode' : 'Focus mode: the page gets the whole window', 'focus');
   bSplit.classList.toggle('on', R.split); bSide.classList.toggle('on', S.dock); $('#edge').hidden = docked();
   pa.classList.toggle('has', !!R.a); pb.classList.toggle('has', !!(R.split && R.b));
   pa.classList.toggle('focus', R.focus === 'a'); pb.classList.toggle('focus', R.focus === 'b');
@@ -253,7 +257,7 @@ function autoIcons() {
   }
 }
 const render = () => { if (S) autoIcons(); updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
-const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); };
+const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); if (window.TOOLBAR) TOOLBAR.apply(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
 const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {} }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
@@ -700,6 +704,7 @@ function openNote() {
   B.panel('notes', { x: Math.round(Math.max(8, Math.min(innerWidth - 348, r.right - 300))), y: Math.round(r.bottom + 2), w: 340, h: 392 }, { text: s.note || '', name: s.name, ...look() });
 }
 bNote.addEventListener('click', openNote);
+bFocus.addEventListener('click', () => focusMode(!S.focusMode));
 bRead.addEventListener('click', () => { const id = focusedId(); readerToggle(!(id && R.reading[id])); });   // the book stamp turns Reader on and off
 bRead.addEventListener('contextmenu', e => { e.preventDefault(); const id = focusedId(); if (id && R.reading[id]) readerPanel(); });
 B.onSetupMsg(m => {
@@ -857,6 +862,7 @@ function spaceMenu(id) {
 B.onMenu(id => menuClick(id));
 function menuClick(id) {
   if (!S) return;
+  if (id.startsWith('tb:') && TOOLBAR.menu(id)) return;
   const t = R.menuTab, s = R.menuSpace;
   if (id === 'pin') pinToggle(t);
   else if (id === 'sep') separate(t);
@@ -946,6 +952,7 @@ function switchEnd(pick) {
 const cycle = d => { const list = [...S.pins, ...spaceTabs(sp())]; if (!list.length) return; const i = list.indexOf(focusedId()); selectTab(list[(i + d + list.length) % list.length]); };
 B.onCmd(n => {
   if (!S) return;
+  if (typeof n === 'string' && n.startsWith('tb:') && TOOLBAR.cmd(n)) return;
   if (n === 'boost:undo') { B.setupAct({ type: 'boost:undoLast' }); return; }
   if (n === 'switch:next' || n === 'switch:prev') return switcher(n === 'switch:next' ? 1 : -1);
   if (n === 'switch:commit') return switchEnd(); if (n === 'switch:cancel') return switchEnd(null);

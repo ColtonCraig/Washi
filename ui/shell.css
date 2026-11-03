@@ -96,3 +96,14 @@ body.focus .bmbar{display:none!important}
 body.focus .topbar .lights{visibility:hidden}
 body.focus.peek .topbar .lights{visibility:visible}
 html.motion-off body.focus .topbar{transition:none}
+
+/* the tools on the right: your order, the ones you want (ui/toolbar.js); drag one along to move it */
+.tools{display:flex;align-items:center;gap:4px;min-width:0}
+.tools [data-off]{display:none!important}
+.tools.arranging,.tools.arranging *{cursor:grabbing!important}
+.tools .lift{position:relative;z-index:5;background:var(--white)!important;color:var(--ink)!important;box-shadow:0 6px 16px rgb(var(--sh) / .22),0 0 0 1px rgb(var(--inkc) / .1);border-radius:8px;transition:none!important}
+.tools.arranging > :not(.lift){transition:none}
+.tools.arranging::after{content:"";position:absolute;inset:4px 0;pointer-events:none}
+body.arranging .label{opacity:.7;transition:opacity .2s}
+body.arranging .topbar,body.arranging .topbar *{-webkit-app-region:no-drag}
+.stamp.fstamp.on{color:var(--tape);background:color-mix(in srgb,var(--tape) 13%,transparent)}

@@ -22,14 +22,17 @@
   <button class="stamp" id="bFwd" title="Forward (⌘])" aria-label="Forward"><svg class="i" viewBox="0 0 24 24"><use href="#i-fwd"/></svg></button>
   <button class="stamp" id="bReload" title="Reload (⌘R)" aria-label="Reload"><svg class="i" viewBox="0 0 24 24"><use href="#i-reload"/></svg></button>
   <button class="label" id="url" title="Go to address (⌘L)"><span class="lk" id="lk"></span><span class="txt" id="urlTxt"></span><i class="stitch"></i></button>
-  <browser-action-list id="exts" partition="washi-pages" alignment="bottom" aria-label="Extensions"></browser-action-list>
-  <button class="stamp nstamp" id="bNote" title="Sticky note for this space (⇧⌘K)" aria-label="Sticky note"><svg class="i" viewBox="0 0 24 24"><use href="#i-note"/></svg></button>
-  <button class="stamp read" id="bRead" title="Reader mode (⇧⌘R)" aria-label="Reader mode" hidden><svg class="i" viewBox="0 0 24 24"><use href="#i-reader"/></svg></button>
-  <button class="stamp star" id="bStar" title="Bookmark this page (⇧⌘D)" aria-label="Bookmark this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-star"/></svg></button>
-  <button class="stamp boost" id="bBoost" title="Boost this site: colors, font, hide things" aria-label="Boost this site"><svg class="i" viewBox="0 0 24 24"><use href="#i-bolt"/></svg></button>
-  <button class="stamp shield" id="bShield" title="Ads and trackers blocked" aria-label="Blocking on this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-shield"/></svg><b></b></button>
-  <button class="stamp dl" id="bDl" title="Downloads" aria-label="Downloads"><svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg><svg class="i" viewBox="0 0 24 24"><use href="#i-download"/></svg><b></b><i class="ok" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></i></button>
-  <button class="stamp" id="bSplit" title="Split view (⌘\)" aria-label="Split view"><svg class="i" viewBox="0 0 24 24"><use href="#i-split"/></svg></button>
+  <div class="tools" id="tools" role="toolbar" aria-label="Page tools (drag to rearrange)">
+    <browser-action-list data-tool="exts" id="exts" partition="washi-pages" alignment="bottom" aria-label="Extensions"></browser-action-list>
+    <button data-tool="note" class="stamp nstamp" id="bNote" title="Sticky note for this space (⇧⌘K)" aria-label="Sticky note"><svg class="i" viewBox="0 0 24 24"><use href="#i-note"/></svg></button>
+    <button data-tool="focus" class="stamp fstamp" id="bFocus" title="Focus mode" aria-label="Focus mode"><svg class="i" viewBox="0 0 24 24"><use href="#i-focus"/></svg></button>
+    <button data-tool="reader" class="stamp read" id="bRead" title="Reader mode (⇧⌘R)" aria-label="Reader mode" hidden><svg class="i" viewBox="0 0 24 24"><use href="#i-reader"/></svg></button>
+    <button data-tool="star" class="stamp star" id="bStar" title="Bookmark this page (⇧⌘D)" aria-label="Bookmark this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-star"/></svg></button>
+    <button data-tool="boost" class="stamp boost" id="bBoost" title="Boost this site: colors, font, hide things" aria-label="Boost this site"><svg class="i" viewBox="0 0 24 24"><use href="#i-bolt"/></svg></button>
+    <button data-tool="shield" class="stamp shield" id="bShield" title="Ads and trackers blocked" aria-label="Blocking on this page"><svg class="i" viewBox="0 0 24 24"><use href="#i-shield"/></svg><b></b></button>
+    <button data-tool="downloads" class="stamp dl" id="bDl" title="Downloads" aria-label="Downloads"><svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg><svg class="i" viewBox="0 0 24 24"><use href="#i-download"/></svg><b></b><i class="ok" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></i></button>
+    <button data-tool="split" class="stamp" id="bSplit" title="Split view (⌘\)" aria-label="Split view"><svg class="i" viewBox="0 0 24 24"><use href="#i-split"/></svg></button>
+  </div>
   <i class="bmedge" id="bmEdge" aria-hidden="true"></i>
 </header>
 <nav class="bmbar" id="bmbar" aria-label="Bookmarks"></nav>
@@ -55,6 +58,7 @@
 <script src="whatsnew.js"></script>
 <script src="bookmarks.js"></script>
 <script src="app.js"></script>
+<script src="toolbar.js"></script>
 <script src="today.js"></script>
 </body>
 </html>
