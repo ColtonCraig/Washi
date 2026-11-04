@@ -435,7 +435,7 @@ function separate(id) {
 }
 function toggleSide() {
   if (S.focusMode) { S.dock = true; return focusMode(false); }        // docking the sidebar is a way out of Focus mode
-  S.dock = !S.dock; B.sbMode({ docked: S.dock, w: sbW() });
+  S.dock = !S.dock; S.prefs.lastDock = S.dock; B.sbMode({ docked: S.dock, w: sbW() });
   placePanes(); commit(false, true, true); save();
 }
 /* ---------- Snapshot (⇧⌘S): the page freezes under a soft veil; drag a box, or Enter for all of it ---------- */
@@ -696,6 +696,7 @@ async function whatsNew() {
   if (!wasSetUp || S.prefs.showNews === false) return;               // a new install gets the welcome instead; or you said not to (Settings › Help)
   const since = seen || (news[1] && news[1].v) || '0.0.0';             // from before this page existed: show this release
   if (!newer(v, since) || !news.some(r => newer(r.v, since) && !newer(r.v, v))) return;
+  if (!(await B.setupAct({ type: 'news:claim', v }).catch(() => null) || {}).ok) return;   // windows open together after an update: only one shows it
   R.newsSince = since; setTimeout(() => openSetup('news', since), 900);
 }
 async function openSetup(page, section) {
@@ -1439,7 +1440,7 @@ setInterval(() => { if (S) archiveTabs(); }, 10 * 60 * 1000);
   const sh = J(raw.shared), mine = J(raw.win) || {}, legacy = J(raw.legacy);
   let start;
   if (sh && Array.isArray(sh.spaces) && sh.spaces.length) {
-    start = { tabs: mine.tabs || {}, pins: mine.pins || [], pairs: mine.pairs || [], ratios: mine.ratios || {}, cur: mine.cur || sh.spaces[0].id, dock: mine.dock, focusMode: !!mine.focus, prefs: sh.prefs, closed: sh.closed || [], archive: sh.archive || [], bookmarks: sh.bookmarks || [],
+    start = { tabs: mine.tabs || {}, pins: mine.pins || [], pairs: mine.pairs || [], ratios: mine.ratios || {}, cur: mine.cur || sh.spaces[0].id, dock: mine.dock !== undefined ? mine.dock : (sh.prefs || {}).lastDock,   /* a new window: the sidebar pinned or floating, like the one you used last */ focusMode: !!mine.focus, prefs: sh.prefs, closed: sh.closed || [], archive: sh.archive || [], bookmarks: sh.bookmarks || [],
       spaces: sh.spaces.map(m => ({ ...m, ...((mine.spaces || {})[m.id] || { tabs: [], folders: [], act: null }) })) };
   } else start = legacy || fresh();                     // first launch, or an older profile (one window, everything in state.json)
   try { S = sanitize(start); } catch { S = fresh(); }

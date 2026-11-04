@@ -491,7 +491,7 @@ function memCheck(capMB) {
 setInterval(() => { try { memCheck(); } catch {} }, 60e3).unref?.();
 /* an update is downloaded: a postcard in the window you're using offers to restart (Settings › Help: or just install it
    when you quit). Waits for a moment when nothing else is open; "Later" doesn't ask again for that version. */
-let updLater = null, updT = 0;
+let updLater = null, updT = 0, newsClaimed = '';
 function offerUpdate(s, tries = 0) {
   clearTimeout(updT);
   if (!s || s.status !== 'ready' || updLater === s.version || P.updates === 'quiet') return;
@@ -1017,6 +1017,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'update:check') return updater.check();
   if (a.type === 'update:install') { updater.install(); return { ok: true }; }
   if (a.type === 'snap:save') { snapSave(true); return { ok: true }; }
+  if (a.type === 'news:claim') { const v = String(a.v || ''); if (!v || newsClaimed === v) return { ok: false }; newsClaimed = v; return { ok: true }; }   // What's new: the first window to ask shows it
   if (a.type === 'update:later') { const s = updater.state(); updLater = (typeof a.version === 'string' && a.version) || (s && s.version); return { ok: true }; }
   if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), notes: String(a.notes || '') }); return { ok: true }; }
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; let url = ''; try { url = p.browserWindow.webContents.getURL(); } catch {} return { open: true, wid, id: p.extensionId, url }; }   // tests: which window an extension popup opened in
