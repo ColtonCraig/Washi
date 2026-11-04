@@ -1021,6 +1021,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'test:metrics' && !app.isPackaged) {               // tests: memory by kind of process (MB)
     const kind = new Map(); for (const c of W.values()) { if (!alive(c.win)) continue; const add = (wc, k) => { try { if (wc && !wc.isDestroyed()) kind.set(wc.getOSProcessId(), k); } catch {} };
       add(c.win.webContents, a.split ? 'ui:window' : 'ui'); add(c.sidebar && c.sidebar.webContents, a.split ? 'ui:sidebar' : 'ui'); add(c.overlay && c.overlay.webContents, a.split ? 'ui:overlay' : 'ui'); for (const t of c.tabs.values()) add(t.wc, 'tab'); }
+    if (a.split) for (const w of require('electron').webContents.getAllWebContents()) { try { const pid = w.getOSProcessId(); if (!kind.has(pid)) kind.set(pid, 'other:' + w.getType() + ':' + (w.getURL().split('/')[2] || w.getURL().slice(0, 30))); } catch {} }
     const out = { total: 0, by: {}, procs: 0, tabsLive: 0 };
     out.pids = [];
     for (const m of app.getAppMetrics()) { const k = kind.get(m.pid) || (m.type === 'Tab' ? 'other renderer' : m.type); const mb = (m.memory.privateBytes || m.memory.workingSetSize) / 1024; out.total += mb; out.by[k] = (out.by[k] || 0) + mb; out.procs++; out.pids.push([m.pid, k]); }

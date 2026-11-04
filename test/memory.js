@@ -11,7 +11,7 @@ const N = +(process.env.MEM_TABS || 30);
   const tabs = {}, ids = []; for (let i = 0; i < N; i++) { const id = 't' + i; ids.push(id); tabs[id] = { url: `http://localhost:8765/heavy.html?${i}`, title: 'Heavy ' + i, seen: Date.now() - i * 60000 }; }
   fs.writeFileSync(path.join(profile, 'state.json'), JSON.stringify({ tabs, pins: [], pairs: [], cur: 'home', dock: true, history: [], closed: [], archive: [], prefs: { done: true, seenVer: require('../package.json').version }, spaces: [{ id: 'home', name: 'Home', h: 18, tabs: ids, folders: [], act: 't0' }, { id: 'work', name: 'Work', h: 200, tabs: [], folders: [] }] }));
   const b = await start({ profile, fresh: false }); const { ui } = b;
-  const m = () => ui.evaluate(() => B.setupAct({ type: 'test:metrics' }));
+  const m = () => ui.evaluate(() => B.setupAct({ type: 'test:metrics', split: true }));
   const say = (what, x) => console.log(`  Memory ${what}: ${x.total} MB in ${x.procs} processes, ${x.tabsLive} pages awake  ${JSON.stringify(x.by)}`);
   await sleep(9000);
   const a = await m(); say('after a restart', a);
@@ -20,7 +20,11 @@ const N = +(process.env.MEM_TABS || 30);
   await ui.evaluate(id => selectTab(id), ids[0]); await sleep(6000);
   const v = await m(); say(`after visiting all ${N} tabs`, v);
   ok(v.tabsLive >= N - 1, `visited, all ${v.tabsLive} pages are awake`);
-  ok((v.by.ui || 0) < 400, `Washi's own interface (window, sidebar, overlay) stays small: ${v.by.ui} MB`);
+  const uiMB = x => Object.keys(x.by).filter(k => k.startsWith('ui')).reduce((s, k) => s + x.by[k], 0);
+  // each interface view is one renderer (about 100-140 MB of fixed cost, most of it Chromium's own; its JS heap is ~3 MB).
+  // What Washi controls is that they don't grow with your tabs: thumbnails, favicons and titles mustn't pile up in them.
+  ok(Object.keys(v.by).filter(k => k.startsWith('ui')).every(k => v.by[k] < 200), 'each interface view stays under 200 MB: ' + Object.keys(v.by).filter(k => k.startsWith('ui')).map(k => k + ' ' + v.by[k]).join(', '));
+  ok(uiMB(v) - uiMB(a) < 100, `and visiting ${N} tabs barely grows them: ${uiMB(a)} → ${uiMB(v)} MB`);
   // Memory saver: over the limit, the oldest idle tabs sleep first (never recent ones)
   await ui.evaluate(ids => { ids.forEach((id, i) => { if (id !== focusedId()) S.tabs[id].seen = Date.now() - (20 + i) * 60e3; }); S.tabs[ids[1]].seen = Date.now() - 60e3; }, ids);
   const r = await ui.evaluate(cap => B.setupAct({ type: 'test:memcheck', capMB: cap }), v.total - 600); await sleep(3000);
