@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld('washi', {
   onPaneFocus: on('pane:focus'), onOverlayResult: on('overlay:result'), onOverlayCancel: on('overlay:cancel'),
   onMenu: on('menu:click'), onOverlayInit: on('overlay:init'), onFx: on('overlay:fx'), onDrag: on('overlay:drag'),
   onSetupMsg: on('setup:msg'), onShared: on('shared:update'), onHistOp: on('hist:op'), onSetupEvent: on('setup:event'), onDl: on('dl:update'), onFind: on('find:result'), onFindStep: on('find:step'),
-  onPeekInfo: on('peek:info'), onOverlayClosed: on('overlay:closed'), onPeekClosed: on('peek:closed'), coachShow: send('coach:show'), coachHide: send('coach:hide'), onCoachHide: on('coach:hide'), onUpdate: on('update:state'), onUpdateCard: on('update:card'), onMemTight: on('mem:tight'), onPerms: on('perms:update'),
+  onPeekInfo: on('peek:info'), onOverlayClosed: on('overlay:closed'), onPeekClosed: on('peek:closed'), tabSleep: send('tab:sleep'), coachShow: send('coach:show'), coachHide: send('coach:hide'), onCoachHide: on('coach:hide'), onUpdate: on('update:state'), onUpdateCard: on('update:card'), onMemTight: on('mem:tight'), onPerms: on('perms:update'),
   onExtTab: on('ext:tab'), onExtOpen: on('ext:open'), onSbState: on('sb:state'), onSbFx: on('sb:fx'), onSbMode: on('sb:mode'), onIntent: on('sb:intent'), onSbReady: on('sb:ready'), onScrapAdopt: on('scrap:adopt'), onScrapInfo: on('scrap:info'), onScrapFocus: on('scrap:focus'), onBmAct: on('bm:act'), onBmEdge: on('bm:edge'), focusSet: send('focus:set'), snapCapture: invoke('snap:capture'), snapTake: invoke('snap:take'), closedWin: invoke('win:closed'), reopenWin: invoke('win:reopen'), onFocusPeek: on('focus:peek'), onBmHide: on('bm:hide')
 });
 

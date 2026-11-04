@@ -100,7 +100,7 @@ const PIP_ON = `(() => { const v = [...document.querySelectorAll('video')].filte
 const PIP_OFF = `(document.pictureInPictureElement ? document.exitPictureInPicture().then(() => true, () => false) : false)`;
 const tabWaiters = [];
 function ensureTab(id, url, space) {
-  if (C.tabs.has(id)) return C.tabs.get(id);
+  if (C.tabs.has(id)) { const t = C.tabs.get(id); t.sleeping = false; return t; }
   const ses = web.pageSession(space);                        // the tab's own space decides its login jar (null = the shared one)
   const view = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, session: ses, safeDialogs: true, spellcheck: true } });
   try { view.setBorderRadius(10); } catch {}
@@ -111,7 +111,13 @@ function ensureTab(id, url, space) {
   hook(t);
   { const at = activeTab(); exts.addTab(t.wc, C.win, at && at.wc); }
   const w = tabWaiters.shift(); if (w) w(t);                      // an extension asked for this tab (chrome.tabs.create)
-  if (url) go(t.wc, url).catch(() => {});
+  const z = slept.get(id); slept.delete(id);
+  if (z && url && z.entries[z.index] && z.entries[z.index].url === url) {          // waking up: its history and scroll come back
+    web.matchUA(t.wc, url);
+    t.wc.navigationHistory.restore({ entries: z.entries, index: z.index }).then(() => {
+      if (z.scroll && (z.scroll[0] || z.scroll[1])) t.wc.executeJavaScript(`scrollTo(${+z.scroll[0] || 0}, ${+z.scroll[1] || 0})`, true).catch(() => {});
+    }).catch(() => go(t.wc, url).catch(() => {}));
+  } else if (url) go(t.wc, url).catch(() => {});
   return t;
 }
 const OK_SCHEMES = new Set(['http:', 'https:', 'about:', 'data:', 'blob:', 'file:', 'view-source:', 'chrome:', 'devtools:', 'chrome-extension:']);
@@ -249,7 +255,25 @@ HANDLE('panes:set', (_, p, fp) => {
   const at = activeTab(); if (at) { exts.selectTab(at.wc, C.win); toUI('ext:tab', at.wc.id); }   // the extension buttons act on this window's tab (not whichever window had focus last)
   if (fp) focusPage(); return true;
 });
+/* sleeping a tab (to free memory): it keeps its back/forward history and where you'd scrolled to, so waking it up is
+   like it never slept (only the page's live state, a half-typed form, say, is gone) */
+const slept = new Map();                                   // tab id → { entries, index, scroll, at }
+ON('tab:sleep', async (_, id) => {
+  const c = C, t = c.tabs.get(id); if (!t || t.wc.isDestroyed()) return;
+  t.sleeping = true; let saved = null;
+  try {
+    const h = t.wc.navigationHistory, entries = h.getAllEntries(), index = h.getActiveIndex();
+    const scroll = await Promise.race([t.wc.executeJavaScript('[scrollX, scrollY]', true), new Promise(r => setTimeout(() => r(null), 400))]).catch(() => null);
+    if (entries && entries.length) saved = { entries: entries.slice(-50), index: Math.max(0, Math.min(entries.slice(-50).length - 1, index - Math.max(0, entries.length - 50))), scroll, at: Date.now() };
+  } catch {}
+  if (saved) { slept.set(id, saved); if (slept.size > 400) slept.delete(slept.keys().next().value); }
+  if (c.tabs.get(id) !== t || !t.sleeping) return;            // woken up again while we were saving: it stays awake
+  c.tabs.delete(id); thumbs.delete(id);
+  try { c.win.contentView.removeChildView(t.view); } catch {}
+  try { t.wc.close(); } catch {}
+});
 ON('tab:close', (_, id) => {
+  slept.delete(id);
   const t = C.tabs.get(id); if (!t) return;
   C.tabs.delete(id); thumbs.delete(id);
   try { C.win.contentView.removeChildView(t.view); } catch {}
@@ -450,15 +474,16 @@ ON('tab:peek', async (_, d) => {
   const w = 288, h = img ? 252 : 132, x = Math.min(W - w - 8, Math.max(0, sb.x) + sb.width + 6), y = Math.max(TOP + 4, Math.min(H - h - 8, Math.round(d.y + d.h / 2 - 40)));
   clearTimeout(C.fxTimer); C.tabPeekOn = true;
   C.overlay.setBounds(rr({ x, y, width: w, height: h })); C.overlay.setVisible(true);
-  toOverlay('overlay:fx', { type: 'tabpeek', img: img ? 'data:image/jpeg;base64,' + img : null, title: String(d.title || '').slice(0, 200), url: String(d.url || '').slice(0, 500), fav: d.fav || null, pal: d.pal, theme: d.theme, arrowY: Math.round(d.y + d.h / 2 - y) });
+  let memMB = 0; try { if (t && !t.wc.isDestroyed()) { const pid = t.wc.getOSProcessId(), m = app.getAppMetrics().find(x => x.pid === pid); if (m) memMB = Math.round((m.memory.privateBytes || m.memory.workingSetSize) / 1024); } } catch {}   // what it costs, like Chrome's hover cards
+  toOverlay('overlay:fx', { type: 'tabpeek', mem: memMB, img: img ? 'data:image/jpeg;base64,' + img : null, title: String(d.title || '').slice(0, 200), url: String(d.url || '').slice(0, 500), fav: d.fav || null, pal: d.pal, theme: d.theme, arrowY: Math.round(d.y + d.h / 2 - y) });
 });
-/* Memory saver: when Washi as a whole uses more than its share of the Mac's memory (a quarter, or a sixth on Maximum),
+/* Memory saver: when Washi as a whole uses more than its share of the Mac's memory (a fifth, or a tenth on Maximum),
    the tabs you haven't looked at for a while go to sleep, oldest first, until it's back under. Never the tab you're on,
    one playing sound, or one you used in the last 10 minutes. Checked once a minute; costs next to nothing. */
 function memCheck(capMB) {
   if (P.memSaver === 'off' && !capMB) return { over: 0 };
   let total = 0; for (const m of app.getAppMetrics()) total += (m.memory.privateBytes || m.memory.workingSetSize) / 1024;
-  const cap = capMB || (require('os').totalmem() / 1048576) * (P.memSaver === 'max' ? 1 / 6 : 1 / 4);
+  const cap = capMB || (require('os').totalmem() / 1048576) * (P.memSaver === 'max' ? 1 / 10 : 1 / 5);
   const over = Math.round(total - cap);
   if (over > 0) for (const c of W.values()) if (alive(c.win)) c.win.webContents.send('mem:tight', { over, total: Math.round(total) });
   return { over, total: Math.round(total), cap: Math.round(cap) };
@@ -997,7 +1022,8 @@ HANDLE('setup:act', async (_, a) => {
     const kind = new Map(); for (const c of W.values()) { if (!alive(c.win)) continue; const add = (wc, k) => { try { if (wc && !wc.isDestroyed()) kind.set(wc.getOSProcessId(), k); } catch {} };
       add(c.win.webContents, a.split ? 'ui:window' : 'ui'); add(c.sidebar && c.sidebar.webContents, a.split ? 'ui:sidebar' : 'ui'); add(c.overlay && c.overlay.webContents, a.split ? 'ui:overlay' : 'ui'); for (const t of c.tabs.values()) add(t.wc, 'tab'); }
     const out = { total: 0, by: {}, procs: 0, tabsLive: 0 };
-    for (const m of app.getAppMetrics()) { const k = kind.get(m.pid) || (m.type === 'Tab' ? 'other renderer' : m.type); const mb = (m.memory.privateBytes || m.memory.workingSetSize) / 1024; out.total += mb; out.by[k] = (out.by[k] || 0) + mb; out.procs++; }
+    out.pids = [];
+    for (const m of app.getAppMetrics()) { const k = kind.get(m.pid) || (m.type === 'Tab' ? 'other renderer' : m.type); const mb = (m.memory.privateBytes || m.memory.workingSetSize) / 1024; out.total += mb; out.by[k] = (out.by[k] || 0) + mb; out.procs++; out.pids.push([m.pid, k]); }
     for (const c of W.values()) for (const t of c.tabs.values()) if (t.wc && !t.wc.isDestroyed()) out.tabsLive++;
     for (const k in out.by) out.by[k] = Math.round(out.by[k]); out.total = Math.round(out.total); return out;
   }

@@ -122,7 +122,7 @@
   const DEF = { done: false, mode: 'light', light: { preset: 'cream', paper: '', ink: '' }, dark: { preset: 'cocoa', paper: '', ink: '' }, texture: true, wobble: false, motion: true,
     search: 'google', customSearch: '', startup: 'restore', home: '', gpc: true, askDownload: false,
     blocking: 'standard', httpsFirst: true, safety: true, dns: 'auto', clearOnExit: false, suggest: true,
-    archive: 0, sleep: 60, autoPip: true, scrapLinks: false, newTabPos: 'top', bookmarkBar: 'hover', keys: {} };
+    archive: 0, sleep: 30, autoPip: true, scrapLinks: false, newTabPos: 'top', bookmarkBar: 'hover', keys: {} };
   /* the tools on the right of the top bar, in their standard order (Settings › Top bar, or drag them in the bar) */
   const TOOLS = [
     { id: 'exts', name: 'Extensions', icon: 'puzzle', sub: 'Your extensions\' buttons' }, { id: 'note', name: 'Sticky note', icon: 'note', key: 'notes' },

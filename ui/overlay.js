@@ -184,7 +184,7 @@ function tabPeek(f) {
   if (f.theme) applyTheme(f.theme, f.pal);
   if (!tpk) { tpk = document.createElement('div'); tpk.id = 'tpk'; tpk.className = 'tpk'; document.body.appendChild(tpk); }
   const host = hostOf(f.url || '');
-  tpk.innerHTML = `<i class="tp"></i>${f.img ? `<div class="ph"><img alt="" src="${esc(f.img)}"></div>` : `<div class="ph none">${favHTML({ title: f.title, url: f.url, fav: f.fav })}<small>${f.url && /^https?:/.test(f.url) ? 'Sleeping: click to wake it' : ''}</small></div>`}<b>${esc(f.title || host)}</b><span>${esc(host)}</span>`;
+  tpk.innerHTML = `<i class="tp"></i>${f.img ? `<div class="ph"><img alt="" src="${esc(f.img)}"></div>` : `<div class="ph none">${favHTML({ title: f.title, url: f.url, fav: f.fav })}<small>${f.url && /^https?:/.test(f.url) ? 'Sleeping: click to wake it' : ''}</small></div>`}<b>${esc(f.title || host)}</b><span class="tpkh"><i class="tpkhost">${esc(host)}</i>${f.mem ? `<em class="mem" title="Memory this tab uses">${f.mem >= 1024 ? (f.mem / 1024).toFixed(1) + ' GB' : f.mem + ' MB'}</em>` : ''}</span>`;
   tpk.style.setProperty('--ay', Math.max(18, Math.min(innerHeight - 18, f.arrowY || 30)) + 'px');
   tpk.classList.toggle('noimg', !f.img);
   if (!tpk.classList.contains('on')) { tpk.classList.remove('out'); void tpk.offsetWidth; tpk.classList.add('on'); }

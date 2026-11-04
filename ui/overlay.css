@@ -136,3 +136,6 @@ html.scrapbook .coach{transform:rotate(-.6deg)}
 html.scrapbook .coach .tp{display:block;top:-6px;left:50%;width:40px;height:12px;margin-left:-20px}
 html.motion-off .coach.on{animation:none}
 @media (prefers-reduced-motion:reduce){.coach.on{animation:none}}
+.tpk span.tpkh{display:flex;gap:10px}
+.tpk span.tpkh .tpkhost{flex:1;min-width:0;font-style:normal;overflow:hidden;text-overflow:ellipsis}
+.tpk span.tpkh .mem{flex:none;font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink2)}

@@ -14,7 +14,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   await ui.evaluate(() => { const id = 't' + Math.random().toString(36).slice(2, 8); S.tabs[id] = { url: 'https://example.org/sleepy', title: 'A sleeping tab', seen: Date.now() }; sp().tabs.push(id); render(); });
   await sleep(1500);
   const tabAt = title => sb.evaluate(t => { const e = [...document.querySelectorAll('.tab')].find(x => x.querySelector('.ttl').textContent === t); const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: e.dataset.id }; }, title);
-  const peek = () => ov.evaluate(() => { const e = document.getElementById('tpk'); if (!e || !e.classList.contains('on')) return null; const im = e.querySelector('img'); return { title: e.querySelector('b').textContent, site: e.querySelector('span').textContent, img: !!im && im.src.startsWith('data:image/jpeg') && im.naturalWidth > 100, sleeping: /Sleeping/.test(e.innerText), focus: document.hasFocus() }; });
+  const peek = () => ov.evaluate(() => { const e = document.getElementById('tpk'); if (!e || !e.classList.contains('on')) return null; const im = e.querySelector('img'); return { title: e.querySelector('b').textContent, site: (e.querySelector('.tpkhost') || e.querySelector('span')).textContent, mem: (e.querySelector('.mem') || {}).textContent || '', img: !!im && im.src.startsWith('data:image/jpeg') && im.naturalWidth > 100, sleeping: /Sleeping/.test(e.innerText), focus: document.hasFocus() }; });
   const move = (r) => ptr(`move ${X0 + r.x} ${Y0 + TOP + r.y}`);
   const waitPeek = async (want, ms = 1500) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const p = await peek(); if (want(p)) return [p, Date.now() - t0]; await sleep(50); } return [await peek(), -1]; };
   const L = await ui.evaluate(() => layout());
@@ -24,6 +24,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok(!(await peek()), 'just passing over a tab shows nothing yet');
   let [p, t] = await waitPeek(x => x);
   ok(p && p.title === 'Test page 2' && p.site === 'localhost:8765' && p.img, `resting on it shows a polaroid with a snapshot, its title and site (after ${t}ms)`);
+  ok(p && /^\d+(\.\d)? (MB|GB)$/.test(p.mem), 'and how much memory the tab uses: ' + (p && p.mem));
   ok(p && await pg.evaluate(() => document.hasFocus()), 'it doesn\'t take the keyboard (the page keeps it)');
   const ob = await ui.evaluate(() => 0); void ob;
   await sleep(350);   // after its fade-in

@@ -346,7 +346,7 @@ function closeTab(id, o = {}) {
   if (!id || !S.tabs[id]) return;
   const shown = R.a === id || R.b === id, partner = R.split && shown ? (R.a === id ? R.b : R.a) : null;
   if (S.pins.includes(id)) {                                  // pinned tabs unload instead of disappearing
-    B.tabClose(id); R.live[id] = false;
+    B.tabSleep(id); R.live[id] = false;
     if (shown) { const s = sp(); const nx = partner || ((s.act && s.act !== id && S.tabs[s.act]) ? s.act : (spaceTabs(s)[0] || null)); R.split = false; R.b = null; R.a = null; if (nx) showTab(nx); placePanes(); }
     commit(true); return;
   }
@@ -1344,7 +1344,7 @@ function sleepTabs() {
   const mins = +S.prefs.sleep; if (!mins) return;
   const cutoff = Date.now() - mins * 60000, shown = new Set([R.a, R.split ? R.b : null]);
   let n = 0;
-  for (const id in R.live) if (R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < cutoff) { B.tabClose(id); R.live[id] = false; n++; }
+  for (const id in R.live) if (R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < cutoff) { B.tabSleep(id); R.live[id] = false; n++; }
   if (n) render();
 }
 /* Memory saver (main.js memCheck): Washi is using too much memory, so idle tabs sleep, oldest first, about one per
@@ -1354,7 +1354,7 @@ B.onMemTight(d => {
   const shown = new Set([R.a, R.split ? R.b : null]), recent = Date.now() - 10 * 60e3;
   const idle = Object.keys(R.live).filter(id => R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < recent).sort((x, y) => (S.tabs[x].seen || 0) - (S.tabs[y].seen || 0));
   const n = Math.min(idle.length, Math.max(1, Math.ceil(d.over / 150)));
-  for (const id of idle.slice(0, n)) { B.tabClose(id); R.live[id] = false; }
+  for (const id of idle.slice(0, n)) { B.tabSleep(id); R.live[id] = false; }
   if (n) render();
 });
 /* ---------- Tidy up (like Dia): loose tabs from the same site go into a folder; ones you haven't opened in half a day
