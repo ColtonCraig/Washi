@@ -52,7 +52,7 @@ jobs:
         env: { WASHI_UPDATE_KEY: '${{ secrets.WASHI_UPDATE_KEY }}' }
         run: |
           V=$(node -p 'require("./package.json").version')
-          node scripts/release-manifest.js "$V" out "out/Washi-$V-arm64.zip" "out/Washi-$V-x64.zip" "$(git log -1 --format=%s)"
+          node scripts/release-manifest.js "$V" out "out/Washi-$V-arm64.zip" "out/Washi-$V-x64.zip" "$(node scripts/notes.js "$V")"
       - name: Publish to washi-releases
         if: steps.v.outputs.skip != '1'
         env: { GH_TOKEN: '${{ secrets.RELEASES_TOKEN || secrets.RELEASE_TOKEN }}', REPO: "${{ vars.RELEASES_REPO || 'ColtonCraig/Washi-releases' }}" }

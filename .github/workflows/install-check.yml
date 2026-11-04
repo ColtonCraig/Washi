@@ -1,0 +1,19 @@
+name: Install check
+# Runs the friends' one-line installer on a real Mac and checks Washi lands in /Applications and opens.
+on: { workflow_dispatch: {} }
+jobs:
+  install:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install with the one-liner
+        run: |
+          bash scripts/get-washi.sh
+          V=$(defaults read /Applications/Washi.app/Contents/Info.plist CFBundleShortVersionString)
+          echo "installed $V"
+          sleep 8; pgrep -x Washi && echo "Washi is running"
+      - name: Run it again (an update over a running Washi)
+        run: |
+          bash scripts/get-washi.sh
+          sleep 8; pgrep -x Washi && echo "Washi is running again"
