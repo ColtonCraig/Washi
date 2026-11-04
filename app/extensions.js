@@ -49,6 +49,7 @@ async function enable(ses, { primary = false } = {}) {
     removeWindow: () => {}
   });
   all.set(ses, x);
+  try { moreApis(x, ses); } catch (e) { console.error('extensions: apis', e.message); }
   x.on('browser-action-popup-created', p => { try { if (p.parent && !p.parent.isDestroyed()) x.ctx.store.lastFocusedWindowId = p.parent.id; } catch {} fitPopup(p); });   // the popup's window is the current one (chrome.tabs.create, windows.getCurrent from the popup)
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) ses.serviceWorkers.on('console-message', (_, m) => console.error('ext-sw', JSON.stringify(m).slice(0, 3000)));
   if (!app.isPackaged && process.env.WASHI_DEBUG_EXT) setTimeout(() => { try { console.error('ext-pre', JSON.stringify(ses.getPreloadScripts().map(p => [p.type, p.id, require('path').basename(p.filePath)]))); console.error('ext-run', JSON.stringify(ses.serviceWorkers.getAllRunning())); } catch (e) { console.error('ext-dbg', e.message); } }, 6000);
@@ -63,6 +64,58 @@ async function enable(ses, { primary = false } = {}) {
     });
   } catch (e) { console.error('extensions: web store', e.message); }
   return x;
+}
+/* chrome.* APIs the engine doesn't have that popular extensions need (the weekly sweep, ext-sweep.yml, finds them):
+   - tabs.captureVisibleTab: a picture of the tab you're looking at (ColorZilla's eyedropper, screenshot and clipper tools).
+     Like Chrome, only for an extension with activeTab or access to all sites.
+   - offscreen: a hidden page of the extension's own, for the DOM work a background worker can't do (LastPass and Honey
+     start one; without it their background fell over: "document is not defined"). One per extension, as in Chrome;
+     closed when the extension is removed. runtime.getContexts answers for it.
+   ext-fix.preload.js puts the functions on chrome.* and calls these through the engine's own channel. Each one checks the
+   call really comes from that extension's own pages or worker. */
+const { BrowserWindow } = require('electron');
+function fromExt(ev) {
+  const id = ev.extension && ev.extension.id; if (!id) return false;
+  let u = ''; try { u = ev.type === 'frame' ? ev.sender.getURL() : (ev.sender && (ev.sender.scope || ev.sender.scriptURL)) || ''; } catch {}
+  return u.startsWith(`chrome-extension://${id}/`);
+}
+function moreApis(x, ses) {
+  const h = x.ctx.router.apiHandler(), store = x.ctx.store, offscreen = new Map();   // this session's offscreen pages: extension id -> hidden window
+  const mine = ev => { if (!fromExt(ev)) throw new Error('Not allowed'); return ev.extension; };
+  h('tabs.captureVisibleTab', async (ev, windowId, opts) => {
+    const e = mine(ev), m = e.manifest || {};
+    if (windowId && typeof windowId === 'object') { opts = windowId; windowId = undefined; }
+    const may = [...(m.permissions || []), ...(m.host_permissions || [])].some(p => p === 'activeTab' || p === '<all_urls>' || /^(\*|https?):\/\/\*\/\*$/.test(p));
+    if (!may) throw new Error("Either the '<all_urls>' or 'activeTab' permission is required.");
+    const win = typeof windowId === 'number' && windowId >= 0 ? store.getWindowById(windowId) : store.getCurrentWindow();
+    const tab = win && store.getActiveTabFromWindow(win);
+    if (!tab || tab.isDestroyed()) throw new Error('No active tab');
+    if (!/^(https?|file|data):/.test(tab.getURL())) throw new Error('Cannot access contents of the page.');   // Chrome won't capture its own pages either
+    const img = await tab.capturePage(), jpeg = opts && opts.format === 'jpeg';
+    const q = Math.max(0, Math.min(100, opts && typeof opts.quality === 'number' ? opts.quality : 92));
+    return 'data:image/' + (jpeg ? 'jpeg' : 'png') + ';base64,' + (jpeg ? img.toJPEG(q) : img.toPNG()).toString('base64');
+  });
+  h('offscreen.createDocument', async (ev, p) => {
+    const e = mine(ev), have = offscreen.get(e.id);
+    if (have && !have.isDestroyed()) throw new Error('Only a single offscreen document may be created.');
+    const path0 = String((p && p.url) || '').replace(/^chrome-extension:\/\/[a-p]{32}\//, '').replace(/^\//, '');
+    if (!path0 || /^[a-z]+:/i.test(path0) || path0.includes('..')) throw new Error('Invalid url');
+    const w = new BrowserWindow({ show: false, width: 800, height: 600, skipTaskbar: true, focusable: false, paintWhenInitiallyHidden: false,
+      webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, spellcheck: false } });
+    w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    w.webContents.on('will-navigate', (ev2, url) => { if (!url.startsWith(`chrome-extension://${e.id}/`)) ev2.preventDefault(); });
+    offscreen.set(e.id, w); w.on('closed', () => { if (offscreen.get(e.id) === w) offscreen.delete(e.id); });
+    await w.loadURL(`chrome-extension://${e.id}/${path0}`);
+  });
+  h('offscreen.closeDocument', async ev => { const e = mine(ev), w = offscreen.get(e.id); if (!w || w.isDestroyed()) throw new Error('No current offscreen document.'); offscreen.delete(e.id); w.destroy(); });
+  h('offscreen.hasDocument', async ev => { const w = offscreen.get(mine(ev).id); return !!(w && !w.isDestroyed()); });
+  h('runtime.getContexts', async (ev, f) => {
+    const e = mine(ev), out = [], want = f && Array.isArray(f.contextTypes) ? new Set(f.contextTypes) : null, w = offscreen.get(e.id);
+    if (w && !w.isDestroyed() && (!want || want.has('OFFSCREEN_DOCUMENT'))) { const u = w.webContents.getURL(); out.push({ contextType: 'OFFSCREEN_DOCUMENT', contextId: 'offscreen-' + e.id, tabId: -1, windowId: -1, frameId: 0, documentId: 'offscreen-' + e.id, documentUrl: u, documentOrigin: `chrome-extension://${e.id}`, incognito: false }); }
+    if (!want || want.has('BACKGROUND')) { const bg = (e.manifest && e.manifest.background && e.manifest.background.service_worker) || ''; if (bg) out.push({ contextType: 'BACKGROUND', contextId: 'background-' + e.id, tabId: -1, windowId: -1, frameId: -1, documentUrl: `chrome-extension://${e.id}/${bg.replace(/^\//, '')}`, documentOrigin: `chrome-extension://${e.id}`, incognito: false }); }
+    return out;
+  });
+  ses.extensions.on('extension-unloaded', (_, ext) => { const w = offscreen.get(ext.id); if (w && !w.isDestroyed()) w.destroy(); offscreen.delete(ext.id); });
 }
 /* Extension popups: size them to their page, under their button, on screen. Chromium's "preferred size" signal
    doesn't always arrive (then the popup stays a 25px square, or opens huge and blank), so measure the page ourselves

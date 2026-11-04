@@ -1014,7 +1014,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'snap:save') { snapSave(true); return { ok: true }; }
   if (a.type === 'update:later') { const s = updater.state(); updLater = (typeof a.version === 'string' && a.version) || (s && s.version); return { ok: true }; }
   if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), notes: String(a.notes || '') }); return { ok: true }; }
-  if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
+  if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; let url = ''; try { url = p.browserWindow.webContents.getURL(); } catch {} return { open: true, wid, id: p.extensionId, url }; }   // tests: which window an extension popup opened in
   if (a.type === 'test:focus' && !app.isPackaged) { C.win.focus(); return { focused: BrowserWindow.getFocusedWindow() === C.win }; }
   if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
   if (a.type === 'test:memcheck' && !app.isPackaged) return memCheck(a.capMB);

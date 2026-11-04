@@ -3,8 +3,8 @@
    standard constants real Chrome has and the engine leaves undefined. Okta's plugin uses chrome.tabs.TAB_ID_NONE in
    its sign-in rules; with it undefined Chrome rejects them and the plugin's background falls over (blank popup,
    "We're having trouble launching your app"). */
-const { contextBridge } = require('electron');
-const fix = (policy) => {
+const { contextBridge, ipcRenderer } = require('electron');
+const fix = (policy, inv) => {
   /* the engine finishes by freezing chrome; whichever of us runs first, fill the constants in just before that (or now, if it already ran) */
   const C0 = globalThis.chrome;
   /* this preload runs before the engine's (extensions.js registers it first): wait for the engine to finish and fill
@@ -128,9 +128,23 @@ const fix = (policy) => {
       if (!swapped && br && typeof br === 'object') for (const k of Object.keys(c)) { if (br[k] === undefined) try { Object.defineProperty(br, k, { value: c[k], enumerable: true, configurable: true }); } catch { try { br[k] = c[k]; } catch {} } }
     }
   } catch {}
+  /* APIs Washi adds in the main process (app/extensions.js moreApis), called through the engine's own channel */
+  if (typeof inv === 'function' && c.runtime && c.runtime.id) {
+    const call = (fn, ...a) => inv(c.runtime.id, fn, ...a);
+    const cbify = (p, cb) => { if (typeof cb !== 'function') return p; p.then(v => { try { cb(v); } catch {} }, e => { if (globalThis.__washiDebugExt) console.log('washi-ext-fix', e && e.message); try { cb(); } catch {} }); return undefined; };
+    if (c.tabs && typeof c.tabs.captureVisibleTab !== 'function') set(c.tabs, 'captureVisibleTab', (w, o, cb) => { if (typeof w === 'function') { cb = w; w = undefined; o = undefined; } else if (typeof o === 'function') { cb = o; o = undefined; } if (w && typeof w === 'object') { o = w; w = undefined; } return cbify(call('tabs.captureVisibleTab', w == null ? -2 : w, o || {}), cb); });
+    if (perms.includes('offscreen') && !c.offscreen) set(c, 'offscreen', {
+      createDocument: (p, cb) => cbify(call('offscreen.createDocument', p ? { url: String(p.url || ''), reasons: p.reasons, justification: p.justification } : {}), cb),
+      closeDocument: cb => cbify(call('offscreen.closeDocument'), cb),
+      hasDocument: cb => cbify(call('offscreen.hasDocument'), cb),
+      Reason: Object.fromEntries(['TESTING', 'AUDIO_PLAYBACK', 'IFRAME_SCRIPTING', 'DOM_SCRAPING', 'BLOBS', 'DOM_PARSER', 'USER_MEDIA', 'DISPLAY_MEDIA', 'WEB_RTC', 'CLIPBOARD', 'LOCAL_STORAGE', 'WORKERS', 'BATTERY_STATUS', 'MATCH_MEDIA', 'GEOLOCATION'].map(k => [k, k]))
+    });
+    if (typeof c.runtime.getContexts !== 'function') set(c.runtime, 'getContexts', (f, cb) => cbify(call('runtime.getContexts', f && Array.isArray(f.contextTypes) ? { contextTypes: f.contextTypes.map(String) } : {}), cb));
+    if (!c.runtime.ContextType) set(c.runtime, 'ContextType', { TAB: 'TAB', POPUP: 'POPUP', BACKGROUND: 'BACKGROUND', OFFSCREEN_DOCUMENT: 'OFFSCREEN_DOCUMENT', SIDE_PANEL: 'SIDE_PANEL', DEVELOPER_TOOLS: 'DEVELOPER_TOOLS' });
+  }
   if (globalThis.__washiDebugExt) console.log('washi-ext-fix', typeof c.tabs, c.tabs && c.tabs.TAB_ID_NONE, Object.isFrozen(c));
   }
 };
 let dbg = false; try { dbg = !!(process.env && process.env.WASHI_DEBUG_EXT); } catch {}
 const isExt = () => { try { return process.type === 'service-worker' || (globalThis.location && String(location.href).startsWith('chrome-extension://')); } catch { return false; } };   // a worker has no location yet: ask process.type, like the engine does
-try { if (isExt()) { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); let pol = '{}'; try { pol = (process.env && process.env.WASHI_EXT_POLICY) || '{}'; } catch {} contextBridge.executeInMainWorld({ func: fix, args: [pol] }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }
+try { if (isExt()) { if (dbg) contextBridge.executeInMainWorld({ func: () => { globalThis.__washiDebugExt = true; } }); let pol = '{}'; try { pol = (process.env && process.env.WASHI_EXT_POLICY) || '{}'; } catch {} const inv = (id, fn, ...a) => ipcRenderer.invoke('crx-msg', String(id), String(fn), ...a); contextBridge.executeInMainWorld({ func: fix, args: [pol, inv] }); } } catch (e) { try { console.error('washi ext-fix', e && e.message); } catch {} }

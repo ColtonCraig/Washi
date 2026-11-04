@@ -13,16 +13,16 @@ const { start, sleep, ok, done, skipSetup } = require('./lib');
   const y0 = await art.evaluate(() => scrollY);
   const other = await ui.evaluate(id => Object.keys(S.tabs).find(k => k !== id), id);
   await ui.evaluate(o => selectTab(o), other); await sleep(600);
-  await ui.evaluate(id => { B.tabSleep(id); R.live[id] = false; render(); }, id); await sleep(1200);
-  ok(await ui.evaluate(id => B.setupAct({ type: 'test:metrics' }).then(m => m.tabsLive), id) === 1 && !b.pages().some(p => p.url().includes('/article.html')), 'the tab sleeps: its page is gone from memory');
-  await ui.evaluate(id => selectTab(id), id); await sleep(2200);
-  const w = b.pages().filter(p => p.url().includes('/article.html')).pop();
-  const y1 = w && await w.evaluate(() => scrollY);
+  await ui.evaluate(id => { B.tabSleep(id); R.live[id] = false; render(); }, id);
+  const asleep = async () => await ui.evaluate(() => B.setupAct({ type: 'test:metrics' }).then(m => m.tabsLive)) === 1 && !b.pages().some(p => p.url().includes('/article.html'));
+  let gone = false; for (let i = 0; i < 40 && !(gone = await asleep()); i++) await sleep(200);
+  ok(gone, 'the tab sleeps: its page is gone from memory');
+  await ui.evaluate(id => selectTab(id), id);
+  let w = null, y1 = null; for (let i = 0; i < 40; i++) { w = b.pages().filter(p => p.url().includes('/article.html')).pop(); y1 = w && await w.evaluate(() => document.readyState === 'complete' ? scrollY : null).catch(() => null); if (y1 != null && Math.abs(y1 - y0) < 30) break; await sleep(200); }
   ok(w && Math.abs(y1 - y0) < 30, `waking it, the page is back where you'd scrolled to (${y0} → ${y1})`);
-  await ui.evaluate(() => B.tabAct(focusedId(), 'back')); await sleep(1500);
-  ok(await ui.evaluate(() => /links\.html/.test(S.tabs[focusedId()].url)), 'and Back still goes to the page before it');
-  await ui.evaluate(() => B.tabAct(focusedId(), 'back')); await sleep(1500);
-  ok(await ui.evaluate(() => /p1\.html/.test(S.tabs[focusedId()].url)), 'and the one before that');
+  const backTo = async re => { await ui.evaluate(() => B.tabAct(focusedId(), 'back')); let u = ''; for (let i = 0; i < 30; i++) { u = await ui.evaluate(() => S.tabs[focusedId()].url); if (re.test(u)) break; await sleep(200); } return u; };
+  let u = await backTo(/links\.html/); ok(/links\.html/.test(u), 'and Back still goes to the page before it' + (/links/.test(u) ? '' : ': ' + u));
+  u = await backTo(/p1\.html/); ok(/p1\.html/.test(u), 'and the one before that' + (/p1/.test(u) ? '' : ': ' + u));
   // clicked right as it starts to sleep: it stays awake
   await ui.evaluate(o => selectTab(o), other); await sleep(600);
   await ui.evaluate(id => { B.tabSleep(id); R.live[id] = false; selectTab(id); }, id); await sleep(1500);

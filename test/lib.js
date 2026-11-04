@@ -31,7 +31,7 @@ async function skipSetup(b) {
   await b.ov.evaluate(() => { const c = document.getElementById('cmd'); if (c.classList.contains('on')) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
   await b.ui.evaluate(() => B.overlayCancel()); await sleep(400);
 }
-const shot = name => { try { execSync(`import -window root ${path.join(process.env.WASHI_SHOTS || os.tmpdir(), name)}.png`); } catch {} };
+const shot = name => { const f = path.join(process.env.WASHI_SHOTS || os.tmpdir(), name) + '.png'; try { execSync(process.platform === 'darwin' ? `screencapture -x ${f}` : `import -window root ${f}`, { stdio: 'ignore' }); } catch {} };
 /* Every visible element must sit inside the box that clips it (overflow container or the window) and its text must not be cut off unless it ends in an ellipsis. */
 const AUDIT = () => {
   const out = [], W = innerWidth, H = innerHeight, tol = 1.5;

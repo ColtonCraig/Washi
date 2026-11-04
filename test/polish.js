@@ -20,6 +20,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
   ok(icons.length === 4 && icons.every(x => x === 'img'), `every app tile gets its icon by itself, nothing to click (${Date.now() - t0}ms): ${icons}`);
   ok(await ov.evaluate(() => getComputedStyle(document.querySelector('.apptile')).cursor) === 'pointer', 'the app tiles show the hand cursor');
   ok(await ov.evaluate(() => getComputedStyle(document.querySelector('.next')).cursor) === 'pointer', 'and so do the setup buttons');
+  await sleep(700);                                          // the page slides in: audit it once it's settled
   await audit(ov, 'Your apps');
   shot('pol-apps');
   await ov.evaluate(() => [...document.querySelectorAll('.crumb')].find(c => c.textContent === 'Quick start').click()); await sleep(1500);

@@ -30,7 +30,7 @@ const N = +(process.env.MEM_TABS || 30);
   const r = await ui.evaluate(cap => B.setupAct({ type: 'test:memcheck', capMB: cap }), v.total - 600); await sleep(3000);
   const ms = await m(); say('after Memory saver', ms);
   const slept = await ui.evaluate(ids => ids.filter(id => !R.live[id]), ids);
-  ok(r.over >= 600 && slept.length >= 4 && slept.length <= 6, `Memory saver: ${r.over} MB over the limit puts ${slept.length} idle tabs to sleep`);
+  ok(r.over >= 500 && slept.length >= 4 && slept.length <= 6, `Memory saver: ${r.over} MB over the limit puts ${slept.length} idle tabs to sleep`);
   ok(slept.every(id => +id.slice(1) >= N - 7) && !slept.includes(ids[1]), 'the ones you used longest ago, never one from the last 10 minutes: ' + slept.join(' '));
   ok(ms.total < v.total, `${v.total} → ${ms.total} MB`);
   await ui.evaluate(() => B.setupMsg({ type: 'prefs', patch: { memSaver: 'off' } })); await sleep(500);

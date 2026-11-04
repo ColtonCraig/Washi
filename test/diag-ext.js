@@ -18,6 +18,10 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   for (let i = 0; i < 40; i++) { const t = await store.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Add to (Chrome|Washi)/i.test(x.textContent)); if (b) { b.click(); return 1; } return 0; }).catch(() => 0); if (t) break; await sleep(500); }
   let L = null; for (let i = 0; i < 90; i++) { L = await ui.evaluate(() => B.setupAct({ type: 'ext:list' })); if (L.list.some(e => e.id === ID)) break; await sleep(1000); }
   say('installed', L.list.map(e => e.name + ' ' + e.version));
+  if (!L.list.some(e => e.id === ID)) {                  // why not: what the store page says, and what Washi logged
+    say('store page', await store.evaluate(() => ({ buttons: [...document.querySelectorAll('button')].map(x => x.textContent.trim()).filter(t => t && t.length < 40).slice(0, 12), notes: [...document.querySelectorAll('[role=alert],[role=status],h1,h2')].map(x => x.textContent.trim().slice(0, 160)).filter(Boolean).slice(0, 8) })).catch(e => 'unreadable: ' + e.message));
+    say('main log', b.log().split('\n').filter(l => /extension|crx|web.?store|install|manifest|error/i.test(l)).slice(-25).join('\n'));
+  }
   const dir = path.join(profile, 'Extensions', ID); let man = null;
   try { const v = fs.readdirSync(dir).filter(x => !x.startsWith('.'))[0]; man = JSON.parse(fs.readFileSync(path.join(dir, v, 'manifest.json'), 'utf8')); say('manifest', { mv: man.manifest_version, permissions: man.permissions, optional: man.optional_permissions, host: man.host_permissions, bg: man.background, popup: (man.action || man.browser_action || {}).default_popup, externally_connectable: man.externally_connectable, commands: man.commands });
     // which chrome.* APIs its code mentions
@@ -40,7 +44,9 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   const btn = await ui.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (!e) return null; const r = e.getBoundingClientRect(); e.click(); return { x: r.x, y: r.y, w: r.width }; }, ID);
   say('button', btn);
   const popPath = man && (man.action || man.browser_action || {}).default_popup;
-  const pop = popPath ? await page('chrome-extension://' + ID + '/' + String(popPath).replace(/^\//, ''), 40) : await page('chrome-extension://' + ID, 40);
+  // the popup Washi opened (an extension can change its page per tab, e.g. React DevTools on a site that uses React)
+  let pu = ''; for (let i = 0; i < 40 && !pu; i++) { const q = await ui.evaluate(() => B.setupAct({ type: 'test:popup' })).catch(() => null); if (q && q.open && q.url) pu = q.url; else await sleep(250); }
+  const pop = pu ? await page(pu.split('#')[0], 40) : popPath ? await page('chrome-extension://' + ID + '/' + String(popPath).replace(/^\//, ''), 20) : null;
   say('popup page', pop ? pop.url() : 'never opened');
   if (pop) {
     const msgs = []; pop.on('console', m => msgs.push(m.type() + ': ' + m.text())); pop.on('pageerror', e => msgs.push('pageerror: ' + e.message));
