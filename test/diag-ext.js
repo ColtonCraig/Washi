@@ -47,7 +47,8 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   say('action', await ui.evaluate(id => B.setupAct({ type: 'test:action', id }), ID).catch(e => e.message));
   await sleep(4000);
   say('after the click: worker', b.log().slice(mark).split('\n').filter(l => /ext-sw|crx|popup|onClicked|openPopup/i.test(l) && !/contextMenus\.update|tabs\.query|tabs\.get |Receiving end/.test(l)).map(l => l.slice(0, 600)).slice(0, 40));
-  say('after the click: tabs', await ui.evaluate(() => Object.values(S.tabs).map(t => t.url.slice(0, 90))));
+  const tabsNow = await ui.evaluate(() => Object.values(S.tabs).map(t => t.url.slice(0, 90))); say('after the click: tabs', tabsNow);
+  V.ownPage = tabsNow.some(u => u.startsWith('chrome-extension://' + ID + '/'));   // its button opened its own page (1Password before you set it up does that, as in Chrome)
   const popPath = man && (man.action || man.browser_action || {}).default_popup;
   // the popup Washi opened (an extension can change its page per tab, e.g. React DevTools on a site that uses React)
   let pu = ''; for (let i = 0; i < 40 && !pu; i++) { const q = await ui.evaluate(() => B.setupAct({ type: 'test:popup' })).catch(() => null); if (q && q.open && q.url) pu = q.url; else await sleep(250); }
@@ -56,6 +57,7 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   if (pop) {
     const msgs = []; pop.on('console', m => msgs.push(m.type() + ': ' + m.text())); pop.on('pageerror', e => msgs.push('pageerror: ' + e.message));
     await sleep(8000);
+    V.closedItself = false; pop.once('close', () => { V.closedItself = true; });
     V.popup = await pop.evaluate(() => ({ text: document.body.innerText.trim().length, html: document.body.innerHTML.length, url: location.pathname })).catch(() => null);
     say('popup', await pop.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, text: document.body.innerText.slice(0, 600), html: document.body.innerHTML.length, missing: ['privacy', 'webRequest', 'webNavigation', 'management', 'cookies', 'tabs', 'windows', 'storage', 'runtime', 'identity', 'scripting', 'alarms', 'idle', 'declarativeNetRequest'].filter(k => !chrome[k]) })).catch(e => 'eval failed ' + e.message));
     say('window', await ui.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, avail: [screen.availLeft, screen.availTop, screen.availWidth, screen.availHeight] })));
@@ -87,7 +89,7 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   const logs = ((V.log1 || '') + '\n' + b.log()).split('\n').filter(l => /ext-sw/.test(l) && /"level":3/.test(l) && /Uncaught/.test(l) && /is not a function|Cannot read properties of undefined|is not defined|not supported/.test(l)).map(l => (l.match(/"message":"([^"]{0,160})/) || [])[1]);
   const why = [];
   if (!L || !L.list.some(e => e.id === ID)) why.push('did not install');
-  if (popPath && (!V.popup || (V.popup.text < 2 && V.popup.html < 400))) why.push('popup blank or never opened');
+  if (popPath && !V.ownPage && (!V.popup || (V.popup.text < 2 && V.popup.html < 400))) why.push(V.closedItself ? 'popup opened and closed itself' : 'popup blank or never opened');
   for (const l of [...new Set(logs)].slice(0, 4)) why.push('background: ' + l);
   console.log(`## VERDICT ${ID} ${man ? (man.name || '').replace(/__MSG_.*__/, '') : ''}: ${why.length ? 'BROKEN: ' + why.join(' | ') : 'ok'}`);
   await b.stop(); process.exit(0);
