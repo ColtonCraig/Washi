@@ -496,7 +496,7 @@ function offerUpdate(s, tries = 0) {
   clearTimeout(updT);
   if (!s || s.status !== 'ready' || updLater === s.version || P.updates === 'quiet') return;
   const fw = BrowserWindow.getFocusedWindow(), c = (fw && [...W.values()].find(x => x.win === fw)) || (lastMain && alive(lastMain.win) ? lastMain : null);
-  if (!c || c.overlayOpen || c.dragging || recording || (c.win && !c.win.isFocused())) { if (tries < 400) updT = later(() => offerUpdate(s, tries + 1), 3000); return; }   // when you're back, and not in the middle of something
+  if (!c || c.overlayOpen || c.dragging || recording || (c.win && !c.win.isFocused())) { updT = later(() => offerUpdate(s, tries + 1), tries < 200 ? 3000 : 15000); return; }   // keeps waiting until you're back (it used to give up after 20 minutes)   // when you're back, and not in the middle of something
   C = c; toUI('update:card', { version: s.version, notes: s.notes || '' });
 }
 function showFx(f) {

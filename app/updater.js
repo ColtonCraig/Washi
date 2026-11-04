@@ -99,7 +99,7 @@ async function check() {
     staged = { version: m.version, appDir, notes: m.notes || '' };
     set({ status: 'ready', version: m.version, notes: staged.notes, checked: Date.now(), percent: 100 });
   } catch (e) {
-    set({ status: 'error', error: String(e && e.message || e).slice(0, 200), checked: Date.now() });
+    set({ status: 'error', error: String(e && e.message || e).slice(0, 200), checked: Date.now() - 25 * 60e3 });   // (try again in a few minutes, not half an hour)
   } finally { busy = false; }
   return state;
 }
@@ -140,8 +140,15 @@ function start(onState) {
   notify = onState || notify;
   if (!ACTIVE()) { set({ status: 'dev' }); return; }
   try { fs.rmSync(dir(), { recursive: true, force: true }); } catch {}          // leftovers from an earlier run
-  setTimeout(check, 15e3);                                                       // a little after launch
-  clearInterval(timer); timer = setInterval(check, 4 * 3600e3);
+  /* noticed quickly: a little after launch, every half hour, when the Mac wakes up, and when you come back to Washi
+     after a while (a timer doesn't tick while the Mac sleeps, so "every few hours" could mean not today) */
+  if (!app.isPackaged && process.env.WASHI_UPDATE_MANUAL === '1') return;     // tests that check by hand, step by step
+  setTimeout(check, 15e3);
+  clearInterval(timer); timer = setInterval(check, 30 * 60e3);
+  const stale = ms => Date.now() - (state.checked || 0) > ms && state.status !== 'ready' && !busy;
+  try { const { powerMonitor } = require('electron'); for (const ev of ['resume', 'unlock-screen']) powerMonitor.on(ev, () => setTimeout(() => { if (stale(60e3)) check(); }, 20e3)); } catch {}
+  app.on('browser-window-focus', () => { if (stale(10 * 60e3)) check(); });
+  app.on('did-become-active', () => { if (stale(10 * 60e3)) check(); });
 }
 /* quitting with an update waiting installs it (without reopening) */
 function onQuit() { if (state.status === 'ready') install({ relaunch: false }); }

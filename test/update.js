@@ -24,7 +24,7 @@ const k = crypto.createPrivateKey(fs.readFileSync(KEY, 'utf8'));
 fs.writeFileSync(path.join(UPD, 'latest-badhash.json'), JSON.stringify({ payload: JSON.stringify(p3), sig: crypto.sign(null, Buffer.from(JSON.stringify(p3)), k).toString('base64') }));
 const mode = m => execSync(`curl -s http://localhost:8765/updates/mode?${m}`);
 
-process.env.WASHI_UPDATE_FORCE = '1'; process.env.WASHI_UPDATE_FEED = 'http://localhost:8765/updates/latest.json';
+process.env.WASHI_UPDATE_FORCE = '1'; process.env.WASHI_UPDATE_MANUAL = '1'; process.env.WASHI_UPDATE_FEED = 'http://localhost:8765/updates/latest.json';
 process.env.WASHI_UPDATE_TARGET = path.join(T, 'Applications', 'Washi.app');
 const { start, skipSetup } = require('./lib');
 (async () => {
