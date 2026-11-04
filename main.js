@@ -574,6 +574,11 @@ HANDLE('overlay:panel', (_, kind, rect, data) => {
   toOverlay('overlay:init', { mode: 'panel', kind, data });
   return true;
 });
+ON('overlay:fit', (e, kind, h) => {                  // a card hands back the room it doesn't need (only ever shrinks)
+  const c = [...W.values()].find(x => x.overlay && x.overlay.webContents === e.sender); if (!c || c.panelOpen !== kind || kind === 'find') return;
+  const b = c.overlay.getBounds(); h = Math.round(+h || 0); if (!(h >= 80) || h >= b.height - 2) return;
+  c.overlay.setBounds(rr({ x: b.x, y: kind === 'update' ? b.y + b.height - h : b.y, width: b.width, height: h }));   // the update card sits in the corner: keep its bottom edge
+});
 function placeFind() {
   if (!C.lastLayout || !C.overlay) return;
   const r = (C.lastLayout.split && C.panes.focus === 'b' ? C.lastLayout.b : C.lastLayout.a) || C.lastLayout.stage;

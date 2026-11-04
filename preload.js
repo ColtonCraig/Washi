@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('washi', {
   stateLoad: invoke('state:load'), stateSave: send('state:save'), histOp: send('hist:op'),
   tabEnsure: invoke('tab:ensure'), tabClose: send('tab:close'), tabNav: send('tab:nav'), tabAct: send('tab:act'),
   panes: invoke('panes:set'),
-  overlayOpen: invoke('overlay:open'), panel: invoke('overlay:panel'), overlayResult: send('overlay:result'), overlayCancel: send('overlay:cancel'),
+  overlayOpen: invoke('overlay:open'), panel: invoke('overlay:panel'), panelFit: send('overlay:fit'), overlayResult: send('overlay:result'), overlayCancel: send('overlay:cancel'),
   emojiPanel: invoke('emoji:panel'), tabPeek: send('tab:peek'), readerSet: invoke('reader:set'),
   fx: send('fx'), toastAct: send('toast:act'), popupMenu: send('menu:popup'), copy: send('copy'), reveal: send('reveal'),
   sbState: send('sb:state'), sbFx: send('sb:fx'), sbMode: invoke('side:set'),

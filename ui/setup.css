@@ -154,7 +154,7 @@
 .rail button{padding:9px 12px;border-radius:8px;text-align:left;font-weight:600;color:var(--ink2);transition:transform var(--spring-ms) var(--spring),background .15s,color .15s}
 .rail button:hover{color:var(--ink);transform:translateX(3px)}
 .rail button.on{background:var(--white);color:var(--ink);box-shadow:0 0 0 1px rgb(var(--inkc) / .08)}
-.scroll{overflow:auto;padding:4px 34px 60px 18px;scrollbar-width:thin}
+.scroll{position:relative;overflow:auto;padding:4px 34px 60px 18px;scrollbar-width:thin}
 .sec{padding:6px 0 22px;border-bottom:1px solid rgb(var(--inkc) / .1)}
 .sec:last-child{border-bottom:0}
 .sec>h3{margin:14px 0 0;font:700 28px/1 var(--font-hand)}
@@ -421,7 +421,7 @@ html.scrapbook .nw .nwc::before{content:"";position:absolute;left:50%;top:-6px;w
 .tbrow .tbn b{font:600 13.5px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbrow .tbn small{font:12px var(--font-ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbrow kbd{flex:none}
-.tbrow .tbmv{flex:none;display:flex;gap:2px}
+.tbrow .tbmv{flex:none;display:flex;gap:4px}
 .tbrow .mv{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;color:var(--ink2)}
 .tbrow .mv:hover{background:rgb(var(--inkc) / .08);color:var(--ink)}
 .tbrow .mv:disabled{opacity:.25}

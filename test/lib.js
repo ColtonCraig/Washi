@@ -9,7 +9,7 @@ const ok = (c, m) => { if (c) passes++; else fails++; console.log((c ? '  PASS '
 async function start({ profile, fresh = true, port = 9222, args = [], sandbox = false } = {}) {
   profile = profile || fs.mkdtempSync(path.join(os.tmpdir(), 'bloom-test-'));
   const app = spawn(path.join(__dirname, '..', 'node_modules', '.bin', 'electron'), [...(sandbox ? [] : ['--no-sandbox']), '--no-proxy-server', `--remote-debugging-port=${port}`, path.join(__dirname, '..'), ...(fresh ? ['--fresh'] : []), ...args],
-    { env: { WASHI_TEST_SUGGEST: 'http://localhost:8765/sugg?q=%s', ...process.env, WASHI_PROFILE: profile }, stdio: ['ignore', 'ignore', 'pipe'] });
+    { env: { WASHI_TEST_SUGGEST: 'http://localhost:8765/sugg?q=%s', ...process.env, NODE_OPTIONS: '', WASHI_PROFILE: profile }, stdio: ['ignore', 'ignore', 'pipe'] });
   let log = ''; app.stderr.on('data', d => { log += d; });
   let br;
   for (let i = 0; i < 60 && !br; i++) { await sleep(250); try { br = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch {} }
@@ -86,4 +86,41 @@ const AUDIT = () => {
   return out;
 };
 const done = () => { console.log(`\n${passes} passed, ${fails} failed`); process.exit(fails ? 1 : 0); };
-module.exports = { start, sleep, ok, shot, AUDIT, done, skipSetup, counts: () => ({ passes, fails }) };
+/* GAPS: boxes that touch or run into each other. A box is anything drawn with an edge: a button, a field, a card or row
+   with a background, border or shadow. Two boxes that aren't inside one another must not overlap, and must keep at least
+   MIN px apart where they face each other (a button sitting right on the row above it, a pill on its neighbour). Joined
+   controls on purpose (a segmented control's buttons, a field and its attached button) are marked data-joined. */
+const GAPS = (MIN = 4) => {
+  const out = [], seen = new Set();
+  const visible = e => { for (let x = e; x && x !== document.documentElement; x = x.parentElement) { const s = getComputedStyle(x); if (s.display === 'none' || s.visibility === 'hidden' || +s.opacity < .05) return false; } return true; };
+  const tr = c => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c) || /\/ 0\)$/.test(c);
+  const boxy = (e, s) => /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName) || !tr(s.backgroundColor) || (parseFloat(s.borderTopWidth) > 0 && !tr(s.borderTopColor)) || (s.boxShadow && s.boxShadow !== 'none');
+  const name = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : '') + (e.textContent.trim() ? ` "${e.textContent.trim().replace(/\s+/g, ' ').slice(0, 22)}"` : '');
+  const clipOf = e => { let c = { left: -1e9, top: -1e9, right: 1e9, bottom: 1e9 }; for (let x = e.parentElement; x && x !== document.body; x = x.parentElement) { const cs = getComputedStyle(x); if (/(hidden|auto|scroll|clip)/.test(cs.overflow + cs.overflowX + cs.overflowY)) { const r = x.getBoundingClientRect(); c = { left: Math.max(c.left, r.left), top: Math.max(c.top, r.top), right: Math.min(c.right, r.right), bottom: Math.min(c.bottom, r.bottom) }; } } return c; };
+  const B = [];
+  for (const e of document.body.querySelectorAll('*')) {
+    if (e.closest('svg,[aria-hidden="true"],[data-clip],[data-joined],.tp,.deco,.desk,.bit,.cf-bit,.scraps')) continue;
+    const r = e.getBoundingClientRect(); if (r.width < 8 || r.height < 8) continue;
+    const s = getComputedStyle(e); if (!boxy(e, s) || !visible(e)) continue;
+    if (s.position === 'fixed' && r.width >= innerWidth - 2 && r.height >= innerHeight - 2) continue;   // a full-window backdrop
+    const c = clipOf(e), v = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) };
+    if (v.right - v.left < 4 || v.bottom - v.top < 4) continue;                                    // scrolled out of view
+    const layer = (() => { for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) { const cs = getComputedStyle(n); if (cs.position === 'fixed' || cs.position === 'absolute' || +cs.zIndex > 0) return n; } return document.body; })();
+    B.push({ e, r: v, full: r, layer, cut: { t: v.top > r.top + .5, b: v.bottom < r.bottom - .5, l: v.left > r.left + .5, rt: v.right < r.right - .5 } });
+  }
+  for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
+    const a = B[i], b = B[j]; if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+    const ox = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), oy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+    let why = '';
+    if (a.layer !== b.layer) continue;                     // stacked on purpose: a menu, popover or panel laid over another layer
+    const up = a.r.top < b.r.top ? [a, b] : [b, a], lf = a.r.left < b.r.left ? [a, b] : [b, a];
+    if (ox > 1 && oy > 1) why = `overlap ${Math.round(ox)}×${Math.round(oy)}`;
+    else if (ox > 4 && oy <= 0 && -oy < MIN && !up[0].cut.b && !up[1].cut.t) why = `${Math.round(-oy * 10) / 10}px apart vertically`;   // (a box cut by a scroll edge just meets that edge)
+    else if (oy > 4 && ox <= 0 && -ox < MIN && !lf[0].cut.rt && !lf[1].cut.l) why = `${Math.round(-ox * 10) / 10}px apart sideways`;
+    if (!why) continue;
+    const k = name(a.e) + ' | ' + name(b.e); if (seen.has(k)) continue; seen.add(k);
+    out.push(`${name(a.e)}  ↔  ${name(b.e)}: ${why}`);
+  }
+  return out;
+};
+module.exports = { GAPS, start, sleep, ok, shot, AUDIT, done, skipSetup, counts: () => ({ passes, fails }) };

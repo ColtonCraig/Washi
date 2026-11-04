@@ -220,7 +220,7 @@ window.SETUP = (() => {
       }));
       BMK.dragSort(list, '.tbrow', 'y', m => { const o = order.filter(x => x !== m.id), j = o.indexOf(m.target); o.splice(m.before ? j : j + 1, 0, m.id); setPref({ tools: o }); });
       const dflt = !P.tools && !(P.toolsOff || []).length;
-      box.replaceChildren(preview, list, h('div', { class: 'row' }, h('button', { class: 'btn small', disabled: dflt ? '' : null, onclick: () => setPref({ tools: null, toolsOff: [] }) }, 'Reset to the standard order')));
+      box.replaceChildren(preview, list, h('div', { class: 'row', style: 'margin-top:14px' }, h('button', { class: 'btn small', disabled: dflt ? '' : null, onclick: () => setPref({ tools: null, toolsOff: [] }) }, 'Reset to the standard order')));
     };
     sync(draw);
     return [field('Tools on the right', box, 'Drag a row to move it (or drag the buttons in the top bar itself). Right-click a button in the bar to hide it. Reader only shows on articles, Downloads once you\'ve downloaded something.')];
@@ -812,14 +812,14 @@ window.SETUP = (() => {
         ...secAbout(), secSpeed()]]
     ];
     const scroll = h('div', { class: 'scroll' }, secs.map(([id, n, f]) => h('section', { class: 'sec', id: 'sec-' + id }, h('h3', {}, n), f())));
-    const rail = h('nav', { class: 'rail' }, secs.map(([id, n]) => h('button', { 'data-s': id, onclick: () => { scroll.querySelector('#sec-' + id).scrollIntoView({ behavior: calm() ? 'auto' : 'smooth' }); } }, n)));
-    const mark = () => { let cur = secs[0][0]; for (const [id] of secs) if (scroll.querySelector('#sec-' + id).offsetTop - scroll.scrollTop < 140) cur = id; if (scroll.scrollTop > 0 && scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 4) cur = secs[secs.length - 1][0];   /* at the very bottom: the last section, even if it's short */ rail.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); };
+    const rail = h('nav', { class: 'rail' }, secs.map(([id, n]) => h('button', { 'data-s': id, onclick: () => { scroll.scrollTo({ top: scroll.querySelector('#sec-' + id).offsetTop - 4, behavior: calm() ? 'auto' : 'smooth' }); } }, n)));
+    const mark = () => { let cur = secs[0][0]; if (!scroll.clientHeight) return; for (const [id] of secs) if (scroll.querySelector('#sec-' + id).offsetTop - scroll.scrollTop < 120) cur = id; if (scroll.scrollTop <= 0) cur = secs[0][0]; if (scroll.scrollTop > 0 && scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 4) cur = secs[secs.length - 1][0];   /* at the very bottom: the last section, even if it's short */ rail.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); };
     scroll.addEventListener('scroll', mark, { passive: true });
     sheet = h('div', { class: 'sheet set' }, h('i', { class: 'tp l' }), h('i', { class: 'tp r' }),
       h('header', { class: 'shead' }, h('h2', { class: 'ttl' }, 'Settings'), h('button', { class: 'xx', 'aria-label': 'Close settings', onclick: finish }, '×')),
       h('div', { class: 'cols' }, rail, scroll));
-    root.append(sheet); mark();
-    if (startAt) requestAnimationFrame(() => scroll.querySelector('#sec-' + startAt)?.scrollIntoView());
+    root.append(sheet);
+    requestAnimationFrame(() => { const at = startAt && scroll.querySelector('#sec-' + startAt); if (at) scroll.scrollTop = at.offsetTop - 4; mark(); });   // once it's laid out: before that every section sits at the top and the last one (Help) looked current
   }
   /* ---------- What's new: "Fresh off the press", after an update (and Help › What's New) ---------- */
   const vnum = v => String(v || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -877,5 +877,8 @@ window.SETUP = (() => {
     if (e.key === 'Escape') { e.preventDefault(); if (PAGE !== 'onboard') finish(); return; }
     if (PAGE === 'onboard' && e.key === 'Enter' && !/INPUT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); if (step === STEPS.length - 1) finish(); else go(step + 1); }
   }
-  return { open, isOpen: () => isOpen, key, finish };
+  /* put away at once, because something else took the overlay (a card opened by its shortcut): no closing animation,
+     and the welcome setup isn't marked done (it comes back next time) */
+  function drop() { if (!isOpen) return; isOpen = false; if (appsCommit) { appsCommit(); appsCommit = null; } root.classList.remove('on'); root.innerHTML = ''; syncs = []; }
+  return { open, isOpen: () => isOpen, key, finish, drop };
 })();

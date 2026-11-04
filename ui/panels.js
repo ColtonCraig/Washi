@@ -156,6 +156,14 @@ window.PANELS = (() => {
     kind = d.kind; data = d.data || {}; if (d.data && d.data.theme) window.BL.applyTheme(d.data.theme, d.data.pal);
     panel.className = 'panel on ' + kind;
     if (kind === 'find') find(); else if (kind === 'shield') shield(); else if (kind === 'boost') boost(); else if (kind === 'bmedit') bmedit(); else if (kind === 'flook') flook(); else if (kind === 'reader') readerp(); else if (kind === 'notes') notes(); else if (kind === 'update') update();
+    if (/^(shield|boost|reader|update)$/.test(kind)) requestAnimationFrame(fit);
+  }
+  /* a card is as tall as what's on it: the main process gives it room for its tallest case, this hands back the rest
+     (the blocking card on a page with no site settings left a big empty space under its count) */
+  function fit() {
+    const p = panel.querySelector('.pop'); if (!p || !B.panelFit) return;
+    const was = p.style.bottom; p.style.bottom = 'auto'; const need = Math.ceil(p.offsetTop + p.offsetHeight + 22);   // layout size: the card is still sliding in (a transform), so not its on-screen box p.style.bottom = was;   // (22: the room .pop keeps under itself for its shadow)
+    B.panelFit(kind, need);
   }
   function close() { kind = null; panel.className = 'panel'; panel.innerHTML = ''; }
 

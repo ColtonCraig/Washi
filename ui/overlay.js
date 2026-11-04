@@ -24,7 +24,8 @@ B.onOverlayInit(d => {
   coachEl.classList.remove('on');
   hideStrip(); window.VAULTUI.close();
   if (d.mode === 'vault') { toast.classList.remove('on'); window.PANELS.closeAll(); window.SHEETS.close(true); close(); window.VAULTUI.open(d); return; }
-  if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'panel' && d.mode !== 'peek' && d.mode !== 'sheet' && d.mode !== 'setup') close();
+  if (d.mode !== 'peek') window.PANELS.closeAll(); if (d.mode !== 'sheet') window.SHEETS.close(true); if (d.mode !== 'peek') close();   // one thing at a time: a card or sheet opened by its shortcut replaces the command bar
+  if (d.mode !== 'setup' && d.mode !== 'peek' && window.SETUP.isOpen()) window.SETUP.drop();   // …and Settings, the guide or What's new
   if (d.mode === 'snap') { window.SNAP.open(d); return; }
   if (d.mode === 'setup') { window.SETUP.open(d); return; }
   if (d.mode === 'panel') { window.PANELS.open(d); return; }
@@ -95,7 +96,7 @@ function render(groups) {
     }
   }
   if (!n && D.mode !== 'prompt') h = '<div class="note">Nothing matches. Press Return to search the web.</div>';
-  res.innerHTML = '<div class="hl" id="hl"></div>' + h; sel = 0; move();
+  res.innerHTML = '<div class="hl" id="hl" aria-hidden="true"></div>' + h; sel = 0; move();
 }
 function move() {
   const el = res.querySelector(`.r[data-n="${sel}"]`), hl = $('#hl'); if (!hl) return;
