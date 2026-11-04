@@ -66,6 +66,14 @@ const AUDIT = () => {
     if (!scrollY && (r.top < c.top - tol || r.bottom > c.bottom + tol)) bad.push(`y ${r.top.toFixed(0)}..${r.bottom.toFixed(0)} outside ${c.top.toFixed(0)}..${c.bottom.toFixed(0)}`);
     if (scrollX && (r.left < c.left - tol || r.right > c.right + tol) && clip.scrollWidth <= clip.clientWidth + 1) bad.push(`x sticks out of a scroller that can't scroll sideways`);
     if (e.children.length === 0 && e.textContent.trim() && e.scrollWidth > e.clientWidth + 1 && s.textOverflow !== 'ellipsis' && /(hidden|clip)/.test(s.overflowX)) bad.push('text cut off');
+    /* a letter that reaches past its box (handwriting curls and italics do) is shaved off by overflow: measure the ink */
+    if (e.children.length === 0 && e.textContent.trim() && /(hidden|clip)/.test(s.overflowX) && e.scrollWidth <= e.clientWidth + 1) {
+      const cv = window.__auditCv || (window.__auditCv = document.createElement('canvas').getContext('2d')); cv.font = s.font;
+      const m = cv.measureText(e.textContent.trim()), pl = parseFloat(s.paddingLeft) || 0, pr = parseFloat(s.paddingRight) || 0;
+      const w = s.textAlign === 'center' || s.textAlign === 'right' || s.textAlign === 'end' ? null : e.clientWidth;
+      if (w && pl + m.actualBoundingBoxRight > w + 1.5) bad.push(`its last letter is shaved off (ink ${Math.round(pl + m.actualBoundingBoxRight)}px in a ${w}px box)`);
+      else if (w && m.actualBoundingBoxLeft > pl + 1.5) bad.push('its first letter is shaved off');
+    }
     for (let x = e.parentElement; x && x !== document.body; x = x.parentElement) {     // a frame drawn inside a box (negative outline-offset) must not run through its contents
       const cs = getComputedStyle(x); const off = parseFloat(cs.outlineOffset || 0), w = parseFloat(cs.outlineWidth || 0);
       if (cs.outlineStyle !== 'none' && w && off < 0) { const xr = x.getBoundingClientRect(), ins = -off; if (r.left < xr.left + ins - tol || r.right > xr.right - ins + tol || r.top < xr.top + ins - tol || r.bottom > xr.bottom - ins + tol) { bad.push('crosses the frame drawn inside ' + name(x).slice(0, 30)); break; } }

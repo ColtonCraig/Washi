@@ -193,8 +193,9 @@ function updateChrome() {
   const bk = !!(web && bmByUrl(t.url)); bStar.disabled = !web; if (bStar.classList.contains('on') !== bk) { bStar.classList.toggle('on', bk); if (bk && !calm()) bStar.firstElementChild.animate([{ transform: 'scale(.6) rotate(-30deg)' }, { transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.34,1.5,.64,1)' }); }
   bStar.title = tip(bk ? 'Edit this bookmark' : 'Bookmark this page', 'bookmark') + ' · rest here for the bookmarks bar';
   const rd = !!(id && R.reading[id]), ra = !!(id && (R.readable[id] || rd));
-  if (bRead.hidden === ra) { bRead.hidden = !ra; if (ra && !calm()) bRead.animate([{ transform: 'scale(.5) rotate(-12deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
-  bRead.classList.toggle('on', rd); bRead.title = rd ? `Leave Reader (${keyHint('reader')} or esc) · right-click for text size` : `Reader mode (${keyHint('reader')})`;
+  /* always in the bar when it's turned on (it used to hide off articles, so it looked missing); greyed where there's no article */
+  if (bRead.disabled === ra) { bRead.disabled = !ra; if (ra && !calm()) bRead.firstElementChild.animate([{ transform: 'scale(.6) rotate(-12deg)' }, { transform: 'scale(1.12)' }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
+  bRead.classList.toggle('on', rd); bRead.title = rd ? `Leave Reader (${keyHint('reader')} or esc) · right-click for text size` : ra ? `Reader mode (${keyHint('reader')})` : 'Reader mode: lights up on articles';
   bBoost.disabled = !web; bBoost.classList.toggle('on', web && !!R.boosted[id]); bBoost.title = R.boosted[id] ? 'This site is boosted' : 'Boost this site: colors, font, hide things';
   const blocked = id ? R.blocked[id] || 0 : 0;
   bShield.querySelector('b').textContent = blocked > 99 ? '99+' : blocked || '';

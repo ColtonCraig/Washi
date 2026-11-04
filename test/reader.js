@@ -14,7 +14,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
 (async () => {
   const b = await start(); const { ui, ov } = b; await skipSetup(b);
   const page = async s => { for (let i = 0; i < 40; i++) { const p = b.pages().filter(x => x.url().includes(s)).pop(); if (p) return p; await sleep(150); } return null; };
-  const btn = () => ui.evaluate(() => { const e = document.getElementById('bRead'), r = e.getBoundingClientRect(); return { shown: !e.hidden && r.width > 0, on: e.classList.contains('on'), x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  const btn = () => ui.evaluate(() => { const e = document.getElementById('bRead'), r = e.getBoundingClientRect(); return { vis: !e.hidden && r.width > 0, shown: !e.hidden && r.width > 0 && !e.disabled, on: e.classList.contains('on'), x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   const waitBtn = async want => { for (let i = 0; i < 30; i++) { const s = await btn(); if (s.shown === want) return s; await sleep(150); } return btn(); };
   const click = async (x, y) => { ptr(`move ${X0 + x} ${Y0 + y}`); await sleep(80); ptr('down'); ptr('up'); };
   const sheet = p => p.evaluate(() => { const h = document.querySelector('washi-reader'); if (!h || !h.shadowRoot) return null; const s = h.shadowRoot.querySelector('.sheet'), cs = getComputedStyle(s), r = s.getBoundingClientRect();
@@ -23,7 +23,7 @@ const audit = async (p, what) => { const a = await p.evaluate(AUDIT); ok(!a.leng
 
   // ---------- not offered on a short page ----------
   await ui.evaluate(() => openTab('http://localhost:8765/p1.html')); await sleep(1800);
-  ok(!(await waitBtn(false)).shown, 'a short page doesn\'t offer Reader');
+  { const s0 = await waitBtn(false); ok(!s0.shown && s0.vis, 'a short page doesn\'t offer Reader: the stamp stays in the bar, greyed (it\'s turned on in Settings)'); }
 
   // ---------- offered on an article; a real click opens it ----------
   await ui.evaluate(() => navigate('http://localhost:8765/article.html')); await sleep(1500);

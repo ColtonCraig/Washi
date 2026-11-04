@@ -11,7 +11,7 @@ html.scrapbook .tab.on::before{left:-4px;top:-3px;width:28px;height:11px;transfo
 html.scrapbook .pin::after{left:50%;top:-4px;width:22px;height:9px;margin-left:-11px;transform:rotate(calc(var(--rot,1) * 5deg))}
 html.scrapbook .pins{padding-top:6px}
 html.scrapbook .fh .fi{transform:rotate(-7deg);filter:drop-shadow(0 0 0 #fff) drop-shadow(0 1px 1px rgb(var(--sh) / .25))}
-html.scrapbook .sname{transform:rotate(-1.5deg);transform-origin:0 50%;width:fit-content;max-width:calc(100% - 8px)}
+html.scrapbook .sname{transform:rotate(-1.5deg);transform-origin:100% 50%;width:fit-content;max-width:calc(100% - 8px)}
 
 /* ---------- top bar ---------- */
 html.scrapbook .label::before{left:-9px;top:-3px;width:26px;height:11px;transform:rotate(-38deg);z-index:1}

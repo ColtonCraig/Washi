@@ -13,7 +13,7 @@ body.still .sheet{transition:none!important}
 .sheet>*{position:relative}
 
 /* space name */
-.sname{margin:0 0 4px 4px;font:700 28px/1.15 var(--font-hand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:3px;background:linear-gradient(var(--tape),var(--tape)) 0 100%/34px 2px no-repeat;animation:rise .3s var(--ease) both}
+.sname{margin:0 0 4px 4px;font:700 28px/1.15 var(--font-hand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:3px;padding-right:8px;background:linear-gradient(var(--tape),var(--tape)) 0 100%/34px 2px no-repeat;animation:rise .3s var(--ease) both}
 
 /* new scrap + new folder */
 .toprow{display:flex;gap:6px;flex:none}
@@ -136,7 +136,7 @@ body.float .pair{background:rgb(var(--inkc) / .04)}
 .sp:hover{transform:translateY(-1px)}
 .sp:active{transform:scale(.94)}
 .sp.on{height:28px;min-width:56px;z-index:1}
-.sp .nm{display:none;font:700 12px/1 var(--font-ui);letter-spacing:.02em;white-space:nowrap}
+.sp .nm{display:none;font:700 12px/1 var(--font-ui);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;padding-right:1px}
 .sp.on .nm{display:block}
 .sp.add{background:transparent;border:1.5px solid rgb(var(--inkc) / .3);border-bottom:0;color:var(--ink2);min-width:26px;padding:0 5px}
 .sp.add:hover{color:var(--ink);background:rgb(var(--whc) / .5)}

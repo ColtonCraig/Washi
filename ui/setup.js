@@ -223,7 +223,7 @@ window.SETUP = (() => {
       box.replaceChildren(preview, list, h('div', { class: 'row', style: 'margin-top:14px' }, h('button', { class: 'btn small', disabled: dflt ? '' : null, onclick: () => setPref({ tools: null, toolsOff: [] }) }, 'Reset to the standard order')));
     };
     sync(draw);
-    return [field('Tools on the right', box, 'Drag a row to move it (or drag the buttons in the top bar itself). Right-click a button in the bar to hide it. Reader only shows on articles, Downloads once you\'ve downloaded something.')];
+    return [field('Tools on the right', box, 'Drag a row to move it (or drag the buttons in the top bar itself). Right-click a button in the bar to hide it. Reader lights up on articles.')];
   }
   function secTabs(brief) {
     const arch = field('Tidy up old tabs', seg(ARCHIVE_OPTS, () => +P.archive, v => setPref({ archive: v }), 'grid'),

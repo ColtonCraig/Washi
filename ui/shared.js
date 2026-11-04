@@ -126,7 +126,7 @@
   /* the tools on the right of the top bar, in their standard order (Settings › Top bar, or drag them in the bar) */
   const TOOLS = [
     { id: 'exts', name: 'Extensions', icon: 'puzzle', sub: 'Your extensions\' buttons' }, { id: 'note', name: 'Sticky note', icon: 'note', key: 'notes' },
-    { id: 'focus', name: 'Focus mode', icon: 'focus', key: 'focus' }, { id: 'reader', name: 'Reader', icon: 'reader', key: 'reader', sub: 'Shows on articles' },
+    { id: 'focus', name: 'Focus mode', icon: 'focus', key: 'focus' }, { id: 'reader', name: 'Reader', icon: 'reader', key: 'reader', sub: 'Lights up on articles' },
     { id: 'star', name: 'Bookmark', icon: 'star', key: 'bookmark' }, { id: 'boost', name: 'Boost', icon: 'bolt' },
     { id: 'shield', name: 'Blocking', icon: 'shield' }, { id: 'downloads', name: 'Downloads', icon: 'download', key: 'downloads' }, { id: 'split', name: 'Split view', icon: 'split', key: 'split' }
   ];
