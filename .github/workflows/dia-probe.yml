@@ -1,0 +1,27 @@
+name: Dia probe
+# What a fresh Dia shows on GitHub's Mac (for building Washi's Dia tweaks): install it, open it, take screenshots.
+on: { workflow_dispatch: {} }
+jobs:
+  probe:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install Dia
+        run: |
+          curl -fsSL -o /tmp/Dia.dmg https://releases.diabrowser.com/release/Dia-latest.dmg
+          hdiutil attach -nobrowse -quiet /tmp/Dia.dmg -mountpoint /tmp/dia
+          ditto /tmp/dia/Dia.app /Applications/Dia.app
+          defaults read /Applications/Dia.app/Contents/Info.plist CFBundleShortVersionString
+          defaults read /Applications/Dia.app/Contents/Info.plist SUFeedURL || true
+          codesign -dv /Applications/Dia.app 2>&1 | grep -E "TeamIdentifier|Identifier="
+      - name: Open it and look
+        run: |
+          mkdir -p shots
+          open -a /Applications/Dia.app; sleep 25
+          screencapture -x shots/1-launch.png
+          osascript -e 'tell application "System Events" to tell process "Dia" to get {name, position, size} of every window' || true
+          osascript -e 'tell application "System Events" to tell process "Dia" to get entire contents of window 1' 2>/dev/null | tr ',' '\n' | grep -iE "button|text|static" | head -60 || true
+          sleep 10; screencapture -x shots/2-later.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: dia-probe, path: shots }
