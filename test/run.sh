@@ -20,7 +20,7 @@ LIST="${@:-$ALL}"
 if [ -n "${SHARD:-}" ]; then i=${SHARD%/*}; n=${SHARD#*/}; k=0; L=""; for t in $LIST; do [ $((k % n + 1)) = "$i" ] && L="$L $t"; k=$((k+1)); done; LIST=$L; fi
 for t in $LIST; do
   echo "== $t"
-  eval $RUN test/$t.js 2>&1 | grep -v "agent-proxy\|redirector\|Allowed domains\|For details" | grep "nav\|comparison\|  [A-Z][a-z].*: \|PASS\|FAIL\|passed\|Error\|threw" || true
+  eval $RUN test/$t.js 2>&1 | grep -v "agent-proxy\|redirector\|Allowed domains\|For details" | grep "nav\|comparison\|  [A-Z][a-z].*: \|PASS\|FAIL\|passed\|Error\|threw\|^      " || true
   [ "${PIPESTATUS[0]}" = "0" ] || fail=1
 done
 exit $fail
