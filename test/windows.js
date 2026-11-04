@@ -8,7 +8,7 @@ const K = a => execSync('python3 ' + __dirname + '/ptr.py keys ' + JSON.stringif
 (async () => {
   let b = await start(); await skipSetup(b); let w1 = b.ui;
   const shells = () => b.pages().filter(p => p.url().endsWith('/index.html'));
-  const newWin = async () => { const n = shells().length; await w1.evaluate(() => B.setupAct({ type: 'test:focus' })); K('down:Control_L tap:n up:Control_L'); for (let i = 0; i < 30 && shells().length <= n; i++) await sleep(200); if (shells().length <= n) { console.log('  NOTE the virtual keyboard lost ⌘N: pressed again'); K('down:Control_L tap:n up:Control_L'); for (let i = 0; i < 30 && shells().length <= n; i++) await sleep(200); } await sleep(1500); return shells().find(p => p !== w1 && !seen.has(p)); };
+  const newWin = async () => { const n = shells().length; await w1.evaluate(() => B.setupAct({ type: 'test:focus' })); K('down:Control_L tap:n up:Control_L'); for (let i = 0; i < 30 && shells().length <= n; i++) await sleep(200); if (shells().length <= n) { console.log('  NOTE the virtual keyboard lost ⌘N (CI): New Window from the menu instead (test/shortcuts.js checks ⌘N itself)'); await w1.evaluate(() => B.setupAct({ type: 'test:newwin' })); for (let i = 0; i < 40 && shells().length <= n; i++) await sleep(250); } await sleep(1500); return shells().find(p => p !== w1 && !seen.has(p)); };
   const seen = new Set();
   await w1.evaluate(() => openTab('http://localhost:8765/p1.html')); await sleep(1200);
   const w2 = await newWin(); seen.add(w2); ok(!!w2, 'a second window');
