@@ -6,7 +6,31 @@
    "Show me" points at (a selector in the window) with tip; try: an action "Try it" runs. */
 window.WHATSNEW = [
   {
-    v: '1.1.2',
+    v: '1.2.0', name: '1.0', paper: 'Kozo',
+    lead: 'Washi 1.0, “Kozo”: the paper browser, finished.',
+    items: [
+      { icon: 'i:sidebar', title: 'Tabs down the side', text: 'Your tabs, folders and pins live in a sidebar you can pin or float. Spaces keep work and home apart, each with its own color, and can keep their own sign-ins.', point: '#bSide', tip: 'Pin or float the sidebar here' },
+      { icon: 'i:split', title: 'Split view', text: 'Drag a tab onto the page to put two side by side. They stay together in the sidebar as one item.', keys: ['split'], point: '#bSplit', tip: 'Split view' },
+      { icon: 'i:search', title: 'One bar for everything', text: 'Search, jump to an open tab, or run a command from the same bar. !bangs work too (!yt cats).', keys: ['newtab'] },
+      { icon: 'i:bolt', title: 'Your top bar, your way', text: 'Drag the buttons into the order you like and hide the ones you don\'t use. Settings › Top bar has them all.', point: '#tools', tip: 'Drag a button along the bar' },
+      { icon: 'i:focus', title: 'Focus mode and Reader', text: 'Focus mode gives the page the whole window. Reader turns an article into clean, quiet text.', keys: ['focus', 'reader'], try: 'focus' },
+      { icon: 'p:news', title: 'Sticky notes and snapshots', text: 'Every space has its own sticky note. Snapshot copies the page as a picture.', keys: ['notes', 'snapshot'], try: 'notes' },
+      { icon: 'i:key', title: 'Passwords, kept on this Mac', text: 'Washi saves and fills your passwords, encrypted with a key in your Keychain. Showing one asks for Touch ID.' },
+      { icon: 'i:shield', title: 'Blocking and safety', text: 'Ads and trackers are blocked, known scam sites are stopped, and every page runs locked away from the rest of your Mac.' },
+      { icon: 'i:puzzle', title: 'Your Chrome extensions', text: 'Install from the Chrome Web Store as usual: Bitwarden, Okta, LastPass, Dark Reader, Grammarly, uBlock Origin Lite and more.' },
+      { icon: 'i:reload', title: 'Light on memory', text: 'Tabs you haven\'t looked at for a while go to sleep and wake right where you left them. Hover a tab to see what it uses.' },
+      { icon: 'i:down', title: 'Updates on its own', text: 'Washi checks for updates often, downloads them quietly, and a postcard offers to restart. Chromium\'s security fixes come in as they\'re released.' }
+    ],
+    fixes: [
+      'Reader stays in the top bar when it\'s turned on: it lights up on articles.',
+      'A long or handwritten space name is never shaved off, docked or floating.',
+      'Settings opens on Look, and nothing on any screen touches or runs into anything.',
+      'Updates are noticed within minutes, and the postcard waits until you\'re back.',
+      'Passkeys are gone: Apple only lets browsers it has approved use iCloud passkeys, so sites offer your password or a code straight away.'
+    ]
+  },
+  {
+    v: '1.1.2', name: 'Beta 7',
     lead: 'Polished all over.',
     fixes: [
       'Settings opens on Look with Look lit up (it showed Help lit).',
@@ -17,7 +41,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '1.1.1',
+    v: '1.1.1', name: 'Beta 6',
     lead: 'Lighter on memory, and safer.',
     fixes: [
       'A sleeping tab wakes up just where you left it: same place on the page, same Back and Forward.',
@@ -28,7 +52,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '1.1.0',
+    v: '1.1.0', name: 'Beta 5',
     lead: 'Washi, arranged your way.',
     items: [
       { icon: 'i:bolt', title: 'Your top bar, your way', text: 'Drag any button along the top bar to put it where you like, and right-click one you never use to hide it. Settings › Top bar has them all, with a reset.', point: '#tools', tip: 'Drag any of these along the bar. Right-click one to hide it.' },
@@ -47,7 +71,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '1.0.1',
+    v: '1.0.1', name: 'Beta 4',
     lead: 'Extensions behave with more than one window.',
     fixes: [
       'With two windows open, an extension\'s popup opens in the window you clicked it in (it could jump to the other one, even on another desktop), and tabs it opens land there too.',
@@ -55,7 +79,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '1.0.0',
+    v: '1.0.0', name: 'Beta 3',
     lead: 'Washi 1.0: your extensions work, and lots of little things got fixed.',
     fixes: [
       'Chrome extensions work properly: Okta\'s plugin shows your apps once you\'re signed in, and 1Password, uBlock Origin Lite, Bitwarden, Dark Reader and Grammarly open and work.',
@@ -67,7 +91,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '0.17.0',
+    v: '0.17.0', name: 'Beta 2',
     lead: 'A calmer page, music in the corner, notes for every space.',
     items: [
       { icon: 'i:expand', title: 'Focus mode', text: 'The page gets the whole window: the top bar and sidebar get out of the way.', how: 'Point at the very top for the top bar, the left edge for the sidebar.', keys: ['focus'], try: 'focus' },
@@ -82,7 +106,7 @@ window.WHATSNEW = [
     ]
   },
   {
-    v: '0.16.0',
+    v: '0.16.0', name: 'Beta 1',
     lead: 'Okta works, and the sidebar learned to tidy itself.',
     items: [
       { icon: 'p:tools', title: 'Okta Browser Plugin works', text: 'No more "We\'re having trouble launching your app" on hudl.okta.com and other sign-in pages.' },

@@ -58,9 +58,9 @@ window.PANELS = (() => {
   function update() {
     const notes = String(data.notes || '').split(/\n+/).map(s => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean).slice(0, 3);
     panel.innerHTML = `<div class="pop upd" role="dialog" aria-label="Update ready"><i class="tp"></i>
-      <span class="ust" aria-hidden="true"><b>${esc(data.version || '')}</b><small>Washi</small></span>
+      <span class="ust" aria-hidden="true"><b>${esc(data.display || data.version || '')}</b><small>${esc(data.paper || 'Washi')}</small></span>
       <h5 class="uh">Fresh copy, ready to go</h5>
-      <p class="ut">Washi ${esc(data.version || '')} is downloaded. Restart to install it: every window and tab comes right back.</p>
+      <p class="ut">Washi ${esc(data.display || data.version || '')}${data.paper ? ' “' + esc(data.paper) + '”' : ''} is downloaded. Restart to install it: every window and tab comes right back.</p>
       ${notes.length ? `<ul class="un">${notes.map(n => `<li>${esc(n.slice(0, 90))}</li>`).join('')}</ul>` : ''}
       <div class="ub"><button class="btn soft" id="ulater">Later</button><button class="btn primary" id="unow">Restart now</button></div>
       <small class="uf">Later: it installs by itself the next time you quit Washi.</small></div>`;

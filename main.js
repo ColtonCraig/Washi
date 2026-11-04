@@ -58,6 +58,9 @@ const HANDLE = (ch, fn) => sec.handle(ch, (e, ...a) => { const c = ctxOf(e.sende
 const toUI = (ch, ...a) => { if (alive(C && C.win)) C.win.webContents.send(ch, ...a); };
 const toSide = (ch, ...a) => { if (C.sidebar && !C.sidebar.webContents.isDestroyed()) C.sidebar.webContents.send(ch, ...a); };
 const toOverlay = (ch, ...a) => { if (C.overlay && !C.overlay.webContents.isDestroyed()) C.overlay.webContents.send(ch, ...a); };
+/* the version you see (1.0 "Kozo") and the build number updates go by (it only ever goes up): package.json "washi" */
+const SHOWN = (() => { try { const w = require('./package.json').washi || {}; return { display: String(w.display || app.getVersion()), paper: String(w.paper || '') }; } catch { return { display: app.getVersion(), paper: '' }; } })();
+try { app.setAboutPanelOptions({ applicationName: 'Washi', applicationVersion: `${SHOWN.display}${SHOWN.paper ? ' “' + SHOWN.paper + '”' : ''}`, version: app.getVersion() }); } catch {}
 const rr = r => ({ x: Math.round(r.x), y: Math.round(r.y), width: Math.max(0, Math.round(r.width)), height: Math.max(0, Math.round(r.height)) });
 const nav = wc => { const h = wc.navigationHistory; return { canBack: h.canGoBack(), canFwd: h.canGoForward() }; };
 const goBack = wc => wc.navigationHistory.goBack();
@@ -497,7 +500,7 @@ function offerUpdate(s, tries = 0) {
   if (!s || s.status !== 'ready' || updLater === s.version || P.updates === 'quiet') return;
   const fw = BrowserWindow.getFocusedWindow(), c = (fw && [...W.values()].find(x => x.win === fw)) || (lastMain && alive(lastMain.win) ? lastMain : null);
   if (!c || c.overlayOpen || c.dragging || recording || (c.win && !c.win.isFocused())) { updT = later(() => offerUpdate(s, tries + 1), tries < 200 ? 3000 : 15000); return; }   // keeps waiting until you're back (it used to give up after 20 minutes)   // when you're back, and not in the middle of something
-  C = c; toUI('update:card', { version: s.version, notes: s.notes || '' });
+  C = c; toUI('update:card', { version: s.version, display: s.display || s.version, paper: s.paper || '', notes: s.notes || '' });
 }
 function showFx(f) {
   C.tabPeekOn = false; C.coachOn = false;
@@ -904,7 +907,7 @@ HANDLE('keys:list', () => ({ actions: keys.ACTIONS, custom: P.keys || {} }));
 ON('setup:msg', (_, m) => toUI('setup:msg', m));
 ON('setup:reply', (_, m) => toOverlay('setup:event', m));     // the shell answering something the setup sheet asked for
 const isDefault = () => { try { return app.isDefaultProtocolClient('https') && app.isDefaultProtocolClient('http'); } catch { return false; } };
-HANDLE('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms(), ghToken: live.tokenHas(), appsTest: !app.isPackaged && process.env.WASHI_APPS_TEST ? process.env.WASHI_APPS_TEST : null }));
+HANDLE('setup:info', () => ({ packaged: app.isPackaged, isDefault: isDefault(), version: app.getVersion(), display: SHOWN.display, paper: SHOWN.paper, electron: process.versions.electron, chrome: process.versions.chrome, update: updater.state(), lists: blocker.listDate(), perms: web.listPerms(), ghToken: live.tokenHas(), appsTest: !app.isPackaged && process.env.WASHI_APPS_TEST ? process.env.WASHI_APPS_TEST : null }));
 HANDLE('setup:act', async (_, a) => {
   if (a.type === 'defaultBrowser') {
     if (!app.isPackaged) return { ok: false, isDefault: false, why: 'dev' };
@@ -1019,7 +1022,7 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'snap:save') { snapSave(true); return { ok: true }; }
   if (a.type === 'news:claim') { const v = String(a.v || ''); if (!v || newsClaimed === v) return { ok: false }; newsClaimed = v; return { ok: true }; }   // What's new: the first window to ask shows it
   if (a.type === 'update:later') { const s = updater.state(); updLater = (typeof a.version === 'string' && a.version) || (s && s.version); return { ok: true }; }
-  if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), notes: String(a.notes || '') }); return { ok: true }; }
+  if (a.type === 'test:update' && !app.isPackaged) { if (!a.again) updLater = null; offerUpdate({ status: 'ready', version: String(a.version || '9.9.9'), display: a.display ? String(a.display) : undefined, paper: a.paper ? String(a.paper) : '', notes: String(a.notes || '') }); return { ok: true }; }
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; let url = ''; try { url = p.browserWindow.webContents.getURL(); } catch {} return { open: true, wid, id: p.extensionId, url }; }   // tests: which window an extension popup opened in
   if (a.type === 'test:action' && !app.isPackaged) return exts.actionInfo(String(a.id || ''));
   if (a.type === 'test:newwin' && !app.isPackaged) { createWindow(null, { cascade: true }); return { ok: true }; }   // tests: File › New Window, when the virtual keyboard drops ⌘N
@@ -1066,7 +1069,7 @@ async function perfReport() {
   const gs = app.getGPUFeatureStatus(), gpu = /^enabled/.test(gs.gpu_compositing || '');
   const r = { gpu, lagMax: Math.round(lagMax), ui: sum(m.filter(x => uiPids.has(x.pid)).concat(m.filter(x => x.type === 'Browser'))), pages: { ...sum([...new Set(pageProcs)]), n: C.tabs.size },
     gpuProc: sum(m.filter(x => x.type === 'GPU')), top };
-  r.text = [`Washi ${app.getVersion()} · Chromium ${process.versions.chrome} · ${process.platform} ${process.arch} · ${os.release()}`,
+  r.text = [`Washi ${SHOWN.display} ${SHOWN.paper} (${app.getVersion()}) · Chromium ${process.versions.chrome} · ${process.platform} ${process.arch} · ${os.release()}`,
     `GPU: ${JSON.stringify(gs)}`, `Main-process worst stall: ${r.lagMax} ms`, `Interface: ${r.ui.cpu}% CPU, ${r.ui.mem} MB`,
     `Pages (${r.pages.n}): ${r.pages.cpu}% CPU, ${r.pages.mem} MB; busiest: ${top ? top.title + ' ' + top.cpu + '%' : '-'}`, `GPU process: ${r.gpuProc.cpu}% CPU, ${r.gpuProc.mem} MB`,
     `Processes: ${m.map(x => `${x.type}:${pct(x)}%/${mb(x)}MB`).join(' ')}`, `Blocking: ${blocker.getMode()} · C.sidebar ${C.sbDocked ? 'docked' : 'floating'}`].join('\n');

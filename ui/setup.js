@@ -329,7 +329,7 @@ window.SETUP = (() => {
       btn.onclick = async () => { if (u.status === 'ready') return B.setupAct({ type: 'update:install' }); draw(await B.setupAct({ type: 'update:check' })); };
     };
     draw(INFO.update); hooks.update = draw;
-    return [field('Updates', h('div', {}, h('p', { class: 'ver' }, h('b', {}, 'Washi ' + (INFO.version || '')), h('small', {}, ` · Chromium ${INFO.chrome || ''} · Electron ${INFO.electron || ''}`)), st, btn),
+    return [field('Updates', h('div', {}, h('p', { class: 'ver' }, h('b', {}, 'Washi ' + (INFO.display || INFO.version || '') + (INFO.paper ? ' · ' + INFO.paper : '')), h('small', {}, ` · Chromium ${INFO.chrome || ''} · Electron ${INFO.electron || ''}`)), st, btn),
       'Each update brings the newest Chromium security fixes. Updates download in the background; you choose when to restart.'),
       field('When an update is ready', seg([{ v: 'card', label: 'Show me a card', sub: 'Restart now, or later' }, { v: 'quiet', label: 'Stay quiet', sub: 'It installs when you quit' }], () => P.updates || 'card', v => setPref({ updates: v }), 'wide')),
       field('After an update', toggle('Show what\'s new', 'A page of what changed and how to use it, the first time Washi starts after an update.', () => P.showNews !== false, v => setPref({ showNews: v })))];
@@ -841,11 +841,11 @@ window.SETUP = (() => {
     const all = window.WHATSNEW || [], fresh = since ? all.filter(r => newer(r.v, since)) : all.slice(0, 1), show = fresh.length ? fresh : all.slice(0, 1), older = all.filter(r => !show.includes(r));
     let n = 0;
     const fixes = r => (r.fixes || []).length ? h('div', { class: 'nwfx', style: `--i:${n++}` }, h('h4', {}, (r.items || []).length ? 'Also fixed and polished' : 'Fixes and polish'), h('ul', {}, r.fixes.map(f => h('li', { html: BL.ic('check', 14) + '<span>' + BL.esc(f) + '</span>' })))) : null;
-    const rel = (r, first) => h('div', { class: 'nwr' }, first ? null : h('h3', { class: 'nwv' }, h('span', {}, 'Washi ' + r.v), h('small', {}, r.lead || '')), (r.items || []).length ? h('div', { class: 'nwg' }, r.items.map(it => newsCard(it, n++))) : null, fixes(r));
+    const rel = (r, first) => h('div', { class: 'nwr' }, first ? null : h('h3', { class: 'nwv' }, h('span', {}, (r.name && /^Beta/.test(r.name) ? r.name : 'Washi ' + (r.name || r.v)) + (r.paper ? ' · ' + r.paper : '')), h('small', {}, r.lead || '')), (r.items || []).length ? h('div', { class: 'nwg' }, r.items.map(it => newsCard(it, n++))) : null, fixes(r));
     const earlier = h('div', { class: 'nwold' });
     const more = older.length ? h('button', { class: 'lnk', onclick: () => { more.remove(); n = 0; earlier.append(...older.map(r => rel(r, false))); } }, 'Earlier updates') : null;
     sheet = h('div', { class: 'sheet nw' }, h('i', { class: 'tp l' }), h('i', { class: 'tp r' }),
-      h('header', { class: 'shead' }, h('span', { class: 'stampv' }, 'Washi ' + (show[0] ? show[0].v : INFO.version || '')), h('h2', { class: 'ttl' }, 'Fresh off the press'), h('p', { class: 'lead' }, (show[0] && show[0].lead) || 'What\'s new in Washi.'), h('button', { class: 'xx', 'aria-label': 'Close', onclick: finish }, '×')),
+      h('header', { class: 'shead' }, h('span', { class: 'stampv' }, show[0] && show[0].name && /^Beta/.test(show[0].name) ? show[0].name : 'Washi ' + (show[0] ? show[0].name || show[0].v : INFO.display || INFO.version || '')), h('h2', { class: 'ttl' }, 'Fresh off the press'), h('p', { class: 'lead' }, (show[0] && show[0].lead) || 'What\'s new in Washi.'), h('button', { class: 'xx', 'aria-label': 'Close', onclick: finish }, '×')),
       h('div', { class: 'body' }, h('div', { class: 'pg npage' }, ...show.map((r, i) => rel(r, i === 0)), earlier, more)),
       h('footer', { class: 'nav' }, h('span', { class: 'hint' }, 'Any time: Help › What\'s New'), h('span', { class: 'fill' }), h('button', { class: 'btn primary', onclick: finish }, 'Got it')));
     root.append(sheet);

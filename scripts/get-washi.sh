@@ -19,7 +19,7 @@ curl -fsSL "$REL/latest.json" -o "$TMP/latest.json" || die "Couldn't reach GitHu
 read -r VER NAME SHA < <(osascript -l JavaScript -e "
   const j = JSON.parse($.NSString.stringWithContentsOfFileEncodingError('$TMP/latest.json', 4, null).js);
   const p = JSON.parse(j.payload || JSON.stringify(j)), f = p.files['$ARCH'];
-  p.version + ' ' + f.name + ' ' + f.sha256") || die "The release list looks wrong. Tell Colton."
+  (p.display || p.version) + ' ' + f.name + ' ' + f.sha256") || die "The release list looks wrong. Tell Colton."
 [ -n "$SHA" ] || die "No $ARCH build in the latest release. Tell Colton."
 
 say "Downloading Washi $VER for $([ $ARCH = arm64 ] && echo 'Apple chip' || echo 'Intel')…"

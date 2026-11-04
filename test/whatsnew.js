@@ -25,7 +25,7 @@ const sheetOn = ov => ov.evaluate(() => !!document.querySelector('#setup.on .she
   await sleep(1200);
   const info = await ov.evaluate(() => ({ title: document.querySelector('.nw .ttl').textContent, stamp: document.querySelector('.nw .stampv').textContent, cards: [...document.querySelectorAll('.nw .nwc h5')].map(e => e.textContent), vers: [...document.querySelectorAll('.nw .nwv span')].map(e => e.textContent), keys: [...document.querySelectorAll('.nw .nwc kbd')].map(e => e.textContent), tries: document.querySelectorAll('.nw .nwc .btn').length }));
   const want = await ov.evaluate(v => window.WHATSNEW.filter(r => { const n = x => x.split('.').map(Number); const a = n(r.v), s = n('0.15.1'), c = n(v); const gt = (p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]; return gt(a, s) > 0 && gt(a, c) <= 0; }).flatMap(r => (r.items || []).map(i => i.title)), VERSION);
-  ok(info.title === 'Fresh off the press' && info.stamp === 'Washi ' + VERSION, `titled "${info.title}", stamped ${info.stamp}`);
+  ok(info.title === 'Fresh off the press' && info.stamp === 'Washi ' + require('../package.json').washi.display, `titled "${info.title}", stamped ${info.stamp}`);
   ok(want.length && JSON.stringify(info.cards) === JSON.stringify(want), `it shows everything new since 0.15.1 (${info.cards.length} cards, ${info.vers.length + 1} releases)`);
   ok(info.keys.length >= 2 && info.keys.every(k => k.length >= 2), 'with the shortcuts, as you have them set: ' + info.keys.join(' '));
   ok(info.tries >= 2, `and "Try it" buttons (${info.tries})`);

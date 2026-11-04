@@ -90,14 +90,14 @@ async function check() {
     if (!newer(m.version, app.getVersion())) { set({ status: 'current', checked: Date.now(), version: null }); return state; }
     const f = m.files[archKey()];
     if (!f || !f.name || !/^[0-9a-f]{64}$/i.test(f.sha256 || '')) throw new Error('no download for this Mac');
-    set({ status: 'downloading', version: m.version, percent: 0 });
+    set({ status: 'downloading', version: m.version, display: typeof m.display === 'string' ? m.display.slice(0, 20) : m.version, percent: 0 });
     fs.mkdirSync(dir(), { recursive: true });
     const zip = path.join(dir(), `Washi-${m.version}.zip`);
     await download(fileURL(f.name), zip, f);
     const appDir = await unpack(zip, path.join(dir(), m.version), m.version);
     fs.rmSync(zip, { force: true });
     staged = { version: m.version, appDir, notes: m.notes || '' };
-    set({ status: 'ready', version: m.version, notes: staged.notes, checked: Date.now(), percent: 100 });
+    set({ status: 'ready', version: m.version, display: typeof m.display === 'string' ? m.display.slice(0, 20) : m.version, paper: typeof m.paper === 'string' ? m.paper.slice(0, 30) : '', notes: staged.notes, checked: Date.now(), percent: 100 });
   } catch (e) {
     set({ status: 'error', error: String(e && e.message || e).slice(0, 200), checked: Date.now() - 25 * 60e3 });   // (try again in a few minutes, not half an hour)
   } finally { busy = false; }

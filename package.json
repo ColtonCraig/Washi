@@ -1,7 +1,7 @@
 {
   "name": "washi",
   "productName": "Washi",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Washi: a paper-collage browser for macOS with a vertical sidebar, spaces and split view. Built on Chromium.",
   "main": "main.js",
   "scripts": {
@@ -83,7 +83,9 @@
         "NSLocationUsageDescription": "Websites you allow can ask for your location.",
         "NSBluetoothAlwaysUsageDescription": "Websites you allow can connect to Bluetooth devices.",
         "LSApplicationCategoryType": "public.app-category.productivity"
-      }
+      },
+      "bundleShortVersion": "1.0",
+      "bundleVersion": "1.2.0"
     },
     "dmg": {
       "title": "Washi",
@@ -133,6 +135,13 @@
   },
   "homepage": "https://github.com/YOUR_GITHUB_USERNAME/washi",
   "washi": {
-    "updates": "https://github.com/ColtonCraig/Washi-releases/releases/latest/download/latest.json"
+    "display": "1.0",
+    "paper": "Kozo",
+    "papers": {
+      "1": "Kozo",
+      "2": "Gampi",
+      "3": "Mitsumata"
+    },
+    "note": "What you see is display (and paper, the name of the major version); version only ever goes up, so updates keep working."
   }
 }
