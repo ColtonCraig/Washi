@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New Tab</title>
+<link rel="stylesheet" href="paper.css">
+<link rel="stylesheet" href="newtab.css">
+</head>
+<body class="grain">
+<div id="page">
+<main id="desk">
+  <header class="hello">
+    <h1 id="greet">Hello</h1>
+    <p id="date"></p>
+  </header>
+  <form id="search" class="card grain" role="search" autocomplete="off">
+    <i class="tape" style="left:28px;top:-8px;transform:rotate(-4deg)"></i>
+    <svg class="i"><use href="#i-search"/></svg>
+    <input id="q" type="text" placeholder="Search, or type an address" aria-label="Search, or type an address" spellcheck="false">
+    <kbd id="go" aria-hidden="true">↵</kbd>
+  </form>
+  <section id="apps" aria-label="Your apps"></section>
+  <section id="note" class="card grain" aria-label="Sticky note">
+    <i class="tape" style="right:22px;top:-8px;transform:rotate(5deg)"></i>
+    <h2>A note</h2>
+    <textarea id="ntx" placeholder="Jot something down: it stays here, on every new tab." spellcheck="true"></textarea>
+  </section>
+</main>
+</div>
+<button id="gear" class="corner" title="Washi look" aria-label="Washi look"><svg class="i"><use href="#i-gear"/></svg></button>
+<button id="edit" class="corner second" title="Edit your apps" aria-label="Edit your apps"><svg class="i"><use href="#i-pen"/></svg></button>
+<aside id="look" class="card grain" hidden aria-label="Washi look"></aside>
+<script src="theme.js"></script>
+<script src="newtab.js"></script>
+</body>
+</html>

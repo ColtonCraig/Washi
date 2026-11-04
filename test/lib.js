@@ -107,13 +107,14 @@ const GAPS = (MIN = 4) => {
   const clipOf = e => { let c = { left: -1e9, top: -1e9, right: 1e9, bottom: 1e9 }; for (let x = e.parentElement; x && x !== document.body; x = x.parentElement) { const cs = getComputedStyle(x); if (/(hidden|auto|scroll|clip)/.test(cs.overflow + cs.overflowX + cs.overflowY)) { const r = x.getBoundingClientRect(); c = { left: Math.max(c.left, r.left), top: Math.max(c.top, r.top), right: Math.min(c.right, r.right), bottom: Math.min(c.bottom, r.bottom) }; } } return c; };
   const B = [];
   for (const e of document.body.querySelectorAll('*')) {
-    if (e.closest('svg,[aria-hidden="true"],[data-clip],[data-joined],.tp,.deco,.desk,.bit,.cf-bit,.scraps')) continue;
+    if (e.closest('svg,[aria-hidden="true"],[data-clip],[data-joined],.tp,.tape,.deco,.desk,.bit,.cf-bit,.scraps')) continue;
     const r = e.getBoundingClientRect(); if (r.width < 8 || r.height < 8) continue;
     const s = getComputedStyle(e); if (!boxy(e, s) || !visible(e)) continue;
     if (s.position === 'fixed' && r.width >= innerWidth - 2 && r.height >= innerHeight - 2) continue;   // a full-window backdrop
     const c = clipOf(e), v = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) };
     if (v.right - v.left < 4 || v.bottom - v.top < 4) continue;                                    // scrolled out of view
-    const layer = (() => { for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) { const cs = getComputedStyle(n); if (cs.position === 'fixed' || cs.position === 'absolute' || +cs.zIndex > 0) return n; } return document.body; })();
+    const layer = (() => { { const own = getComputedStyle(e); if (own.position === 'fixed') return e; }   // a box that floats over the page (a pop-over) is its own layer
+      for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) { const cs = getComputedStyle(n); if (cs.position === 'fixed' || cs.position === 'absolute' || +cs.zIndex > 0) return n; } return document.body; })();
     B.push({ e, r: v, full: r, layer, cut: { t: v.top > r.top + .5, b: v.bottom < r.bottom - .5, l: v.left > r.left + .5, rt: v.right < r.right - .5 } });
   }
   for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {

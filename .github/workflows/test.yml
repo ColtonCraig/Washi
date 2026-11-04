@@ -21,8 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx playwright install-deps chromium && npm i --no-save playwright@1 && sudo apt-get install -y xvfb imagemagick python3-xlib python3-pil
-      - run: sudo CI=1 SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
+      - run: npx playwright install-deps chromium && npm i --no-save playwright@1 && PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/pw npx playwright install chromium && sudo apt-get install -y xvfb imagemagick python3-xlib python3-pil
+      - run: sudo CI=1 PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/pw SHARD=${{ matrix.shard }}/4 WASHI_SHOTS=$RUNNER_TEMP bash test/run.sh
       - name: Extensions with the sandbox on, like the real app (background workers get their APIs only then)
         if: matrix.shard == 1
         run: |

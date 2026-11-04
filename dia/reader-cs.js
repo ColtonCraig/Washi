@@ -1,0 +1,89 @@
+'use strict';
+/* Reader (from Washi's app/reader.js): an article as a clean sheet of Washi paper laid over the page, in your Washi
+   paper and ink. Mozilla's Readability (Apache-2.0, vendor/) finds the article. Clicking Reader again, × or esc lifts
+   the sheet off; Aa steps through the text sizes and fonts. Injected (with theme.js and Readability) by the popup or
+   the Reader shortcut. */
+(() => {
+  if (window.__washiReader) return;
+  const R = window.__washiReader = { host: null, look: null, art: null };
+  const css = l => `
+    :host{all:initial;position:fixed;inset:0;z-index:2147483647;display:block;background:${l.desk};overflow:auto;-webkit-font-smoothing:antialiased;color-scheme:${l.dark ? 'dark' : 'light'}}
+    .sheet{position:relative;box-sizing:border-box;max-width:${l.width}px;margin:40px auto 80px;padding:56px 64px 64px;background:${l.paper};color:${l.ink};border-radius:6px 6px 10px 8px;box-shadow:0 0 0 1px ${l.line},0 18px 50px rgba(0,0,0,${l.dark ? .45 : .14});
+      font:${l.size}px/1.62 ${l.face === 'serif' ? "'New York','Iowan Old Style',Charter,Georgia,serif" : "-apple-system,system-ui,'Helvetica Neue',sans-serif"};animation:in .32s cubic-bezier(.2,.9,.3,1.04)}
+    @keyframes in{from{opacity:0;transform:translateY(14px) rotate(-.4deg)}}
+    @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+    .tape{position:absolute;top:-9px;left:50%;width:84px;height:20px;margin-left:-42px;transform:rotate(-2deg);opacity:.85;background:repeating-linear-gradient(-45deg,${l.tape} 0 6px,color-mix(in srgb,${l.tape} 62%,#fff) 6px 12px);display:${l.scrap ? 'block' : 'none'}}
+    .site{margin:0 0 10px;font:700 12px/1.3 -apple-system,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:${l.tapeInk}}
+    h1.t{margin:0 0 10px;font-size:1.9em;line-height:1.18;letter-spacing:-.01em;font-weight:700}
+    .by{margin:0 0 30px;padding-bottom:22px;border-bottom:1.5px dashed ${l.line};font:500 13px/1.4 -apple-system,system-ui,sans-serif;color:${l.ink2}}
+    .c{overflow-wrap:break-word}
+    .c img,.c video,.c figure,.c picture,.c svg{max-width:100%;height:auto;border-radius:4px}
+    .c figure{margin:1.4em 0}.c figcaption{font-size:.82em;color:${l.ink2};margin-top:6px}
+    .c a{color:${l.tapeInk};text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+    .c h1,.c h2,.c h3,.c h4{line-height:1.25;margin:1.6em 0 .5em}
+    .c p,.c ul,.c ol,.c blockquote,.c pre,.c table{margin:0 0 1.05em}
+    .c blockquote{margin-left:0;padding:2px 0 2px 18px;border-left:3px solid ${l.tape};color:${l.ink2}}
+    .c pre,.c code{font:.86em/1.5 ui-monospace,Menlo,monospace;background:${l.wash};border-radius:5px}
+    .c pre{padding:12px 14px;overflow:auto}.c code{padding:1px 4px}.c pre code{padding:0;background:none}
+    .c table{border-collapse:collapse;max-width:100%;display:block;overflow:auto}.c td,.c th{border:1px solid ${l.line};padding:5px 8px}
+    .c hr{border:0;border-top:1.5px dashed ${l.line};margin:2em 0}
+    .ctl{position:fixed;top:14px;right:18px;display:flex;gap:6px;z-index:2}
+    .ctl button{all:unset;box-sizing:border-box;height:32px;min-width:32px;padding:0 10px;display:grid;place-items:center;border-radius:9px;background:${l.paper};color:${l.ink2};font:700 14px/1 -apple-system,system-ui,sans-serif;box-shadow:0 0 0 1px ${l.line},0 4px 12px rgba(0,0,0,${l.dark ? .4 : .1});cursor:pointer}
+    .ctl button:hover{color:${l.ink};box-shadow:0 0 0 1.5px ${l.tape},0 4px 12px rgba(0,0,0,${l.dark ? .4 : .12})}
+    .ctl .lv{font-size:19px;font-weight:500;padding:0}
+    .ctl small{align-self:center;font:500 11px -apple-system,system-ui,sans-serif;color:${l.ink2};opacity:.8;margin-right:2px}
+    ::selection{background:color-mix(in srgb,${l.tape} 30%,transparent)}
+    @media (max-width:760px){.sheet{margin:16px;padding:34px 26px 40px}}`;
+  R.show = l => {
+    if (!R.art) {
+      const doc = document.cloneNode(true);
+      const a = new Readability(doc, { charThreshold: 300, keepClasses: false }).parse();
+      if (!a || !a.content) return { ok: false };
+      R.art = a;
+    }
+    if (!R.host) {
+      R.host = document.createElement('washi-reader'); const sr = R.host.attachShadow({ mode: 'open' }); R.sr = sr;
+      sr.innerHTML = '<div class="ctl"><small>esc to leave</small><button class="aa" title="Text size and font">Aa</button><button class="lv" title="Leave Reader (esc)" aria-label="Leave Reader">×</button></div><div class="sheet" role="article"><i class="tape"></i><p class="site"></p><h1 class="t"></h1><p class="by"></p><div class="c"></div></div>';
+      /* Washi hears these (page-preload.js): the buttons, and Esc anywhere on the page */
+      const tell = n => document.dispatchEvent(new Event('washi-reader-' + n));
+      sr.querySelector('.aa').addEventListener('click', () => tell('look')); sr.querySelector('.lv').addEventListener('click', () => tell('leave'));
+      R.key = e => { if (e.key === 'Escape' && R.host && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); tell('leave'); } };
+      document.addEventListener('keydown', R.key, true);
+      const a = R.art, q = s => sr.querySelector(s);
+      q('.site').textContent = a.siteName || location.hostname.replace(/^www\./, '');
+      const site = (a.siteName || '').trim(); let title = (a.title || document.title || '').trim();
+      if (site) for (const x of [' — ', ' – ', ' - ', ' | ', ' · ', ' : ', ' • ']) { if (title.endsWith(x + site)) title = title.slice(0, -(x + site).length); if (title.startsWith(site + x)) title = title.slice((site + x).length); }   // "Title — Site" → "Title"
+      q('.t').textContent = title;
+      const mins = Math.max(1, Math.round((a.length || 0) / 1100));
+      q('.by').textContent = [a.byline, mins + ' min read'].filter(Boolean).join(' · ');
+      const tpl = document.createElement('template'); tpl.innerHTML = a.content;
+      for (const e of tpl.content.querySelectorAll('script,style,iframe,object,embed,form,link,meta')) e.remove();
+      for (const e of tpl.content.querySelectorAll('*')) for (const at of [...e.attributes]) if (/^on/i.test(at.name) || /^(style|class|id)$/i.test(at.name) || (/^(href|src)$/i.test(at.name) && /^\s*javascript:/i.test(at.value))) e.removeAttribute(at.name);
+      q('.c').append(tpl.content);
+      sr.addEventListener('keydown', e => e.stopPropagation(), true);
+      R.prevOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';
+      document.documentElement.append(R.host);
+    }
+    R.look = l; const sheet = new CSSStyleSheet(); sheet.replaceSync(css(l)); R.sr.adoptedStyleSheets = [sheet];
+    return { ok: true, title: R.art.title || '', words: R.art.length || 0 };
+  };
+  R.hide = () => { if (R.key) { document.removeEventListener('keydown', R.key, true); R.key = null; } if (R.host) { R.host.remove(); R.host = null; R.sr = null; document.documentElement.style.overflow = R.prevOverflow || ''; } return { ok: true }; };
+  R.on = () => !!R.host;
+})();
+(async () => {
+  const W = window.WASHI, R = window.__washiReader;
+  if (R.on()) { R.hide(); return; }
+  await W.load();
+  const c = W.colors(), o = await chrome.storage.local.get('reader'), rd = { face: 'serif', size: 19, ...(o.reader || {}) };
+  const look = () => ({ desk: c.dark ? W.mix(c.paper, '#000000', .35) : W.mix(c.paper, c.ink, .06), paper: c.paper, ink: c.ink, ink2: W.mix(c.ink, c.paper, .38), line: W.mix(c.paper, c.ink, .16), wash: W.mix(c.paper, c.ink, .06), tape: c.pal.tape, tapeInk: c.dark ? W.mix(c.pal.tape, '#ffffff', .25) : W.mix(c.pal.tape, '#000000', .18), dark: c.dark, scrap: !!W.look.scrapbook, face: rd.face, size: rd.size, width: 720 });
+  const able = typeof isProbablyReaderable !== 'function' || isProbablyReaderable(document, { minContentLength: 400, minScore: 30 });
+  const r = able ? R.show(look()) : { ok: false };
+  if (!r || !r.ok) { const t = document.createElement('washi-toast'); const sr = t.attachShadow({ mode: 'open' }); sr.innerHTML = '<style>:host{all:initial;position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483647;padding:10px 16px;border-radius:12px;background:' + c.paper + ';color:' + c.ink + ';font:600 13px -apple-system,system-ui,sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 8px 22px rgba(0,0,0,.18)}</style>Reader works on articles: this page doesn\u2019t have one.'; document.documentElement.append(t); setTimeout(() => t.remove(), 2600); return; }
+  if (window.__washiReaderWired) return; window.__washiReaderWired = true;
+  const STEPS = [['serif', 19], ['serif', 22], ['sans', 19], ['sans', 22], ['serif', 16]];
+  document.addEventListener('washi-reader-leave', () => R.hide());
+  document.addEventListener('washi-reader-look', () => {
+    const i = STEPS.findIndex(([f, s]) => f === rd.face && s === rd.size), [f, s] = STEPS[(i + 1) % STEPS.length];
+    rd.face = f; rd.size = s; chrome.storage.local.set({ reader: { face: f, size: s } }); R.show(look());
+  });
+})();
