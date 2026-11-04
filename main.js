@@ -452,6 +452,18 @@ ON('tab:peek', async (_, d) => {
   C.overlay.setBounds(rr({ x, y, width: w, height: h })); C.overlay.setVisible(true);
   toOverlay('overlay:fx', { type: 'tabpeek', img: img ? 'data:image/jpeg;base64,' + img : null, title: String(d.title || '').slice(0, 200), url: String(d.url || '').slice(0, 500), fav: d.fav || null, pal: d.pal, theme: d.theme, arrowY: Math.round(d.y + d.h / 2 - y) });
 });
+/* Memory saver: when Washi as a whole uses more than its share of the Mac's memory (a quarter, or a sixth on Maximum),
+   the tabs you haven't looked at for a while go to sleep, oldest first, until it's back under. Never the tab you're on,
+   one playing sound, or one you used in the last 10 minutes. Checked once a minute; costs next to nothing. */
+function memCheck(capMB) {
+  if (P.memSaver === 'off' && !capMB) return { over: 0 };
+  let total = 0; for (const m of app.getAppMetrics()) total += (m.memory.privateBytes || m.memory.workingSetSize) / 1024;
+  const cap = capMB || (require('os').totalmem() / 1048576) * (P.memSaver === 'max' ? 1 / 6 : 1 / 4);
+  const over = Math.round(total - cap);
+  if (over > 0) for (const c of W.values()) if (alive(c.win)) c.win.webContents.send('mem:tight', { over, total: Math.round(total) });
+  return { over, total: Math.round(total), cap: Math.round(cap) };
+}
+setInterval(() => { try { memCheck(); } catch {} }, 60e3).unref?.();
 /* an update is downloaded: a postcard in the window you're using offers to restart (Settings › Help: or just install it
    when you quit). Waits for a moment when nothing else is open; "Later" doesn't ask again for that version. */
 let updLater = null, updT = 0;
@@ -980,10 +992,21 @@ HANDLE('setup:act', async (_, a) => {
   if (a.type === 'test:popup' && !app.isPackaged) { const p = exts.popupNow(); if (!p) return { open: false }; let wid = null; for (const [k, c] of W) if (c.win === p.parent) wid = k; return { open: true, wid, id: p.extensionId }; }   // tests: which window an extension popup opened in
   if (a.type === 'test:focus' && !app.isPackaged) { C.win.focus(); return { focused: BrowserWindow.getFocusedWindow() === C.win }; }
   if (a.type === 'test:extcmds' && !app.isPackaged) return exts.commands();
+  if (a.type === 'test:memcheck' && !app.isPackaged) return memCheck(a.capMB);
+  if (a.type === 'test:metrics' && !app.isPackaged) {               // tests: memory by kind of process (MB)
+    const kind = new Map(); for (const c of W.values()) { if (!alive(c.win)) continue; const add = (wc, k) => { try { if (wc && !wc.isDestroyed()) kind.set(wc.getOSProcessId(), k); } catch {} };
+      add(c.win.webContents, a.split ? 'ui:window' : 'ui'); add(c.sidebar && c.sidebar.webContents, a.split ? 'ui:sidebar' : 'ui'); add(c.overlay && c.overlay.webContents, a.split ? 'ui:overlay' : 'ui'); for (const t of c.tabs.values()) add(t.wc, 'tab'); }
+    const out = { total: 0, by: {}, procs: 0, tabsLive: 0 };
+    for (const m of app.getAppMetrics()) { const k = kind.get(m.pid) || (m.type === 'Tab' ? 'other renderer' : m.type); const mb = (m.memory.privateBytes || m.memory.workingSetSize) / 1024; out.total += mb; out.by[k] = (out.by[k] || 0) + mb; out.procs++; }
+    for (const c of W.values()) for (const t of c.tabs.values()) if (t.wc && !t.wc.isDestroyed()) out.tabsLive++;
+    for (const k in out.by) out.by[k] = Math.round(out.by[k]); out.total = Math.round(out.total); return out;
+  }
   if (a.type === 'test:zoom' && !app.isPackaged) { const t = activeTab(); return { zoom: t ? +t.wc.getZoomFactor().toFixed(2) : null }; }
   if (a.type === 'test:devtools' && !app.isPackaged) { const t = activeTab(); if (t && a.close) t.wc.closeDevTools(); return { open: !!(t && t.wc.isDevToolsOpened()) }; }
   if (a.type === 'test:scraps' && !app.isPackaged) return { n: scraps.size };
   if (a.type === 'test:menu' && !app.isPackaged) { const out = {}; const walk = items => { for (const i of items) { if (i.submenu) walk(i.submenu.items); else if (i.label) out[i.label] = i.accelerator || ''; } }; walk(Menu.getApplicationMenu().items); return { items: out, recording, focused: (BrowserWindow.getFocusedWindow() || {}).id, mains: [...W.values()].map(c => c.win.id), scraps: scraps.size }; }
+  if (a.type === 'test:wcprefs' && !app.isPackaged) return require('electron').webContents.getAllWebContents().map(w => { const p = w.getLastWebPreferences() || {}; return { type: w.getType(), url: w.getURL().slice(0, 80), sandbox: p.sandbox, iso: p.contextIsolation, node: !!p.nodeIntegration, nodeSub: !!p.nodeIntegrationInSubFrames, web: p.webSecurity !== false, insecure: !!p.allowRunningInsecureContent, ui: sec.trusted({ sender: w, senderFrame: w.mainFrame }) }; });
+  if (a.type === 'test:refused' && !app.isPackaged) return { n: sec.refusedCount() };
   if (a.type === 'test:block' && !app.isPackaged) { let r = null; const hit = blocker.onRequest({ url: String(a.url), resourceType: 'xhr', referrer: String(a.page), webContentsId: null }, x => { r = x; }); return { blocked: !!(hit && r && (r.cancel || r.redirectURL)) }; }   // tests: would this request be blocked on that page?
   if (a.type === 'lists:refresh') { const r = await blocker.refresh(true); return { ...r, at: blocker.listDate() }; }
   if (a.type === 'blocking:site') { blocker.setException(a.host, !a.block); const t = activeTab(); if (t) t.wc.reloadIgnoringCache(); return { ok: true }; }   // not from the cache: ads that loaded while blocking was off mustn't come back

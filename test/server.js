@@ -122,6 +122,11 @@ const srv = http.createServer((q, r) => {
     for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin(i / rate * 2 * Math.PI * 330) * 1200), 44 + i * 2);
     r.setHeader('content-type', 'audio/wav'); return r.end(b);
   }
+  if (q.url.startsWith('/heavy.html')) {               // a page that uses memory like a real site (a big page, scripts holding data, a timer)
+    r.setHeader('content-type', 'text/html');
+    return r.end(`<!doctype html><title>Heavy ${q.url.split('?')[1] || ''}</title><body style="font:14px system-ui"><h1>Heavy page</h1><div id="d"></div>
+<script>window.__data = Array.from({ length: 160000 }, (_, i) => ({ i, s: 'item ' + i + ' ' + Math.random() })); const d = document.getElementById('d'); for (let i = 0; i < 3000; i++) { const p = document.createElement('p'); p.textContent = 'Paragraph ' + i + ' with some ordinary text to make the page a real size.'; d.append(p); } setInterval(() => { window.__tick = (window.__tick || 0) + 1; }, 1000);</script></body>`);
+  }
   if (q.url.startsWith('/music-evil.html')) {          // a page that lies about what's playing (Now playing must take nothing on trust)
     r.setHeader('content-type', 'text/html');
     return r.end(`<!doctype html><title>Evil Radio</title><body><audio id="a" src="/tone.wav" loop></audio>

@@ -20,7 +20,7 @@ function serve(ses) {
     try {
       const r = await net.fetch(pathToFileURL(p).toString());
       if (!r.ok) return new Response('Not found', { status: 404 });
-      return new Response(r.body, { headers: { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', 'x-content-type-options': 'nosniff', 'cache-control': 'no-cache' } });
+      return new Response(r.body, { headers: { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', 'x-content-type-options': 'nosniff', 'cache-control': 'no-cache', 'x-frame-options': 'SAMEORIGIN', 'content-security-policy': "frame-ancestors 'self'", 'cross-origin-resource-policy': 'same-origin' } });
     } catch { return new Response('Not found', { status: 404 }); }
   });
 }

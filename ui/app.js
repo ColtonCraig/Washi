@@ -260,7 +260,7 @@ function autoIcons() {
 const render = () => { if (S) autoIcons(); updateChrome(); pushState(); if (window.TODAY) TODAY.draw(); };
 const theme = () => { applyTheme(S.prefs, palFor(sp())); readerRestyle(); if (window.TOOLBAR) TOOLBAR.apply(); };
 const look = () => ({ pal: palFor(sp()), theme: S.prefs });
-const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {}, updates: p.updates || 'card', focusBar: p.focusBar || 'peek', focusSide: p.focusSide || 'edge' }); refreshKeys(); };
+const syncMain = () => { const p = S.prefs; B.prefsSync({ mode: p.mode, search: searchTpl(p), gpc: !!p.gpc, askDownload: !!p.askDownload, httpsFirst: !!p.httpsFirst, safety: !!p.safety, blocking: p.blocking, dns: p.dns, clearOnExit: !!p.clearOnExit, autoPip: !!p.autoPip, suggest: !!p.suggest, scrapLinks: !!p.scrapLinks, confirmQuit: p.confirmQuit !== false, muteSites: (p.muteSites || []).slice(0, 200), keys: p.keys || {}, updates: p.updates || 'card', memSaver: p.memSaver || 'balanced', focusBar: p.focusBar || 'peek', focusSide: p.focusSide || 'edge' }); refreshKeys(); };
 async function refreshKeys() { try { const k = await B.keysList(); R.keys = {}; for (const a of k.actions) R.keys[a.id] = k.custom[a.id] !== undefined ? k.custom[a.id] : a.def; } catch {} }
 
 /* ---------- native page views ---------- */
@@ -1336,7 +1336,7 @@ function warm(id) {
 }
 function warmRecent() {                     // after launch, quietly wake the few tabs you used most recently
   const shown = new Set([R.a, R.b]);
-  const list = [...S.pins, ...S.spaces.flatMap(spaceTabs)].filter(id => S.tabs[id] && !shown.has(id) && !R.live[id]).sort((x, y) => (S.tabs[y].seen || 0) - (S.tabs[x].seen || 0)).slice(0, 3);
+  const list = [...S.pins, ...S.spaces.flatMap(spaceTabs)].filter(id => S.tabs[id] && !shown.has(id) && !R.live[id]).sort((x, y) => (S.tabs[y].seen || 0) - (S.tabs[x].seen || 0)).slice(0, S.prefs.memSaver === 'max' ? 0 : 3);   // Memory saver › Maximum: only the tab you're looking at
   list.forEach((id, i) => setTimeout(() => warm(id), 1500 + i * 700));
 }
 /* ---------- tidy-up: sleeping tabs free memory, old tabs move to the archive (both optional, in Settings) ---------- */
@@ -1347,6 +1347,16 @@ function sleepTabs() {
   for (const id in R.live) if (R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < cutoff) { B.tabClose(id); R.live[id] = false; n++; }
   if (n) render();
 }
+/* Memory saver (main.js memCheck): Washi is using too much memory, so idle tabs sleep, oldest first, about one per
+   150 MB over. Not the ones you're looking at, playing sound, or used in the last 10 minutes. */
+B.onMemTight(d => {
+  if (!S || S.prefs.memSaver === 'off' || !d) return;
+  const shown = new Set([R.a, R.split ? R.b : null]), recent = Date.now() - 10 * 60e3;
+  const idle = Object.keys(R.live).filter(id => R.live[id] && !shown.has(id) && !R.audible[id] && S.tabs[id] && (S.tabs[id].seen || 0) < recent).sort((x, y) => (S.tabs[x].seen || 0) - (S.tabs[y].seen || 0));
+  const n = Math.min(idle.length, Math.max(1, Math.ceil(d.over / 150)));
+  for (const id of idle.slice(0, n)) { B.tabClose(id); R.live[id] = false; }
+  if (n) render();
+});
 /* ---------- Tidy up (like Dia): loose tabs from the same site go into a folder; ones you haven't opened in half a day
    go to the Archive. Clear closes the loose tabs (pins and folders stay). Both can be undone from the toast. ---------- */
 /* the site a page belongs to (docs.google.com and drive.google.com are both google.com), and a nice name for it */

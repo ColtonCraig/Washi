@@ -233,6 +233,8 @@ window.SETUP = (() => {
     return [pos, arch,
       field('Sleeping tabs', seg([{ v: 0, label: 'Never' }, { v: 15, label: 'After 15 min' }, { v: 60, label: 'After 1 hour' }, { v: 240, label: 'After 4 hours' }], () => +P.sleep, v => setPref({ sleep: v }), 'grid'),
         'Tabs you aren\'t using stop running to save memory and battery. They reload when you click them. Tabs playing sound never sleep.'),
+      field('Memory saver', seg([{ v: 'off', label: 'Off' }, { v: 'balanced', label: 'Balanced', sub: 'Over a quarter of your memory' }, { v: 'max', label: 'Maximum', sub: 'Over a sixth of your memory' }], () => P.memSaver || 'balanced', v => setPref({ memSaver: v }), 'grid'),
+        'When Washi uses more than that much of your Mac\'s memory, tabs you haven\'t looked at in a while go to sleep early, oldest first. Never the tab you\'re on, one playing sound, or one you used in the last 10 minutes.'),
       field('Video', toggle('Picture in picture when switching tabs', 'A playing video keeps going in a small floating window', () => P.autoPip, v => setPref({ autoPip: v }))),
       field('Little scraps', toggle('Open links from other apps in a little scrap', `A small window you can glance at and close, or keep${kh('scrapadopt') ? ` with ${kh('scrapadopt')}` : ''}. Needs Washi as your default browser.`, () => P.scrapLinks, v => setPref({ scrapLinks: v })),
         kh('scrap') ? `Open one any time with ${kh('scrap')}.` : ''),
