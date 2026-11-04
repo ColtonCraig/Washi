@@ -6,6 +6,8 @@ on:
     branches-ignore: [release]
     paths-ignore: ['ios/**', '.github/workflows/ios.yml']
   pull_request:
+  workflow_call:                    # electron-update.yml runs every test on its security-update commit before releasing it
+    inputs: { ref: { type: string, required: true } }
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,6 +17,7 @@ jobs:
     name: test (${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.ref || github.sha }}' }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci

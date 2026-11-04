@@ -6,6 +6,17 @@
    "Show me" points at (a selector in the window) with tip; try: an action "Try it" runs. */
 window.WHATSNEW = [
   {
+    v: '1.1.1',
+    lead: 'Lighter on memory, and safer.',
+    fixes: [
+      'A sleeping tab wakes up just where you left it: same place on the page, same Back and Forward.',
+      'Tabs you haven\'t looked at for 30 minutes go to sleep to save memory (Settings › Tabs: from 15 minutes to 4 hours, or never).',
+      'Hover a tab to see how much memory it\'s using.',
+      'Memory saver steps in sooner when your Mac is running low.',
+      'Security fixes from Chromium, the engine underneath Washi (now Electron 45.2.2).'
+    ]
+  },
+  {
     v: '1.1.0',
     lead: 'Washi, arranged your way.',
     items: [

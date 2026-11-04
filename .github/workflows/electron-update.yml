@@ -1,0 +1,52 @@
+# Security updates without anyone lifting a finger: once a day, if Electron has a newer release in Washi's major version
+# (that's how Chromium's security fixes arrive), move to it, bump Washi's patch version with a What's new note, run every
+# test on that commit, and release it. Installed copies then update themselves the usual way.
+# It only releases on its own when main has nothing unreleased in the app itself (otherwise half-finished work would ship):
+# then the update waits on main for the next release. A new major Electron is only reported, never taken automatically.
+name: Electron security update
+on:
+  schedule: [{ cron: '23 15 * * *' }]
+  workflow_dispatch:
+permissions: { contents: write, actions: write }
+concurrency: { group: electron-update, cancel-in-progress: false }
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    outputs: { sha: '${{ steps.b.outputs.sha }}', ship: '${{ steps.b.outputs.ship }}', version: '${{ steps.b.outputs.version }}' }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - id: b
+        run: |
+          git fetch -q origin release
+          PENDING=$(git diff --name-only origin/release HEAD -- app ui main.js preload.js package.json | head -1)
+          R=$(node scripts/electron-bump.js)
+          echo "$R"
+          if [ "$R" = none ]; then echo "Electron is up to date"; exit 0; fi
+          set -- $R; V=$3
+          git config user.name "Colton Craig"; git config user.email "craigcolton123@gmail.com"
+          git add -A
+          git commit -qm "Washi $V: security update (Electron $1 → $2)" -m "Automatic, from .github/workflows/electron-update.yml"
+          git push -q origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ -n "$PENDING" ]; then echo "::notice::main has unreleased app changes ($PENDING …): the security update waits for the next release"; else echo "ship=1" >> "$GITHUB_OUTPUT"; fi
+  test:
+    needs: bump
+    if: needs.bump.outputs.sha != ''
+    uses: ./.github/workflows/test.yml
+    with: { ref: '${{ needs.bump.outputs.sha }}' }
+  release:
+    needs: [bump, test]
+    if: needs.bump.outputs.ship == '1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ needs.bump.outputs.sha }}', fetch-depth: 0 }
+      - name: Release it (a push made by this workflow doesn't start other workflows, so ask for the Release run)
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          git push -q origin HEAD:release
+          gh workflow run release.yml --ref release
+          echo "::notice::Washi ${{ needs.bump.outputs.version }} is being released"

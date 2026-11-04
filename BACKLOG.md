@@ -44,6 +44,14 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.1.1)
+- Lossless sleep: a sleeping tab keeps its Back/Forward history and scroll position (test/sleep.js); sleep after 30 min by default; Memory saver at a fifth (a tenth on Maximum)
+- Tab peek shows the tab's memory (test/tabpeek.js); memory test checks the interface views don't grow with tabs (test/memory.js)
+- Security review: interface can't be framed; every view sandboxed and isolated, only washi://app trusted, fuses locked (test/hardening.js)
+- Electron 45.2.1 → 45.2.2; automatic Electron security updates (.github/workflows/electron-update.yml)
+- Release notes in latest.json come from What's new (scripts/notes.js); friends' one-line installer (scripts/get-washi.sh, docs/INSTALL.md), checked on a real Mac
+- Extension sweep of 32 popular extensions on a Mac every Monday (.github/workflows/ext-sweep.yml)
+
 ## Done and tested (1.1)
 - Top bar your way: a Focus mode button; drag any tool along the bar (the others slide aside, Esc puts it back), right-click to hide, Settings › Top bar to show/hide/reorder/reset; animated; every window follows; tooltips follow your shortcuts. test/toolbar.js
 - Update postcard: Restart now / Later when an update has downloaded; Settings › Help: or stay quiet; and turn off What's new after updates. test/updatecard.js
