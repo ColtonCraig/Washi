@@ -42,8 +42,12 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   say('navigations', nav.slice(0, 40));
   say('tabs after visiting login pages', await ui.evaluate(() => Object.values(S.tabs).map(t => t.url)));
   const btn = await ui.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (!e) return null; const r = e.getBoundingClientRect(); e.click(); return { x: r.x, y: r.y, w: r.width }; }, ID);
+  const mark = b.log().length;
   say('button', btn);
   say('action', await ui.evaluate(id => B.setupAct({ type: 'test:action', id }), ID).catch(e => e.message));
+  await sleep(4000);
+  say('after the click: worker', b.log().slice(mark).split('\n').filter(l => /ext-sw|crx|popup|onClicked|openPopup/i.test(l) && !/contextMenus\.update|tabs\.query|tabs\.get |Receiving end/.test(l)).map(l => l.slice(0, 600)).slice(0, 40));
+  say('after the click: tabs', await ui.evaluate(() => Object.values(S.tabs).map(t => t.url.slice(0, 90))));
   const popPath = man && (man.action || man.browser_action || {}).default_popup;
   // the popup Washi opened (an extension can change its page per tab, e.g. React DevTools on a site that uses React)
   let pu = ''; for (let i = 0; i < 40 && !pu; i++) { const q = await ui.evaluate(() => B.setupAct({ type: 'test:popup' })).catch(() => null); if (q && q.open && q.url) pu = q.url; else await sleep(250); }
