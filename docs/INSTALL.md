@@ -1,6 +1,6 @@
 # Installing Washi
 
-Washi is a Mac browser Colton made. It works on any Mac running macOS 12 (Monterey) or newer, Apple chip or Intel.
+Washi is a Mac browser Colton made. This is Washi 1.0, “Kozo” (each big version is named after a Japanese paper). It works on any Mac running macOS 12 (Monterey) or newer, Apple chip or Intel.
 
 ## Install
 

@@ -51,6 +51,13 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.0 “Kozo”, build 1.2.0)
+- Reader stays in the bar when it's on (greyed off articles); every tool that's on is checked visible on an article, a short page and Today (test/spacing.js)
+- The handwritten space name isn't shaved off in Scrapbook; long space names ellipsize in the space tabs; AUDIT measures ink, so a letter curling past its box fails a test
+- Floating sidebar and long names (space, folder, tab) in test/spacing.js
+- Updates noticed fast: every 30 min, on wake/unlock, on coming back to Washi; the postcard waits for you
+- 1.0 naming: display version and paper name everywhere you see a version; What's new tells the 1.0 story, earlier releases are betas
+
 ## Done and tested (1.1.2)
 - Settings opens with Look lit (the rail was marked before layout); jumps scroll the Settings list itself
 - GAPS in test/lib.js: boxes that overlap or sit closer than 4px; test/spacing.js runs it and AUDIT on every Settings section, sheet, page, command bar and top-bar card, two window sizes, every look, sidebar 200/260/380. Fixed: Reset to the standard order, the move buttons; cards fit their content (overlay:fit)
@@ -59,8 +66,8 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
 - Windows: What's new once per update (news:claim); a new window starts with the sidebar pinned/floating like the last (test/windows.js)
 - Automatic Electron updates weekly, not daily (each build means one keychain prompt without an Apple team id)
 
-## Next: the keychain asks once per update
-- macOS ties "Always Allow" to each exact build when the app has no Apple team id. Fix without paying: keep the signed app bundle the same between releases (Washi's code shipped and verified separately), so only Electron updates change it.
+## Decided: the keychain asks once per update (until there's an Apple team id)
+- macOS ties "Always Allow" to each exact build when the app has no Apple team id. Keeping the app bundle unchanged (Washi's code outside it) would stop the prompt but let anything running as you on the Mac rewrite Washi's code and read your passwords and cookies without a prompt, so it's not done. Instead: releases are batched and Electron updates come weekly. The $99 account (Washi 2.0 "Gampi") fixes it properly.
 
 ## Done and tested (1.1.1)
 - Lossless sleep: a sleeping tab keeps its Back/Forward history and scroll position (test/sleep.js); sleep after 30 min by default; Memory saver at a fifth (a tenth on Maximum)

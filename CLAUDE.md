@@ -24,7 +24,7 @@ Speed matters as much as testing (Colton, Nov 2: "I would rather just push out a
 Use the local test server (`test/server.js`, port 8765). `test/run.sh` stops any old test server first (a stale one serves the wrong update files). Search suggestions in tests come from `WASHI_TEST_SUGGEST` (set in `test/lib.js`). Anything that waits on the network polls with a timeout instead of a fixed sleep.
 
 ## Release mechanics
-- Version in `package.json`; notes in `BACKLOG.md` ("Done and tested (x.y)").
+- Version in `package.json`: `version` is the build number updates compare (it only ever goes up: 1.2.0 = Washi 1.0); `washi.display` is what people see (1.0, 1.0.1…) and `washi.paper` the major version's paper name (1 Kozo, 2 Gampi, 3 Mitsumata); `build.mac.bundleShortVersion`/`bundleVersion` match them. Notes in `ui/whatsnew.js` (`name`/`paper` for what's shown) and `BACKLOG.md` ("Done and tested (x.y)").
 - Releases come from the `release` branch only. Keys live in GitHub secrets; never paste keys or tokens in chat or commit them.
 - Commits: author Colton Craig <craigcolton123@gmail.com>.
 
