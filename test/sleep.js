@@ -2,6 +2,7 @@
 /* Sleeping tabs (to free memory) wake up as if they'd never slept: the back/forward history and the scroll position are
    kept. Clicking a tab the moment it starts to sleep keeps it awake. A pinned tab you ⌘W keeps its history too. */
 const { start, sleep, ok, done, skipSetup } = require('./lib');
+const ptr = a => require('child_process').execSync('python3 ' + __dirname + '/ptr.py ' + a);
 (async () => {
   const b = await start(); const { ui } = b; await skipSetup(b);
   await ui.evaluate(() => { openTab('http://localhost:8765/p2.html', { bg: true }); openTab('http://localhost:8765/p1.html'); }); await sleep(1500);
@@ -13,6 +14,7 @@ const { start, sleep, ok, done, skipSetup } = require('./lib');
   const y0 = await art.evaluate(() => scrollY);
   const other = await ui.evaluate(id => Object.keys(S.tabs).find(k => k !== id), id);
   await ui.evaluate(o => selectTab(o), other); await sleep(600);
+  ptr('move 900 500');                                  // the pointer resting on a tab in the sidebar warms it up again (that's on purpose): keep it on the page
   await ui.evaluate(id => { B.tabSleep(id); R.live[id] = false; render(); }, id);
   const asleep = async () => await ui.evaluate(() => B.setupAct({ type: 'test:metrics' }).then(m => m.tabsLive)) === 1 && !b.pages().some(p => p.url().includes('/article.html'));
   let gone = false; for (let i = 0; i < 40 && !(gone = await asleep()); i++) await sleep(200);
