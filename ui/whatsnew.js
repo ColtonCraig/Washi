@@ -6,6 +6,17 @@
    "Show me" points at (a selector in the window) with tip; try: an action "Try it" runs. */
 window.WHATSNEW = [
   {
+    v: '1.1.2',
+    lead: 'Polished all over.',
+    fixes: [
+      'Settings opens on Look with Look lit up (it showed Help lit).',
+      'Nothing runs into anything: "Reset to the standard order" no longer sits on the last top-bar row, and every screen and card was checked in every look.',
+      'The blocking and update cards are as tall as what\'s on them, with no empty space.',
+      'Passkeys are gone: Apple only lets browsers it has approved use your iCloud passkeys, so sites now offer your password or a code straight away instead of waiting.',
+      'With two windows, What\'s new shows once, and a new window starts with the sidebar the way you had it.'
+    ]
+  },
+  {
     v: '1.1.1',
     lead: 'Lighter on memory, and safer.',
     fixes: [

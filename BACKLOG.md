@@ -51,6 +51,17 @@ Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26
   mute; picture in picture; bangs; suggestions; shortcut editor; separate logins per space; auto-update plumbing;
   clipping audit of every screen; idle CPU fix
 
+## Done and tested (1.1.2)
+- Settings opens with Look lit (the rail was marked before layout); jumps scroll the Settings list itself
+- GAPS in test/lib.js: boxes that overlap or sit closer than 4px; test/spacing.js runs it and AUDIT on every Settings section, sheet, page, command bar and top-bar card, two window sizes, every look, sidebar 200/260/380. Fixed: Reset to the standard order, the move buttons; cards fit their content (overlay:fit)
+- A card opened by its shortcut replaces the command bar / Settings in the overlay
+- Passkeys out: sites see none and hear no at once; ones saved before still sign in and are listed to delete (test/passwords.js)
+- Windows: What's new once per update (news:claim); a new window starts with the sidebar pinned/floating like the last (test/windows.js)
+- Automatic Electron updates weekly, not daily (each build means one keychain prompt without an Apple team id)
+
+## Next: the keychain asks once per update
+- macOS ties "Always Allow" to each exact build when the app has no Apple team id. Fix without paying: keep the signed app bundle the same between releases (Washi's code shipped and verified separately), so only Electron updates change it.
+
 ## Done and tested (1.1.1)
 - Lossless sleep: a sleeping tab keeps its Back/Forward history and scroll position (test/sleep.js); sleep after 30 min by default; Memory saver at a fifth (a tenth on Maximum)
 - Tab peek shows the tab's memory (test/tabpeek.js); memory test checks the interface views don't grow with tabs (test/memory.js)

@@ -1,11 +1,11 @@
-# Security updates without anyone lifting a finger: once a day, if Electron has a newer release in Washi's major version
+# Security updates without anyone lifting a finger: once a week, if Electron has a newer release in Washi's major version
 # (that's how Chromium's security fixes arrive), move to it, bump Washi's patch version with a What's new note, run every
 # test on that commit, and release it. Installed copies then update themselves the usual way.
 # It only releases on its own when main has nothing unreleased in the app itself (otherwise half-finished work would ship):
 # then the update waits on main for the next release. A new major Electron is only reported, never taken automatically.
 name: Electron security update
 on:
-  schedule: [{ cron: '23 15 * * *' }]
+  schedule: [{ cron: '23 15 * * 1' }]     # Mondays: each new build makes macOS ask for the keychain once (no Apple team id), so not every day
   workflow_dispatch:
 permissions: { contents: write, actions: write }
 concurrency: { group: electron-update, cancel-in-progress: false }

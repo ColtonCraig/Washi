@@ -1,7 +1,7 @@
 {
   "name": "washi",
   "productName": "Washi",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Washi: a paper-collage browser for macOS with a vertical sidebar, spaces and split view. Built on Chromium.",
   "main": "main.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "build": {
     "appId": "app.washi.browser",
     "productName": "Washi",
-    "copyright": "© 2026 Colton Craig",
+    "copyright": "\u00a9 2026 Colton Craig",
     "files": [
       "main.js",
       "preload.js",
