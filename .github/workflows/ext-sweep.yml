@@ -1,0 +1,38 @@
+# On demand: install the most-used Chrome Web Store extensions on GitHub's Mac, one per job, and report which work
+# (test/diag-ext.js prints a VERDICT line per extension; the summary job lists them all).
+#   gh api -X POST repos/ColtonCraig/Washi/actions/workflows/ext-sweep.yml/dispatches -f ref=main
+name: Extension sweep
+on:
+  workflow_dispatch:
+  schedule: [{ cron: '17 9 * * 1' }]    # Mondays, so a Chrome Web Store update that breaks one shows up within a week
+jobs:
+  ext:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        ext: [glnpjglilkicbckjpbgcfkogebgllemb, aeblfdkhhhdcdjpifhhbdiojplfjncoa, nngceckbapebfimnlniiiahkandclblb, hdokiejnpimakedhajhdlcegeplioahd, fdjamakpfbbddfjaooikfcpapjohcfmg, bfogiafebfohielmmehodmfbbebbbpei, ghmbeldphafepmbegfdlkpapadhbakde,
+              ddkjiahejlhfcafbddmgiahcphecmpfh, gighmmpiobklfepjocnamgkkbiglidom, cfhdojbkjhnklbpkdaibdccddilifddb, pkehgijcmpdhfbdbbnkijodmdjhbjlgp, mlomiejdfkolichcflejclcbmpeaniij,
+              eimadpbcbfnmbkopoojfekhnkhdbieeh, kbfnbcaeplbcioakkpcpgfkobkghlhen, aapbdbdomjkkjkaonfhkkikfgjllcleb, bmnlcjabgnpnenekpadlanbbkooimhnj, efaidnbmnnnibpcajpcglclefindmkaj,
+              liecbddmkiiihnedobmlmillhodjkdmb, knheggckgoiihginacbkhaalnibhilkk, pioclpoplcdbaefihamjohnefbikjilc, ldgfbffkinooeloadekpmfoklnobpien, jldhpllghnbhlbpcmnajkpdmadaolakh, laookkfknpbbblfpciffpaejjkokdgca,
+              fmkadmapgofadopljbjfkapdkoienihi, nhdogjmejiglipccpnnnanhbledajbpd, gppongmhjkpfnbhagpmjfkannfbllamg, bhlhnicpbhignbdhedgjhgdocnmhomnp, gbmdgpbipfallnflgajpaliibnhdgobh,
+              mnjggcdmjocbbbhaepdhchncahnbgone, gebbhagfogifgggkldgodflihgfeippi, dhdgffkkebhmkfjojejmpbldmpobfkfo, ghbmnnjooekpmoecnnnilnnbdlolhkhi]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm i --no-save playwright@1
+      - run: EXT_ID=${{ matrix.ext }} WASHI_SHOTS=$RUNNER_TEMP node test/diag-ext.js 2>&1 | tee out.txt; grep '^## VERDICT' out.txt > verdict-${{ matrix.ext }}.txt || echo "## VERDICT ${{ matrix.ext }}: BROKEN: the check itself didn't finish" > verdict-${{ matrix.ext }}.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'verdict-${{ matrix.ext }}', path: 'verdict-*.txt' }
+  summary:
+    needs: ext
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'verdict-*', merge-multiple: true }
+      - run: cat verdict-*.txt | sort -t: -k2 | tee summary.txt; echo; echo "$(grep -c ': ok' summary.txt) of $(wc -l < summary.txt) work"

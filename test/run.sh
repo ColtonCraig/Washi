@@ -14,7 +14,7 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8765/p1.html && break; sleep 0.2; done   # wait until it answers (a cold machine is slow)
 RUN="node"; command -v xvfb-run >/dev/null && RUN="xvfb-run -a -s '-screen 0 ${SCREEN:-1440x900}x24' node"
 fail=0
-ALL="hardening ext-filters ext-org ext-keys toolbar updatecard settings shortcuts scenarios memory youtube menu-keys focus swipe nowplaying whatsnew autoicons reopen routes snapshot rename tabpeek notes passwords bookmarks bmhover permissions reader tidy today downloads scrapbook features split polish preview audit live windows arc bar extensions scrap boost onboarding folders layout switcher security ua speed perf perf-heavy update"
+ALL="hardening sleep ext-filters ext-org ext-keys toolbar updatecard settings shortcuts scenarios memory youtube menu-keys focus swipe nowplaying whatsnew autoicons reopen routes snapshot rename tabpeek notes passwords bookmarks bmhover permissions reader tidy today downloads scrapbook features split polish preview audit live windows arc bar extensions scrap boost onboarding folders layout switcher security ua speed perf perf-heavy update"
 LIST="${@:-$ALL}"
 # SHARD=2/4 runs a quarter of the files (GitHub runs the four quarters side by side)
 if [ -n "${SHARD:-}" ]; then i=${SHARD%/*}; n=${SHARD#*/}; k=0; L=""; for t in $LIST; do [ $((k % n + 1)) = "$i" ] && L="$L $t"; k=$((k+1)); done; LIST=$L; fi

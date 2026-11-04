@@ -10,7 +10,7 @@ const ID = process.env.EXT_ID || 'glnpjglilkicbckjpbgcfkogebgllemb';
 const OUT = process.env.WASHI_SHOTS || os.tmpdir();
 const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.stringify(v, null, 1)}`);
 (async () => {
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-diag-'));
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-diag-')); const V = { popup: null };
   let b = await start({ profile, sandbox: process.platform === 'darwin' }); const { ui } = b;
   const page = async (s, n = 60) => { for (let i = 0; i < n; i++) { const p = b.pages().filter(x => x.url().includes(s)).pop(); if (p) return p; await sleep(250); } return null; };
   await ui.evaluate(u => openTab(u), `https://chromewebstore.google.com/detail/${ID}`); await sleep(7000);
@@ -39,11 +39,13 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   say('tabs after visiting login pages', await ui.evaluate(() => Object.values(S.tabs).map(t => t.url)));
   const btn = await ui.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (!e) return null; const r = e.getBoundingClientRect(); e.click(); return { x: r.x, y: r.y, w: r.width }; }, ID);
   say('button', btn);
-  const pop = await page('chrome-extension://' + ID, 40);
+  const popPath = man && (man.action || man.browser_action || {}).default_popup;
+  const pop = popPath ? await page('chrome-extension://' + ID + '/' + String(popPath).replace(/^\//, ''), 40) : await page('chrome-extension://' + ID, 40);
   say('popup page', pop ? pop.url() : 'never opened');
   if (pop) {
     const msgs = []; pop.on('console', m => msgs.push(m.type() + ': ' + m.text())); pop.on('pageerror', e => msgs.push('pageerror: ' + e.message));
     await sleep(8000);
+    V.popup = await pop.evaluate(() => ({ text: document.body.innerText.trim().length, html: document.body.innerHTML.length, url: location.pathname })).catch(() => null);
     say('popup', await pop.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, text: document.body.innerText.slice(0, 600), html: document.body.innerHTML.length, missing: ['privacy', 'webRequest', 'webNavigation', 'management', 'cookies', 'tabs', 'windows', 'storage', 'runtime', 'identity', 'scripting', 'alarms', 'idle', 'declarativeNetRequest'].filter(k => !chrome[k]) })).catch(e => 'eval failed ' + e.message));
     say('window', await ui.evaluate(() => ({ screenX, screenY, outerWidth, outerHeight, avail: [screen.availLeft, screen.availTop, screen.availWidth, screen.availHeight] })));
     say('popup console', msgs.slice(0, 60));
@@ -63,11 +65,19 @@ const say = (k, v) => console.log(`## ${k}: ${typeof v === 'string' ? v : JSON.s
   await sleep(1500);
   say('worker log', b.log().split('\n').filter(l => /ext-sw/.test(l) && !/Receiving end does not exist|webNavigation\.on|tabs\.onUpdated|Skipped url|\(result\)|tabs\.query|tabs\.get /.test(l)).map(l => l.slice(0, 900)).slice(0, 120));
   // and after a restart (installed extensions load at start): does the popup work then?
+  V.log1 = b.log();
   await b.stop(); b = await start({ profile, fresh: false, sandbox: process.platform === 'darwin' }); await sleep(5000);
   const ui2 = b.ui; await ui2.evaluate(() => openTab('https://example.com/')); await sleep(3000);
   await ui2.evaluate(id => { const e = document.getElementById('exts').shadowRoot.querySelector(`[id="${id}"]`); if (e) e.click(); }, ID);
   let pop2 = null; for (let i = 0; i < 40 && !pop2; i++) { pop2 = b.pages().filter(x => x.url().startsWith('chrome-extension://' + ID)).pop(); if (!pop2) await sleep(250); }
   if (pop2) { await sleep(6000); say('after restart: popup', await pop2.evaluate(() => ({ outerWidth, outerHeight, text: document.body.innerText.slice(0, 300) })).catch(e => e.message)); } else say('after restart: popup', 'never opened');
   say('after restart: worker errors', b.log().split('\n').filter(l => /ext-sw/.test(l) && /"level":3|Uncaught/.test(l)).map(l => l.slice(0, 500)).slice(0, 20));
+  // the verdict, for the sweep (ext-sweep.yml)
+  const logs = ((V.log1 || '') + '\n' + b.log()).split('\n').filter(l => /ext-sw/.test(l) && /"level":3/.test(l) && /Uncaught/.test(l) && /is not a function|Cannot read properties of undefined|is not defined|not supported/.test(l)).map(l => (l.match(/"message":"([^"]{0,160})/) || [])[1]);
+  const why = [];
+  if (!L || !L.list.some(e => e.id === ID)) why.push('did not install');
+  if (popPath && (!V.popup || (V.popup.text < 2 && V.popup.html < 400))) why.push('popup blank or never opened');
+  for (const l of [...new Set(logs)].slice(0, 4)) why.push('background: ' + l);
+  console.log(`## VERDICT ${ID} ${man ? (man.name || '').replace(/__MSG_.*__/, '') : ''}: ${why.length ? 'BROKEN: ' + why.join(' | ') : 'ok'}`);
   await b.stop(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
