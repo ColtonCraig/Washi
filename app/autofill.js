@@ -119,7 +119,11 @@ async function verify(reason) {
 async function passkey(e, info) {
   const s = source(e); if (!s || !info || typeof info !== 'object') return 'cancel';
   if (info.kind === 'done') { const st = serving.get(s.wc.id); if (st) { clearTimeout(st.timer); st.timer = setTimeout(() => stopServing(s.wc), 50); } return 'ok'; }
-  if (!P.passkeys) return 'go';                                   // off in Settings: the request goes to the browser untouched
+  /* Washi no longer makes passkeys, and the engine has no way to reach iCloud Keychain or your phone (Apple only lets
+     browsers it has approved do that): say no at once, so the site offers your password or a code instead of waiting.
+     A passkey saved in Washi before still signs you in. */
+  if (info.kind === 'create' && !(testUV() && process.env.WASHI_TEST_PK_CREATE === '1')) return 'cancel';   // (tests can still make one, to check ones from before keep working)
+  if (info.kind === 'get') { const allow = Array.isArray(info.allow) ? info.allow.map(String) : [], rp = String(info.rpId || new URL(s.origin).hostname).toLowerCase(); if (!vault.passkeysFor(rp).some(p => !allow.length || allow.includes(p.credId))) return 'cancel'; }
   const id = s.wc.id, u = new URL(s.origin), host = u.hostname;
   if (u.protocol !== 'https:' && host !== 'localhost') return 'cancel';
   if (pkBusy.has(id) || Date.now() < (pkQuiet.get(id) || 0)) return 'cancel';

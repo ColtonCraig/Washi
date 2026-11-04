@@ -2,8 +2,8 @@
 /* Saved passwords and passkeys, end to end with real pages, the real keyboard and pointer:
    sign in (a wrong password isn't offered for saving, the right one is), the account menu under the field (mouse and
    keyboard), a strong password on sign-up, two-step and single-page sign-ins, "Never for this site", Settings ›
-   Passwords (show, copy, edit, delete + undo, add, import, export, search), passkeys (save one, sign in with it — the test
-   site checks the signature — use another way, delete), and everything still there after a restart, encrypted on disk. */
+   Passwords (show, copy, edit, delete + undo, add, import, export, search), passkeys (sites hear no at once; one saved before still signs in — the test
+   site checks the signature — and can be deleted), and everything still there after a restart, encrypted on disk. */
 const fs = require('fs'), os = require('os'), path = require('path'), { execSync } = require('child_process');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'washi-pw-'));
 const csv = path.join(tmp, 'Chrome Passwords.csv'), out = path.join(tmp, 'export.csv');
@@ -151,41 +151,41 @@ const typeKeys = s => K(s.split('').map(c => SHIFTED[c] ? `down:Shift_L tap:${SH
   await audit(ov, 'Settings › Passwords, everything open'); shot('pw-settings-2');
   await ov.evaluate(() => SETUP.finish()); await sleep(600);
 
-  // ---------- 7. passkeys ----------
+  // ---------- 7. passkeys: Washi doesn't make them; sites hear no at once and offer another way ----------
   const wk = await open('http://localhost:8765/webauthn.html');
   await pclick(wk, '#caps'); await sleep(400);
-  ok(await wk.title() === 'caps:true:false', 'sites see that passkeys work here (and no half-working autofill offer)');
-  await pclick(wk, '#reg'); v = await card('pk');
-  ok(/Save a passkey for localhost\?/.test(v.text) && /colton@example\.com/.test(v.text), 'a site asking to save a passkey: Washi\'s card, with the account');
-  await audit(ov, 'passkey card'); shot('pk-save');
-  await ov.click('.vault [data-a=create]'); await sleep(1500);
-  ok(/^registered:/.test(await wk.title()), 'Save passkey: the site registers it');
-  await pclick(wk, '#log'); v = await card('pk');
-  ok(/Sign in to localhost/.test(v.text) && /colton@example\.com/.test(v.text), 'signing in: the card lists your passkey');
-  shot('pk-sign');
+  ok(await wk.title() === 'caps:false:false', 'sites see no passkeys here, so they offer your password or a code: ' + await wk.title());
+  let t0 = Date.now(); await pclick(wk, '#reg'); for (let i = 0; i < 30 && !/error|registered/.test(await wk.title()); i++) await sleep(100);
+  ok(await wk.title() === 'reg-error:NotAllowedError' && Date.now() - t0 < 2500, `a site asking to save a passkey hears no straight away (${Date.now() - t0}ms), no card`);
+  ok(!(await ov.evaluate(() => !!document.querySelector('.vault .pkc'))), 'and nothing pops up');
+  t0 = Date.now(); await pclick(wk, '#log'); for (let i = 0; i < 30 && !/error|signed/.test(await wk.title()); i++) await sleep(100);
+  ok(await wk.title() === 'get-error:NotAllowedError' && Date.now() - t0 < 2500, `signing in with a passkey: a clean no at once, so the site moves on (${Date.now() - t0}ms)`);
+  await ui.evaluate(() => openSetup('settings', 'passwords')); await sleep(1500);
+  ok(await ov.evaluate(() => !document.querySelector('#sec-passwords .pwrow.pk') && ![...document.querySelectorAll('#sec-passwords .fld,#sec-passwords h4,#sec-passwords label')].some(e => e.offsetParent && /passkey/i.test(e.textContent))), 'Settings › Passwords doesn\'t mention passkeys when you have none');
+  await ov.evaluate(() => SETUP.finish()); await sleep(600);
+
+  // a passkey saved in Washi before (made here the old way) still signs you in, and Settings lists it to delete
+  await b.stop(); process.env.WASHI_TEST_PK_CREATE = '1';
+  b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(1500);
+  let wk0 = await open('http://localhost:8765/webauthn.html');
+  await pclick(wk0, '#reg'); await card('pk'); await ov.click('.vault [data-a=create]'); await sleep(1500);
+  ok(/^registered:/.test(await wk0.title()), '(one saved the old way)');
+  await b.stop(); delete process.env.WASHI_TEST_PK_CREATE;
+  b = await start({ profile, fresh: false }); ({ ui, ov } = b); await sleep(1500);
+  const wk1 = await open('http://localhost:8765/webauthn.html');
+  await pclick(wk1, '#log'); v = await card('pk');
+  ok(/Sign in to localhost/.test(v.text) && /colton@example\.com/.test(v.text), 'a passkey from before: the card lists it');
   K('tap:Return'); await sleep(1500);
-  ok(/^signed-in:uv=1:count=\d+:user=16$/.test(await wk.title()), 'Return signs in; the site checks the signature, user verified: ' + await wk.title());
-  await pclick(wk, '#log2'); await card('pk'); await ov.click('.vault .vlist .vi'); await sleep(1500);
-  ok(/^signed-in:uv=1/.test(await wk.title()), 'and with the site naming the account it expects');
-  await pclick(wk, '#log'); await card('pk'); await ov.click('.vault .btn[data-a=cancel]'); await sleep(800);
-  ok(await wk.title() === 'get-error:NotAllowedError', '"Use another way": the site hears no, and can offer its other options (it doesn\'t hang)');
+  ok(/^signed-in:uv=1:count=\d+:user=16$/.test(await wk1.title()), 'and it signs you in: ' + await wk1.title());
   await sleep(2600);
   await ui.evaluate(() => openSetup('settings', 'passwords')); await sleep(1500);
-  ok(await ov.evaluate(() => /localhost[\s\S]*colton@example\.com/.test(document.querySelector('#sec-passwords .pwrow.pk').innerText)), 'Settings lists the passkey');
+  ok(await ov.evaluate(() => /localhost[\s\S]*colton@example\.com/.test(document.querySelector('#sec-passwords .pwrow.pk').innerText)), 'Settings lists it under "Passkeys from before"');
+  await audit(ov, 'Settings › Passwords with a passkey from before'); shot('pk-before');
   await ov.click('#sec-passwords .pwrow.pk .ib.warn'); await sleep(500);
-  ok((await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))).passkeys.length === 0 && /Deleted the passkey for localhost/.test(await ov.$eval('#sec-passwords .pwbox .okay', e => e.textContent)), 'deleting a passkey says so, next to the passkeys');
-  await ov.click('#sec-passwords .pwbox .okay .link'); await sleep(500);
-  ok((await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))).passkeys.length === 1, 'Undo brings the passkey back');
-  await ov.click('#sec-passwords .pwrow.pk .ib.warn'); await sleep(500);
+  ok((await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))).passkeys.length === 0 && /Deleted the passkey for localhost/.test(await ov.$eval('#sec-passwords .okay', e => e.textContent)), 'deleting it says so');
+  await ov.click('#sec-passwords .okay .link'); await sleep(500);
+  ok((await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))).passkeys.length === 1, 'Undo brings it back');
   await ov.evaluate(() => SETUP.finish()); await sleep(600);
-  await pclick(wk, '#log'); v = await card('pk');
-  ok(/No Washi passkey for localhost/.test(v.text) && /iCloud Keychain/.test(v.text), 'with no Washi passkey for the site, the card says so plainly (and why iCloud ones can\'t be used)');
-  shot('pk-none'); await audit(ov, 'no-passkey card');
-  await ov.click('.vault .btn[data-a=cancel]'); await sleep(600);
-  ok(await wk.title() === 'get-error:NotAllowedError', 'and the site gets a clean no');
-  await sleep(2600);
-  await pclick(wk, '#reg'); await card('pk'); await ov.click('.vault [data-a=create]'); await sleep(1500);
-  ok(/^registered:/.test(await wk.title()) && (await ui.evaluate(() => B.setupAct({ type: 'pw:list' }))).passkeys.length === 1, 'a new passkey can be saved again');
 
   // ---------- 8. after a restart: still there, encrypted, and Touch ID refusal is respected ----------
   await b.stop();

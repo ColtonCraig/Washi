@@ -444,7 +444,7 @@ window.SETUP = (() => {
     return field('Extensions', box, 'Chrome extensions work in Washi: their buttons sit in the top bar, next to ☆. They run in every space. Extensions that need a desktop app on your Mac to talk to (some password managers) may only partly work.');
   }
 
-  /* ---------- Settings › Passwords: saved logins and passkeys, kept encrypted on this Mac ---------- */
+  /* ---------- Settings › Passwords: saved logins (and passkeys saved before Washi stopped making them), kept encrypted on this Mac ---------- */
   function secPasswords() {
     const box = h('div', { class: 'pwbox' }), pkbox = h('div', { class: 'pwbox' }), nvbox = h('div', {});
     let L = { logins: [], passkeys: [], never: [], ok: true }, q = '', open = null, shown = new Map(), msg = null, undo = null, adding = false;
@@ -502,7 +502,7 @@ window.SETUP = (() => {
           h('button', { class: 'btn small plain', disabled: !L.logins.length, onclick: async () => { const r = await B.setupAct({ type: 'pw:export' }); if (!r) return; if (!r.ok) return say(r.denied ? 'Export cancelled.' : r.error || 'Couldn\'t export.', false); say(`Exported ${r.n} passwords. Anyone who opens that file can read them: delete it when you're done.`); } }, 'Export…'))].filter(Boolean));
       pkbox.innerHTML = '';
       if (msg && msg.where === 'pk') pkbox.append(note());
-      if (!L.passkeys.length) pkbox.append(h('p', { class: 'hint' }, 'No passkeys yet. When a site offers to add a passkey (usually in its security settings), Washi saves it here.'));
+      pkfield.hidden = !L.passkeys.length && !(msg && msg.where === 'pk');   // only there if you have some from before (or just deleted the last: its Undo stays)
       for (const p of L.passkeys) pkbox.append(h('div', { class: 'pwrow pk', 'data-id': p.id },
         h('span', { class: 'pwfav', html: BL.favHTML({ title: p.rpId, url: 'https://' + p.rpId }) }),
         h('span', { class: 'pwt' }, h('b', {}, p.rpId), h('small', {}, (p.user || 'Passkey') + ' · used ' + ago(p.used))),
@@ -510,14 +510,17 @@ window.SETUP = (() => {
       nvbox.innerHTML = '';
       if (L.never.length) nvbox.append(field('Never saved for', h('div', { class: 'pwnever' }, L.never.map(o => h('span', { class: 'chipx' }, o.replace(/^https?:\/\//, ''), h('button', { 'aria-label': 'Offer to save on ' + o + ' again', title: 'Offer to save here again', onclick: async () => { await B.setupAct({ type: 'pw:never', origin: o }); load(); } }, '×'))))));
     }
+    /* Washi doesn't make passkeys (Apple only lets browsers it has approved use passkeys, so sites offer your password or
+       a code instead). Ones saved in Washi before still sign you in, and are listed here so you can delete them. */
+    const pkfield = field('Passkeys from before', pkbox, 'These still sign you in. Washi doesn\'t make new passkeys: Apple only lets browsers it has approved use them, so sites offer your password or a code instead.');
+    pkfield.hidden = true;
     load();
     return [
       field('Passwords', h('div', { class: 'tgls' },
         toggle('Offer to save passwords', 'When you sign in or sign up, Washi asks whether to keep it', () => P.pwSave !== false, v => setPref({ pwSave: v })),
         toggle('Fill saved passwords', 'Pick an account under a sign-in field to fill it in. Nothing is filled until you pick.', () => P.pwFill !== false, v => setPref({ pwFill: v }))), 'Kept encrypted on this Mac with a key in your Keychain, never sent anywhere. Showing or copying one asks for Touch ID.'),
       field('Saved passwords', box),
-      field('Passkeys', h('div', {}, h('div', { class: 'tgls' }, toggle('Use Washi for passkeys', 'Sites can save a passkey in Washi and sign you in with it (with Touch ID)', () => P.passkeys !== false, v => setPref({ passkeys: v }))), pkbox),
-        'Passkeys in iCloud Keychain or on your phone can\'t be used by Washi: Apple only lets browsers it has approved use them. Add a Washi passkey alongside them in each site\'s security settings.'),
+      pkfield,
       nvbox
     ];
   }
@@ -745,7 +748,7 @@ window.SETUP = (() => {
         ['p:music', 'Now playing', 'Music in another tab, playable from the sidebar.', ''],
         ['p:plane', 'Sites in their space', 'Okta always in Work: right-click a tab › Always Open in.', ''],
         ['i:puzzle', 'Chrome extensions', 'From the Chrome Web Store, just like Chrome.', ''],
-        ['i:key', 'Passwords and passkeys', 'Saved safely on this Mac, filled in for you.', ''],
+        ['i:key', 'Passwords', 'Saved safely on this Mac, filled in for you.', ''],
         ['i:shield', 'Blocking', 'Ads and trackers blocked, dangerous sites flagged.', ''],
         ['i:bolt', 'Your top bar', 'Drag its buttons into any order; right-click one to hide it.', ''],
         ['i:gear', 'Lots of choices', 'Settings › Features: Focus, Reader, swiping and more.', 'settings']];

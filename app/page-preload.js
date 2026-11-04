@@ -3,7 +3,7 @@
    - Passwords: notices login and sign-up fields, tells Washi when one is focused (Washi shows the account list), fills a
      login only after you pick it in Washi's own menu, and reports a submitted login so Washi can offer to save it.
    - Passkeys: puts a thin wrapper around navigator.credentials in the page so a passkey request asks Washi first;
-     Washi then serves it with your Washi passkey (or cancels so the site offers another way to sign in).
+     Washi serves one saved in Washi before, or says no at once so the site offers another way to sign in.
    Nothing secret is ever handed to the page's scripts: a password only ever goes into the input you chose to fill. */
 const { ipcRenderer, contextBridge } = require('electron');
 
@@ -50,9 +50,11 @@ if (window.top === window && /^https?:$/.test(location.protocol)) {
           Object.defineProperty(CC.prototype, name, { value: f, writable: true, configurable: true });
         };
         wrap('create'); wrap('get');
-        try { PKC.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(true); } catch {}
+        /* no passkeys on this Mac, as far as sites are concerned: they offer your password or a code straight away (Apple only
+           lets browsers it has approved use iCloud Keychain passkeys). Passkeys saved in Washi before are still served. */
+        try { PKC.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(false); } catch {}
         try { PKC.isConditionalMediationAvailable = () => Promise.resolve(false); } catch {}
-        try { if (PKC.getClientCapabilities) { const g = PKC.getClientCapabilities.bind(PKC); PKC.getClientCapabilities = () => g().then(c => ({ ...c, conditionalGet: false, conditionalCreate: false, hybridTransport: false, passkeyPlatformAuthenticator: true, userVerifyingPlatformAuthenticator: true })); } } catch {}
+        try { if (PKC.getClientCapabilities) { const g = PKC.getClientCapabilities.bind(PKC); PKC.getClientCapabilities = () => g().then(c => ({ ...c, conditionalGet: false, conditionalCreate: false, hybridTransport: false, passkeyPlatformAuthenticator: false, userVerifyingPlatformAuthenticator: false })); } } catch {}
       },
       args: [info => ipcRenderer.invoke('washi-passkey', info).catch(() => 'cancel')]
     });
