@@ -2,6 +2,13 @@
 Rule: nothing is "done" until it's tested with real clicks/drags (see `test/`), matches the paper design and animations, and works with every other feature.
 Rule: check Mac-specific behaviour against the current macOS (26 Tahoe, Xcode 26) on GitHub's Mac machines, not older behaviour from memory.
 
+## Next: extensions the weekly sweep still flags (ext-sweep.yml, Nov 3: 24 of 32 work)
+- 1Password and Loom: the popup never opens from their button (find out why: popup page, background errors)
+- Honey: popup blank (its background also uses localStorage, which Chrome's workers don't have either)
+- Adblock Plus: popup opens then closes itself before the check reads it (may be fine: check by hand)
+- LastPass: the popup works (log-in form); its background logs "document is not defined" (check it saves and fills)
+- JSON Viewer, Raindrop: the Web Store didn't offer "Add to Washi" / didn't finish in time on that run (Raindrop installed on the run before)
+
 ## What other browsers have, and where Washi stands (research, Oct 2026)
 | Feature people love | Who has it | Washi |
 |---|---|---|
