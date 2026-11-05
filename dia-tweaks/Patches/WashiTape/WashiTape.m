@@ -12,6 +12,7 @@ NSArray<NSView *> *DPWashiArtTape(void);   // WashiLook.m
 
 extern DPPatch DPWashiTape;
 static char DPTapeKey;
+static NSHashTable<NSView *> *DPTaped, *DPDotItems;   // tabs wearing tape; the space dots seen so far
 
 typedef struct { NSString *key, *name; uint32_t rgb; } DPTapeChoice;
 static const DPTapeChoice DPTapes[] = {
@@ -170,7 +171,6 @@ static void DPTapeOn(NSView *tab) {
     }
 }
 
-static NSHashTable<NSView *> *DPTaped, *DPDotItems;   // tabs wearing tape; the space dots seen so far
 static void DPTapeAll(void) {
     for (NSView *tab in DPFindViews(DPDiaTabView)) DPTapeOn(tab);
 }
