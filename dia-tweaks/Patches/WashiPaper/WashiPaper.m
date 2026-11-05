@@ -16,6 +16,16 @@ static const DPPaperChoice DPPapers[] = {
     { @"sky", @"Sky and Midnight", 0xeef4ff, 0x22273a },
 };
 
+// The paper in the chosen look, for the other Washi tweaks (cards are this paper mixed toward white). Cream when
+// Washi Paper is off, since that's Washi's own paper.
+NSColor *DPWashiPaperColor(BOOL dark) {
+    NSString *key = DPWashiPaper.on ? (DPChoice(&DPWashiPaper) ?: @"cream") : @"cream";
+    DPPaperChoice paper = DPPapers[0];
+    for (size_t i = 0; i < sizeof DPPapers / sizeof *DPPapers; i++) if ([DPPapers[i].key isEqual:key]) paper = DPPapers[i];
+    uint32_t rgb = dark ? paper.dark : paper.light;
+    return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
+}
+
 static NSMenu *DPPaperChoices(void) {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Paper"];
     for (size_t i = 0; i < sizeof DPPapers / sizeof *DPPapers; i++)
