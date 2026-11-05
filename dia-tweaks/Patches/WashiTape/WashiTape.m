@@ -36,7 +36,7 @@ static CGImageRef DPTapeStripes(uint32_t rgb) {
     if (cached && cachedRGB == rgb) return cached;
     const int scale = 2, w = 34 * scale, h = 17 * scale;
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-    CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, 0, space, kCGImageAlphaPremultipliedLast);
+    CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, 0, space, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     CGFloat r = ((rgb >> 16) & 255) / 255.0, g = ((rgb >> 8) & 255) / 255.0, b = (rgb & 255) / 255.0;
     CGContextSetRGBFillColor(ctx, r + (1 - r) * .38, g + (1 - g) * .38, b + (1 - b) * .38, 1);
     CGContextFillRect(ctx, CGRectMake(0, 0, w, h));
