@@ -9,7 +9,7 @@ NSView *DPWashiPaperMake(NSRect frame);         // WashiPaper.m
 BOOL DPIsWashiPaperView(NSView *view);
 void DPWashiPaperRepaint(NSView *view);
 NSColor *DPWashiPaperColor(BOOL dark);
-static char DPBarPaperKey, DPBarAppearanceKey, DPBarCardKey, DPBarLineKey;
+static char DPBarWatchKey, DPBarPaperKey, DPBarAppearanceKey, DPBarCardKey, DPBarLineKey;
 #define DPCapsule "_TtC13NavigationBar26NavigationBarCapsuleButton"
 
 static BOOL DPBarDark(NSView *view) {
@@ -96,10 +96,33 @@ static NSView *DPBarFill(NSView *bar) {
 }
 
 static NSAppearance *DPWindowAppearance(NSView *view) {
-    NSView *frame = view.window.contentView.superview;
-    NSAppearance *look = frame ? frame.effectiveAppearance : NSApp.effectiveAppearance;
+    NSAppearance *look = view.window ? view.window.effectiveAppearance : NSApp.effectiveAppearance;
     NSAppearanceName name = [look bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
     return [NSAppearance appearanceNamed:name ?: NSAppearanceNameAqua];
+}
+
+// The window turned light or dark (macOS, or Dia's own Appearance setting): its bars follow.
+@interface DPWashiBarsWatcher : NSObject
+@property (nonatomic, weak) NSWindow *window;
+@end
+static void DPBarOn(NSView *bar);
+@implementation DPWashiBarsWatcher
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!DPWashiBars.on) return;
+        for (NSView *bar in [DPFindViews(DPDiaToolbar) arrayByAddingObjectsFromArray:DPFindViews(DPDiaBookmarksBar)])
+            if (!self.window || bar.window == self.window) DPBarOn(bar);
+    });
+}
+- (void)dealloc { [_window removeObserver:self forKeyPath:@"effectiveAppearance"]; }
+@end
+
+static void DPBarWatch(NSWindow *window) {
+    if (!window || DPGet(window, &DPBarWatchKey)) return;
+    DPWashiBarsWatcher *watcher = [DPWashiBarsWatcher new];
+    watcher.window = window;
+    [window addObserver:watcher forKeyPath:@"effectiveAppearance" options:0 context:NULL];
+    DPSet(window, &DPBarWatchKey, watcher);
 }
 
 static void DPBarAppearance(NSView *bar, BOOL paper) {
@@ -123,6 +146,7 @@ static void DPBarOn(NSView *bar) {
         DPBarCards(bar, NO); DPBarLine(bar, NO);
         return;
     }
+    DPBarWatch(bar.window);
     DPBarAppearance(bar, YES);
     if (!paper) { paper = DPWashiPaperMake(fill.frame); paper.autoresizingMask = NSViewNotSizable; DPSet(bar, &DPBarPaperKey, paper); }
     if (paper.superview != bar || [bar.subviews indexOfObject:paper] != [bar.subviews indexOfObject:fill] + 1)
@@ -150,25 +174,13 @@ static void DPBarFill_updateLayer(NSView *self, SEL _cmd) {
     if (DPWashiBars.on && DPIsBar(self.superview)) DPBarOn(self.superview);
 }
 
-// The window turned light or dark: bars set to the old one follow.
-@interface DPWashiBarsWatcher : NSObject
-@end
-@implementation DPWashiBarsWatcher
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (!DPWashiBars.on) return;
-        for (NSView *bar in [DPFindViews(DPDiaToolbar) arrayByAddingObjectsFromArray:DPFindViews(DPDiaBookmarksBar)]) DPBarOn(bar);
-    });
-}
-@end
-
 static void DPInstallWashiBars(void) {
     DPHook(DPDiaToolbar, @selector(layout), (IMP)DPBar_layout);
     DPHook(DPDiaBookmarksBar, @selector(layout), (IMP)DPBar_layout);
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPBarFill_updateLayer);
     DPHook(DPDiaAddressField, @selector(layout), (IMP)DPBarPart_layout);
     DPHook(DPCapsule, @selector(layout), (IMP)DPBarPart_layout);
-    static DPWashiBarsWatcher *watcher;
+    static DPWashiBarsWatcher *watcher;   // macOS's own switch, for every window (each window also has its own watcher)
     watcher = [DPWashiBarsWatcher new];
     [NSApp addObserver:watcher forKeyPath:@"effectiveAppearance" options:0 context:NULL];
 }
