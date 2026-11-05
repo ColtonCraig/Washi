@@ -75,6 +75,17 @@ static BOOL DPTapeTabSelected(NSView *tab) {
     return ![style hasPrefix:@"nil"] && ![style hasPrefix:@"none"] && ![style hasPrefix:@"above"] && ![style hasPrefix:@"below"];
 }
 
+// The tab's visible pill, in the tab's coordinates: its shape view, or the row inset as Dia insets it if there's none.
+static NSRect DPTapePill(NSView *tab) {
+    NSMutableArray<NSView *> *queue = [NSMutableArray arrayWithObject:tab];
+    while (queue.count) {
+        NSView *view = queue.firstObject; [queue removeObjectAtIndex:0];
+        if (view != tab && DPIsKind(view, DPDiaTabShape) && !view.hidden && view.bounds.size.width > 20) return [view convertRect:view.bounds toView:tab];
+        [queue addObjectsFromArray:view.subviews];
+    }
+    return NSInsetRect(tab.bounds, 6, 2);
+}
+
 static BOOL DPCalm(void) { return NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion; }
 
 static void DPTapeOn(NSView *tab) {
@@ -107,9 +118,11 @@ static void DPTapeOn(NSView *tab) {
     tape.shadowOffset = CGSizeMake(0, flipped ? 1 : -1);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());
-    // Its middle sits 13pt in and 5pt down from the tab's top-left corner, inside the tab so nothing clips it.
-    CGFloat h = tab.layer.bounds.size.height;
-    tape.position = CGPointMake(13, flipped ? 5 : h - 5);
+    // On the corner of the tab's pill, not of its whole row (which runs to the window's edge): like Washi, it hangs
+    // 4pt off the left and 3pt off the top, so its middle is 10pt in and 2.5pt down from the pill's top-left corner.
+    NSRect pill = DPTapePill(tab);
+    CGFloat top = tab.isFlipped ? NSMinY(pill) : NSMaxY(pill);
+    tape.position = CGPointMake(NSMinX(pill) + 10, top + (tab.isFlipped ? 2.5 : -2.5));
     tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -20 : 20) * M_PI / 180);
     if (tape.superlayer != tab.layer) [tab.layer addSublayer:tape];
     [CATransaction commit];
