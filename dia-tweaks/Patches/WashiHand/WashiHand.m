@@ -65,36 +65,45 @@ static NSView *DPHandScroll(NSView *list) {
     return nil;
 }
 
+// The tab list gives up a strip at its top for the name, and one at its bottom for the Now Playing ticket
+// (WashiTicket.m). Both are worked out here together, from where Dia put the list, so they never fight over it.
+CGFloat DPWashiTicketRoom(NSView *list);
+void DPWashiTicketIn(NSView *list, NSRect room);
+void DPWashiTicketGone(NSView *list);
+
 static void DPHandIn(NSView *list) {
     DPWashiHandLabel *label = DPGet(list, &DPHandKey);
     NSView *scroll = DPHandScroll(list);
     NSString *name = DPWashiLive(&DPWashiHand) ? DPSpaceName(list.window) : nil;
     // The frame this tweak last gave the tab list, and Dia's from before it. When the list still has ours, Dia hasn't
-    // placed it since, so it isn't moved again; off, Dia's goes back.
+    // placed it since, so it isn't moved again; with no strips, Dia's goes back.
     NSValue *moved = scroll ? DPGet(scroll, &DPHandMovedKey) : nil, *dia = scroll ? DPGet(scroll, &DPHandDiaKey) : nil;
     BOOL ours = moved && NSEqualRects(moved.rectValue, scroll.frame);
-    if (!scroll || !name.length) {
-        if (label) { [label removeFromSuperview]; DPSet(list, &DPHandKey, nil); }
+    NSRect frame = scroll ? (ours ? dia.rectValue : scroll.frame) : NSZeroRect;   // where Dia put it
+    CGFloat top = name.length ? DPHandRoom : 0, bottom = scroll ? DPWashiTicketRoom(list) : 0;
+    if (scroll && NSHeight(frame) - top - bottom < 110) {   // a sidebar too short keeps its tabs: the ticket goes first
+        bottom = 0;
+        if (NSHeight(frame) - top < 110) top = 0;
+    }
+    if (!bottom) DPWashiTicketGone(list);
+    if (!top && label) { [label removeFromSuperview]; DPSet(list, &DPHandKey, nil); label = nil; }
+    if (!scroll || (!top && !bottom)) {
         if (ours && dia) scroll.frame = dia.rectValue;
         if (scroll) { DPSet(scroll, &DPHandMovedKey, nil); DPSet(scroll, &DPHandDiaKey, nil); }
         return;
     }
-    NSRect frame = ours ? dia.rectValue : scroll.frame;   // where Dia put it
-    if (NSHeight(frame) <= DPHandRoom * 3) {                // a sidebar too short for it keeps every tab instead
-        if (label) label.hidden = YES;
-        if (ours) scroll.frame = frame;
-        DPSet(scroll, &DPHandMovedKey, nil);
-        return;
-    }
-    NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) : NSMaxY(frame) - DPHandRoom, NSWidth(frame), DPHandRoom);
-    if (!ours && DPMayAdjust(scroll)) {                     // it moves down by the room, keeping its bottom where it was
-        NSRect mine = frame;
-        mine.size.height -= DPHandRoom;
-        if (list.isFlipped) mine.origin.y += DPHandRoom;
+    NSRect mine = frame;
+    mine.size.height -= top + bottom;
+    if (list.isFlipped) mine.origin.y += top; else mine.origin.y += bottom;
+    if (!NSEqualRects(mine, scroll.frame) && DPMayAdjust(scroll)) {
         DPSet(scroll, &DPHandDiaKey, [NSValue valueWithRect:frame]);
         DPSet(scroll, &DPHandMovedKey, [NSValue valueWithRect:mine]);
         scroll.frame = mine;
     }
+    DPHandWatch(list.window);
+    if (bottom) DPWashiTicketIn(list, NSMakeRect(NSMinX(frame), list.isFlipped ? NSMaxY(frame) - bottom : NSMinY(frame), NSWidth(frame), bottom));
+    if (!top) return;
+    NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) : NSMaxY(frame) - DPHandRoom, NSWidth(frame), DPHandRoom);
     if (!label) {
         label = [DPWashiHandLabel labelWithString:@""];
         label.font = DPCaveat(21);

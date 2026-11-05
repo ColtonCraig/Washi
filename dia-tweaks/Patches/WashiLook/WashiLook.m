@@ -249,6 +249,17 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         [[ink colorWithAlphaComponent:.3] setFill];
         for (NSUInteger i = 0; i < 3; i++) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(popup) + 6, NSMinY(popup) + 8 + i * 10, 34 - i * 6, 2.4) xRadius:1.2 yRadius:1.2] fill];
     }
+    // the Now Playing ticket at the bottom of the tabs
+    NSRect ticket = NSZeroRect;
+    if ([spot isEqual:@"ticket"]) {
+        ticket = NSMakeRect(x + 5, y + h - 22, side - 10, 15);
+        [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(ticket, 1, 1) xRadius:3 yRadius:3] fill];
+        [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:ticket xRadius:3 yRadius:3] fill];
+        NSBezierPath *perf = [NSBezierPath bezierPath];
+        [perf moveToPoint:NSMakePoint(NSMinX(ticket) + 12, NSMinY(ticket) + 2)]; [perf lineToPoint:NSMakePoint(NSMinX(ticket) + 12, NSMaxY(ticket) - 2)];
+        CGFloat d[] = { 1.5, 1.5 }; [perf setLineDash:d count:2 phase:0]; [[ink colorWithAlphaComponent:.3] setStroke]; [perf stroke];
+        [@"Now playing" drawAtPoint:NSMakePoint(NSMinX(ticket) + 15, NSMinY(ticket) + 1) withAttributes:@{ NSFontAttributeName: DPCaveat(9), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.7] }];
+    }
     // What the option changes.
     if ([spot isEqual:@"tape"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(NSMakeRect(NSMinX(selected), NSMinY(selected) - 3, 14, 8), -1, -1)]];
     else if ([spot isEqual:@"cards"]) { [spots addObject:[NSValue valueWithRect:NSInsetRect(favs, -2, -2)]]; [spots addObject:[NSValue valueWithRect:NSInsetRect(selected, -2, -2)]]; }
@@ -259,6 +270,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     else if ([spot isEqual:@"sheet"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, -3, -3)]];
     else if ([spot isEqual:@"popups"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(popup, -2, -2)]];
     else if ([spot isEqual:@"newtab"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, 1, 1)]];
+    else if ([spot isEqual:@"ticket"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(ticket, -2, -2)]];
     else if ([spot isEqual:@"commandbar"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(commandBar, -2, -2)]];
     if (spots.count) {
         NSBezierPath *veil = [NSBezierPath bezierPathWithRect:r];
@@ -523,3 +535,4 @@ DPWashiArt(DPWashiArtSheet, @"sheet")
 DPWashiArt(DPWashiArtPopups, @"popups")
 DPWashiArt(DPWashiArtNewTab, @"newtab")
 DPWashiArt(DPWashiArtCommandBar, @"commandbar")
+DPWashiArt(DPWashiArtTicket, @"ticket")
