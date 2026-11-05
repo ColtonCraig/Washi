@@ -7,6 +7,8 @@ const { execSync } = require('child_process');
 const { start, sleep, ok, done, skipSetup, GAPS, AUDIT, shot } = require('./lib');
 const ptr = a => execSync('python3 ' + __dirname + '/ptr.py ' + a);
 const X0 = 60, Y0 = 57;
+// Waits (up to 2s) until nothing in the view is still animating, so a box isn't measured halfway through opening.
+const settle = async v => { for (let i = 0; i < 20; i++) { if (!(await v.evaluate(() => document.getAnimations().some(a => a.playState === 'running')))) return; await sleep(100); } };
 (async () => {
   const b = await start(); await skipSetup(b); const { ui, ov, sb } = b;
   await ui.evaluate(() => openTab('http://localhost:8765/article.html')); await sleep(2500);
@@ -55,7 +57,7 @@ const X0 = 60, Y0 = 57;
           if (W === 900 && nm === 'light Scrapbook') shot('spacing-' + s.slice(1)); }
         ptr('keys tap:Escape'); await sleep(500);
       }
-      await ui.evaluate(() => openFind()); await sleep(700); await rec(ov, tag + ' find'); ptr('keys tap:Escape'); await sleep(400);
+      await ui.evaluate(() => openFind()); await sleep(700); await settle(ov); await rec(ov, tag + ' find'); ptr('keys tap:Escape'); await sleep(400);
       await ui.evaluate(() => B.setupAct({ type: 'test:update', version: '9.9.9', notes: 'A sleeping tab wakes up\nHover a tab' })); await sleep(1500); await rec(ov, tag + ' update postcard'); ptr('keys tap:Escape'); await sleep(400);
       const t = await sb.evaluate(() => { const e = document.querySelector('.tab'); if (!e) return null; const q = e.getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2 }; });
       if (t) { ptr(`move ${X0 + t.x} ${Y0 + 38 + t.y}`); await sleep(1600); await rec(ov, tag + ' tab peek'); ptr(`move ${X0 + 700} ${Y0 + 400}`); await sleep(400); }

@@ -28,6 +28,10 @@ cp -R "$W/washi/dia-tweaks/Patches/"* "$W/diatweaks/src/dylib/Patches/"
 # no releases instead, and this script is how both update.
 sed -i '' 's|https://api.github.com/repos/JaceThings/DiaTweaks/releases/latest|https://api.github.com/repos/ColtonCraig/Washi/releases/tags/dia-tweaks-none|' "$W/diatweaks/src/diapatch/main.m"
 defaults write com.diapatches devTools -bool YES          # lets Washi's tweaks be checked against Dia's real views
+# The Washi for Dia extension (new tab, Reader, Snapshot, Notes), where Dia can load it from: Documents/Washi for Dia.
+EXT="$HOME/Documents/Washi for Dia"
+rm -rf "$EXT.new" && cp -R "$W/washi/dia" "$EXT.new" && rm -rf "$EXT" && mv "$EXT.new" "$EXT"
 say "Building and installing (Dia will quit and open again)…"
 cd "$W/diatweaks" && ./install.sh --yes
-say "Done. Washi's tweaks are in Dia's Settings › DiaTweaks › Window."
+say "Done. Turn Washi on in Dia's Settings › Patches › Washi."
+say "First time on this Mac? Also load the extension once: chrome://extensions › Developer mode › Load unpacked › Documents › Washi for Dia."

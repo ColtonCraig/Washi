@@ -4,7 +4,7 @@ name: Test
 on:
   push:
     branches-ignore: [release]
-    paths-ignore: ['ios/**', '.github/workflows/ios.yml']
+    paths-ignore: ['ios/**', '.github/workflows/ios.yml', 'dia-tweaks/**', '.github/workflows/dia-tweaks.yml', '.github/workflows/dia-probe.yml']   # the Dia tweaks have their own Mac build check
   pull_request:
   workflow_call:                    # electron-update.yml runs every test on its security-update commit before releasing it
     inputs: { ref: { type: string, required: true } }
