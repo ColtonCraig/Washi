@@ -1085,7 +1085,7 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
     }
     return self;
 }
-- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; [_liftTimer invalidate]; }
+- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 - (void)changed { self.needsDisplay = YES; }
 - (void)tilted:(NSSegmentedControl *)control {
     [DPWashiDefaults() setObject:@[ @"subtle", @"playful", @"wild" ][control.selectedSegment] forKey:@"washiTilt"];
