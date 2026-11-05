@@ -27,25 +27,27 @@ static NSColor *DPHex(uint32_t rgb) {
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
 }
 
-// The grain: soft speckles, made once. Drawn as a pattern so it tiles at any size and scale.
-static NSImage *DPGrain(void) {
-    static NSImage *grain;
-    if (grain) return grain;
+// The grain: soft speckles, made once per look. Drawn as a pattern so it tiles at any size and scale. Light paper
+// gets dark fibres (multiplied in); dark paper gets pale ones laid on top, since darkening dark paper shows nothing.
+static NSImage *DPGrain(BOOL dark) {
+    static NSImage *grains[2];
+    if (grains[dark]) return grains[dark];
     const int size = 160;
     NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:size pixelsHigh:size bitsPerSample:8
         samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace bytesPerRow:size * 4 bitsPerPixel:32];
     uint8_t *px = rep.bitmapData;
     for (int i = 0; i < size * size; i++) {
         uint32_t r = arc4random_uniform(1000);
-        uint8_t a = r < 60 ? 34 : r < 260 ? 14 : 0;                      // a few darker fibres, more faint ones
-        uint8_t v = r < 60 ? 60 : 90;
-        px[i * 4] = v; px[i * 4 + 1] = (uint8_t)(v * .9); px[i * 4 + 2] = (uint8_t)(v * .75);
-        px[i * 4 + 3] = a;                                               // (premultiplied: color scaled by alpha below)
-        px[i * 4] = (uint8_t)(px[i * 4] * a / 255); px[i * 4 + 1] = (uint8_t)(px[i * 4 + 1] * a / 255); px[i * 4 + 2] = (uint8_t)(px[i * 4 + 2] * a / 255);
+        uint8_t a, v;
+        if (dark) { a = r < 60 ? 24 : r < 260 ? 10 : 0; v = r < 60 ? 255 : 220; }   // a few bright fibres, more faint ones
+        else      { a = r < 60 ? 34 : r < 260 ? 14 : 0; v = r < 60 ? 60 : 90; }     // a few darker fibres, more faint ones
+        uint8_t c[3] = { v, (uint8_t)(v * .93), (uint8_t)(v * .8) };
+        for (int k = 0; k < 3; k++) px[i * 4 + k] = (uint8_t)(c[k] * a / 255);       // premultiplied
+        px[i * 4 + 3] = a;
     }
-    grain = [[NSImage alloc] initWithSize:NSMakeSize(size / 2, size / 2)];   // 2x: crisp on Retina
-    [grain addRepresentation:rep];
-    return grain;
+    NSImage *g = [[NSImage alloc] initWithSize:NSMakeSize(size / 2, size / 2)];      // 2x: crisp on Retina
+    [g addRepresentation:rep];
+    return grains[dark] = g;
 }
 
 @interface DPWashiPaperView : NSView
@@ -78,9 +80,9 @@ static NSImage *DPGrain(void) {
         ctx.duration = 0;
         self.layer.backgroundColor = DPHex(dark ? paper.dark : paper.light).CGColor;
         self->_grain.frame = self.layer.bounds;
-        self->_grain.backgroundColor = [NSColor colorWithPatternImage:DPGrain()].CGColor;
-        self->_grain.opacity = dark ? .55 : 1;
-        self->_grain.compositingFilter = dark ? @"screenBlendMode" : @"multiplyBlendMode";
+        self->_grain.backgroundColor = [NSColor colorWithPatternImage:DPGrain(dark)].CGColor;
+        self->_grain.opacity = 1;
+        self->_grain.compositingFilter = dark ? nil : @"multiplyBlendMode";
     }];
 }
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
