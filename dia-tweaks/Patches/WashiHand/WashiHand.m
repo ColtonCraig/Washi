@@ -122,6 +122,62 @@ static void DPHandIn(NSView *list) {
     DPHandWatch(list.window);
 }
 
+#pragma mark The pinned-tabs divider
+
+// Dia's line between pinned tabs and the rest becomes a pencil line: a little wobble, the ink at a quarter. It follows
+// Dia's own line (which Tidy Tabs shortens for its broom), and Dia's goes see-through while it shows.
+static char DPPencilKey, DPPencilDiaKey;
+
+static CALayer *DPDiaDivider(NSView *separator) {
+    for (CALayer *layer in separator.layer.sublayers)
+        if (NSHeight(layer.frame) <= 1.5 && NSWidth(layer.frame) > 20 && ![layer isKindOfClass:CAShapeLayer.class]) return layer;
+    return nil;
+}
+
+static void DPPencilIn(NSView *separator) {
+    CALayer *line = DPDiaDivider(separator);
+    CAShapeLayer *pencil = DPGet(separator, &DPPencilKey);
+    if (!DPWashiLive(&DPWashiHand) || !line) {
+        [pencil removeFromSuperlayer]; DPSet(separator, &DPPencilKey, nil);
+        NSNumber *dia = DPGet(separator, &DPPencilDiaKey);
+        if (line && dia) { line.opacity = dia.floatValue; DPSet(separator, &DPPencilDiaKey, nil); }
+        return;
+    }
+    if (!DPGet(separator, &DPPencilDiaKey)) DPSet(separator, &DPPencilDiaKey, @(line.opacity));
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    line.opacity = 0;
+    if (!pencil) {
+        pencil = [CAShapeLayer layer];
+        pencil.fillColor = nil; pencil.lineWidth = 1.2; pencil.lineCap = kCALineCapRound;
+        DPSet(separator, &DPPencilKey, pencil);
+    }
+    if (pencil.superlayer != separator.layer) [separator.layer addSublayer:pencil];
+    BOOL dark = [[separator.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    pencil.strokeColor = (dark ? [NSColor colorWithWhite:1 alpha:.26] : [NSColor colorWithSRGBRed:43 / 255.0 green:33 / 255.0 blue:24 / 255.0 alpha:.26]).CGColor;
+    CGRect f = line.frame;
+    if (!CGRectEqualToRect(pencil.frame, CGRectMake(f.origin.x, CGRectGetMidY(f) - 2, f.size.width, 4))) {
+        pencil.frame = CGRectMake(f.origin.x, CGRectGetMidY(f) - 2, f.size.width, 4);
+        CGMutablePathRef path = CGPathCreateMutable();
+        CGPathMoveToPoint(path, NULL, 1, 2);
+        for (CGFloat x = 1; x < f.size.width - 1; x += 6) {   // a gentle, even wobble: the same every time
+            CGFloat y = 2 + .7 * sin(x / 9.0) + .35 * sin(x / 3.7);
+            CGPathAddLineToPoint(path, NULL, MIN(x + 6, f.size.width - 1), y);
+        }
+        pencil.path = path;
+        CGPathRelease(path);
+    }
+    [CATransaction commit];
+}
+
+static void DPPencil_layout(NSView *self, SEL _cmd) {
+    DPCallOriginal(DPPencil_layout, self);
+    DPPencilIn(self);
+}
+static void DPPencil_appearance(NSView *self, SEL _cmd) {
+    DPCallOriginal(DPPencil_appearance, self);
+    DPPencilIn(self);
+}
+
 static void DPHandList_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPHandList_layout, self);
     DPHandIn(self);
@@ -129,10 +185,13 @@ static void DPHandList_layout(NSView *self, SEL _cmd) {
 
 static void DPInstallWashiHand(void) {
     DPHook(DPDiaTabList, @selector(layout), (IMP)DPHandList_layout);
+    DPHook(DPDiaTabListSeparator, @selector(layout), (IMP)DPPencil_layout);
+    DPHook(DPDiaTabListSeparator, @selector(viewDidChangeEffectiveAppearance), (IMP)DPPencil_appearance);
 }
 
 static void DPApplyWashiHand(DPPatch *patch) {
     for (NSView *list in DPFindViews(DPDiaTabList)) { DPHandIn(list); list.needsLayout = YES; }
+    for (NSView *separator in DPFindViews(DPDiaTabListSeparator)) DPPencilIn(separator);
 }
 
 static NSString *DPVerifyWashiHand(DPPatch *patch) {
@@ -154,7 +213,7 @@ DP_PATCH(DPWashiHand) {
     .key = @"washiHand",
     .order = 8,
     .title = @"Washi Handwriting",
-    .detail = @"The space’s name in Washi’s handwriting at the top of its tabs.",
+    .detail = @"The space’s name in Washi’s handwriting at the top of its tabs, and the line under your pinned tabs drawn in pencil.",
     .symbol = @"pencil.and.scribble pencil",
     .tint = @"systemTealColor",
     .section = @"Sidebar",
