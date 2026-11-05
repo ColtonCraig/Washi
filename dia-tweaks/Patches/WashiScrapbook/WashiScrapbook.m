@@ -11,8 +11,8 @@ static BOOL DPFlippedLayer(NSView *view);
 CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped);   // WashiTape.m
 void DPWashiTapeRecolor(CALayer *tape);
 
-// Scrapbook pins each favorite with a strip of tape across its top, like Washi's: 22×9, centred, hanging 4pt over
-// the edge, leaning 5° one way or the other.
+// Scrapbook pins each favorite with a strip of tape across its top, like Washi's: 22×9, centred, leaning 5° one way
+// or the other. Washi hangs it over the edge; Dia clips the sidebar above the first row, so here it sits just inside.
 static void DPPinTape(NSView *item, NSUInteger place) {
     CALayer *tape = DPGet(item, &DPPinTapeKey);
     if (!DPWashiScrapbook.on || !item.layer) { [tape removeFromSuperlayer]; DPSet(item, &DPPinTapeKey, nil); return; }
@@ -21,7 +21,7 @@ static void DPPinTape(NSView *item, NSUInteger place) {
     else DPWashiTapeRecolor(tape);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     CGFloat top = flipped ? NSMinY(item.bounds) : NSMaxY(item.bounds);
-    tape.position = CGPointMake(NSMidX(item.bounds), top + (flipped ? 0.5 : -0.5));   // its middle on the edge, so 4pt hangs over
+    tape.position = CGPointMake(NSMidX(item.bounds), top + (flipped ? 5.5 : -5.5));   // just inside the top edge: Dia clips anything above the first row
     CGFloat lean = (place % 2 ? -5 : 5) * M_PI / 180;
     tape.affineTransform = CGAffineTransformMakeRotation(flipped ? lean : -lean);
     if (tape.superlayer != item.layer) [item.layer addSublayer:tape];
