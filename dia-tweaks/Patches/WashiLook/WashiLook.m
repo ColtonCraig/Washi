@@ -273,6 +273,19 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         [[ink colorWithAlphaComponent:.28] setFill];
         for (NSUInteger i = 0; i < 2; i++) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(folder) + 13, NSMinY(folder) + 12 + i * 6, NSWidth(folder) * (i ? .4 : .55), 2.2) xRadius:1.1 yRadius:1.1] fill];
     }
+    // a Peek preview as a polaroid over the page
+    NSRect polaroid = NSZeroRect;
+    if ([spot isEqual:@"polaroid"]) {
+        NSRect page2 = NSMakeRect(x + side, y + 20, w - side - 5, h - 25);
+        polaroid = NSMakeRect(NSMinX(page2) + NSWidth(page2) * .16, NSMinY(page2) + 5, NSWidth(page2) * .68, NSHeight(page2) - 9);
+        [[NSColor colorWithWhite:0 alpha:dark ? .45 : .2] setFill]; [[NSBezierPath bezierPathWithRect:NSOffsetRect(polaroid, 1.5, 2)] fill];
+        [[card blendedColorWithFraction:.3 ofColor:NSColor.whiteColor] setFill]; NSRectFill(polaroid);
+        NSRect photo = NSMakeRect(NSMinX(polaroid) + 4, NSMinY(polaroid) + 4, NSWidth(polaroid) - 8, NSHeight(polaroid) - 18);
+        [(dark ? DPLookHex(0x2a2a2a) : DPLookHex(0xdfe6ee)) setFill]; NSRectFill(photo);
+        NSDictionary *hand = @{ NSFontAttributeName: DPCaveat(9), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.8] };
+        NSSize hs = [@"github.com" sizeWithAttributes:hand];
+        [@"github.com" drawAtPoint:NSMakePoint(NSMidX(polaroid) - hs.width / 2, NSMaxY(photo) + 1) withAttributes:hand];
+    }
     // What the option changes.
     if ([spot isEqual:@"tape"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(NSMakeRect(NSMinX(selected), NSMinY(selected) - 3, 14, 8), -1, -1)]];
     else if ([spot isEqual:@"cards"]) { [spots addObject:[NSValue valueWithRect:NSInsetRect(favs, -2, -2)]]; [spots addObject:[NSValue valueWithRect:NSInsetRect(selected, -2, -2)]]; }
@@ -283,6 +296,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     else if ([spot isEqual:@"sheet"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, -3, -3)]];
     else if ([spot isEqual:@"popups"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(popup, -2, -2)]];
     else if ([spot isEqual:@"newtab"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, 1, 1)]];
+    else if ([spot isEqual:@"polaroid"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(polaroid, -2, -2)]];
     else if ([spot isEqual:@"folders"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(folder, -2, -2)]];
     else if ([spot isEqual:@"ticket"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(ticket, -2, -2)]];
     else if ([spot isEqual:@"commandbar"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(commandBar, -2, -2)]];
@@ -551,3 +565,4 @@ DPWashiArt(DPWashiArtNewTab, @"newtab")
 DPWashiArt(DPWashiArtCommandBar, @"commandbar")
 DPWashiArt(DPWashiArtTicket, @"ticket")
 DPWashiArt(DPWashiArtFolders, @"folders")
+DPWashiArt(DPWashiArtPolaroid, @"polaroid")
