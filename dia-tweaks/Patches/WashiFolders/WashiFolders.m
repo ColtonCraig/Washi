@@ -99,12 +99,24 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
 @property (nonatomic, copy) NSString *title;   // the folder's name, written where Dia's was
 @property (nonatomic, strong) NSFont *font;
 @property (nonatomic) NSRect titleFrame;
+@property (nonatomic) BOOL hover;
 @end
 @implementation DPWashiManila
 - (BOOL)isFlipped { return YES; }
 - (NSView *)hitTest:(NSPoint)point { return nil; }
+// Washi's hover: the folder paper a shade lighter (.fh:hover). Dia's own hover fill on the header is cleared, so it
+// never washes over the folder.
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (!self.trackingAreas.count)
+        [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect owner:self userInfo:nil]];
+}
+- (void)clearDia { self.superview.layer.backgroundColor = nil; }
+- (void)mouseEntered:(NSEvent *)e { self.hover = YES; self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; }); }
+- (void)mouseExited:(NSEvent *)e { self.hover = NO; self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; }); }
 - (NSColor *)paper {
-    return self.tint ? [[DPHex(0xfdf8ec) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:.3 ofColor:[self.tint colorUsingColorSpace:NSColorSpace.sRGBColorSpace]] : DPHex(0xf2d58f);
+    NSColor *base = self.tint ? [[DPHex(0xfdf8ec) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:.3 ofColor:[self.tint colorUsingColorSpace:NSColorSpace.sRGBColorSpace]] : DPHex(0xf2d58f);
+    return self.hover ? [base blendedColorWithFraction:.22 ofColor:NSColor.whiteColor] : base;
 }
 - (void)drawRect:(NSRect)dirty {
     CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds), top = 5;
@@ -214,8 +226,10 @@ static void DPFolderIn(NSView *group) {
     NSColor *fc = [name isKindOfClass:NSTextField.class] ? DPFolderColor(name) : nil;
     if (box) { if (!DPGet(group, &DPFolderBoxAlphaKey)) DPSet(group, &DPFolderBoxAlphaKey, @(box.alphaValue)); box.alphaValue = 0; }
     if (!manila) { manila = [DPWashiManila new]; DPSet(group, &DPFolderManilaKey, manila); }
-    if (manila.superview != group) [group addSubview:manila positioned:NSWindowBelow relativeTo:header];
-    if (!NSEqualRects(manila.frame, header.frame)) manila.frame = header.frame;
+    // Inside the header, under its icon, name and buttons: Dia's hover fill on the header can't land on top of it.
+    if (header.subviews.firstObject != manila) [header addSubview:manila positioned:NSWindowBelow relativeTo:nil];
+    if (!NSEqualRects(manila.frame, header.bounds)) manila.frame = header.bounds;
+    header.layer.backgroundColor = nil;
     if (manila.tint != fc && ![manila.tint isEqual:fc]) { manila.tint = fc; manila.needsDisplay = YES; }
     // The name in dark ink on the folder paper, light and dark alike: Washi writes it, over where Dia's sits.
     if ([name isKindOfClass:NSTextField.class]) {

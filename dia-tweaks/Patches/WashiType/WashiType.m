@@ -63,9 +63,32 @@ static void DPType_setFont(NSTextField *self, SEL _cmd, NSFont *font) {
     DPCallOriginal(DPType_setFont, self, DPLettering(self, font));
 }
 
+// Dia often sets a label's text with its font inside it: the same swap for each run of the text.
+static NSAttributedString *DPLetteringText(NSView *label, NSAttributedString *text) {
+    if (!text.length) return text;
+    NSMutableAttributedString *mine = [text mutableCopy];
+    __block BOOL changed = NO;
+    [text enumerateAttribute:NSFontAttributeName inRange:NSMakeRange(0, text.length) options:0 usingBlock:^(NSFont *font, NSRange range, BOOL *stop) {
+        if (![font isKindOfClass:NSFont.class]) return;
+        NSFont *want = DPLettering(label, font);
+        if (want && ![want isEqual:font]) { [mine addAttribute:NSFontAttributeName value:want range:range]; changed = YES; }
+    }];
+    return changed ? mine : text;
+}
+
+static void DPType_setText(NSTextField *self, SEL _cmd, NSAttributedString *text) {
+    DPCallOriginal(DPType_setText, self, DPLetteringText(self, text));
+}
+
 static void DPRetype(NSTextField *label) {
     NSFont *dia = DPGet(label, &DPDiaFontKey) ?: label.font;
     if (dia) label.font = dia;   // through the hook: Figtree or Dia's, as the switch says
+    NSAttributedString *text = label.attributedStringValue;
+    if (text.length) {   // and the font inside its text, back to Dia's first so the swap starts from Dia's
+        NSMutableAttributedString *base = [text mutableCopy];
+        if (dia) [base addAttribute:NSFontAttributeName value:dia range:NSMakeRange(0, base.length)];
+        label.attributedStringValue = base;
+    }
 }
 
 static void DPBookmark_layout(NSView *self, SEL _cmd) {
@@ -83,6 +106,8 @@ static void DPBookmark_layout(NSView *self, SEL _cmd) {
 static void DPInstallWashiType(void) {
     DPHook(DPTabLabel, @selector(setFont:), (IMP)DPType_setFont);
     DPHook(DPBarLabel, @selector(setFont:), (IMP)DPType_setFont);
+    DPHook(DPTabLabel, @selector(setAttributedStringValue:), (IMP)DPType_setText);
+    DPHook(DPBarLabel, @selector(setAttributedStringValue:), (IMP)DPType_setText);
     DPHook(DPBookmark, @selector(layout), (IMP)DPBookmark_layout);
 }
 
@@ -108,7 +133,7 @@ DP_PATCH(DPWashiType) {
     .defaultOn = YES,
     .order = 4,
     .title = @"Washi Lettering",
-    .detail = @"Washi’s own letters, Figtree, for tab and folder names, the toolbar and bookmarks, at Dia’s sizes.",
+    .detail = @"Washi’s own letters, Figtree, instead of Apple’s: tab and folder names in the sidebar, the page’s name in the toolbar, bookmarks, and Washi’s own pieces (the ticket, New Tab, the new tab’s date).",
     .symbol = @"textformat",
     .tint = @"systemBrownColor",
     .section = @"Window",

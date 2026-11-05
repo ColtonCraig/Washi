@@ -102,8 +102,17 @@ static void DPToast_order(NSWindow *self, SEL _cmd, NSWindowOrderingMode place, 
 static void DPInstallWashiQuit(void) {
     dispatch_async(dispatch_get_main_queue(), ^{ DPHookClass(object_getClass(NSApp), @selector(terminate:), (IMP)DPQuit_terminate); });
 }
+// Dia's toast window has had more than one name: every panel that isn't a browser window, a pop-up or a sheet and
+// shows a small notice qualifies (DPToastPaper checks its size).
+static void DPAnyPanel_order(NSWindow *self, SEL _cmd, NSWindowOrderingMode place, NSInteger other) {
+    DPCallOriginal(DPAnyPanel_order, self, place, other);
+    if (place == NSWindowOut || !DPWashiLive(&DPWashiToasts)) return;
+    NSString *name = NSStringFromClass(self.class);
+    if ([name containsString:@"Toast"] && NSHeight(self.frame) < 120) DPToastPaper(self);
+}
 static void DPInstallWashiToasts(void) {
     DPHook(DPDiaToasts, @selector(orderWindow:relativeTo:), (IMP)DPToast_order);
+    DPHookClass(NSPanel.class, @selector(orderWindow:relativeTo:), (IMP)DPAnyPanel_order);
 }
 
 DP_PATCH(DPWashiQuit) {
@@ -131,6 +140,5 @@ DP_PATCH(DPWashiToasts) {
     .section = @"Window",
     .requires = @"washiPaper",
     .rows = DPWashiArtToasts,
-    .classes = DPClasses(DPDiaToasts),
     .install = DPInstallWashiToasts,
 };

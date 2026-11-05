@@ -31,6 +31,7 @@ static BOOL DPOpenNewTab(NSMenu *menu) {
     NSImageView *_plus;
     NSTextField *_title;
     BOOL _hover, _down;
+    CAShapeLayer *_outline;
 }
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
@@ -40,6 +41,8 @@ static BOOL DPOpenNewTab(NSMenu *menu) {
         _title = [NSTextField labelWithString:@"New Tab"];
         _title.font = DPWashiUIFont(13, NSFontWeightMedium); _title.textColor = NSColor.secondaryLabelColor;
         [self addSubview:_plus]; [self addSubview:_title];
+        _outline = [CAShapeLayer layer];
+        _outline.fillColor = nil; _outline.lineWidth = 1.5; _outline.lineDashPattern = @[ @4, @3 ];
         self.toolTip = @"New Tab (⌘T)";
         [self setAccessibilityElement:YES]; [self setAccessibilityRole:NSAccessibilityButtonRole]; [self setAccessibilityLabel:@"New Tab"];
     }
@@ -63,19 +66,31 @@ static BOOL DPOpenNewTab(NSMenu *menu) {
     [self.window makeKeyAndOrderFront:nil];
     if (!DPOpenNewTab(NSApp.mainMenu)) NSBeep();
 }
-// Dia's look: its pill shows on hover, pressing squeezes it a little (Washi's), and the text darkens.
+// A button: a dashed paper outline at rest, like Washi's "add" spots; on hover it's a card of paper with the small
+// cut shadow; pressing squeezes it a little (Washi's), and the text darkens.
 - (void)paint {
     NSColor *ink = NSColor.labelColor;
+    BOOL dark = [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    extern NSColor *DPWashiPaperColor(BOOL dark);
+    NSColor *card = [[DPWashiPaperColor(dark) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:dark ? .08 : .72 ofColor:NSColor.whiteColor];
     [CATransaction begin]; [CATransaction setDisableActions:DPWashiCalm()];
-    self.layer.backgroundColor = (_hover ? [ink colorWithAlphaComponent:_down ? .1 : .06] : NSColor.clearColor).CGColor;
+    self.layer.backgroundColor = (_hover ? card : NSColor.clearColor).CGColor;
+    self.layer.shadowOpacity = _hover && !_down ? (dark ? .4 : .14) : 0;
+    self.layer.shadowRadius = 0; self.layer.shadowOffset = CGSizeMake(1, -1);
+    self.layer.shadowColor = (dark ? NSColor.blackColor : [NSColor colorWithSRGBRed:43 / 255.0 green:33 / 255.0 blue:24 / 255.0 alpha:1]).CGColor;
+    _outline.strokeColor = [ink colorWithAlphaComponent:_hover ? 0 : .22].CGColor;
     CGFloat cx = NSMidX(self.bounds), cy = NSMidY(self.bounds), k = _down ? .97 : 1;
     self.layer.sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DMakeTranslation(cx, cy, 0), k, k, 1), -cx, -cy, 0);
     [CATransaction commit];
     _title.textColor = _plus.contentTintColor = _hover ? NSColor.labelColor : NSColor.secondaryLabelColor;
 }
+- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
 - (void)layout {
     [super layout];
     self.layer.cornerRadius = 10;
+    if (_outline.superlayer != self.layer) { [self.layer addSublayer:_outline]; [self paint]; }
+    CGPathRef ring = CGPathCreateWithRoundedRect(CGRectInset(self.bounds, .75, .75), 9.25, 9.25, NULL);
+    _outline.frame = self.bounds; _outline.path = ring; CGPathRelease(ring);
     CGFloat h = NSHeight(self.bounds);
     _plus.frame = NSMakeRect(9, (h - 16) / 2, 16, 16);
     _title.frame = NSMakeRect(30, (h - 16) / 2, NSWidth(self.bounds) - 38, 16);
@@ -84,9 +99,34 @@ static BOOL DPOpenNewTab(NSMenu *menu) {
 
 CGFloat DPWashiNewTabRowRoom(NSView *list) { return DPWashiLive(&DPWashiNewTabTop) ? DPRowHeight + 2 : 0; }
 
+// Dia's own "+ New Tab" row: the list's item holding the "add" icon, found by that (its class has had other names).
+static char DPDiaRowKey;
+@interface DPWeakView : NSObject
+@property (nonatomic, weak) NSView *view;
+@end
+@implementation DPWeakView
+@end
+static NSView *DPDiaNewTabRow(NSView *list) {
+    DPWeakView *box = DPGet(list, &DPDiaRowKey);
+    if (box.view && box.view.superview) return box.view;
+    NSView *mine = DPGet(list, &DPRowKey);
+    NSView *icon = DPFindView(list, ^BOOL(NSView *v) {
+        return [v isKindOfClass:NSImageView.class] && [v.accessibilityLabel isEqual:@"add"] && !(mine && [v isDescendantOf:mine]);
+    });
+    NSView *item = icon;
+    while (item.superview && !DPIsKind(item.superview, "_TtCC7TabList11TabListView14CollectionView") && ![item.superview isKindOfClass:NSCollectionView.class]) item = item.superview;
+    if (!item.superview) return nil;
+    if (!box) { box = [DPWeakView new]; DPSet(list, &DPDiaRowKey, box); }
+    box.view = item;
+    return item;
+}
+
 void DPWashiNewTabRowIn(NSView *list, NSRect room) {
     DPWashiNewTabRow *row = DPGet(list, &DPRowKey);
-    if (NSIsEmptyRect(room)) { [row removeFromSuperview]; DPSet(list, &DPRowKey, nil); return; }
+    NSView *dia = DPDiaNewTabRow(list);
+    BOOL top = !NSIsEmptyRect(room);
+    if (dia && dia.hidden != top) dia.hidden = top;   // one New Tab row: ours at the top, or Dia's at the bottom
+    if (!top) { [row removeFromSuperview]; DPSet(list, &DPRowKey, nil); return; }
     if (!row) { row = [[DPWashiNewTabRow alloc] initWithFrame:NSZeroRect]; DPSet(list, &DPRowKey, row); }
     if (row.superview != list) [list addSubview:row];
     NSRect frame = NSMakeRect(NSMinX(room) + 6, NSMinY(room) + 1, NSWidth(room) - 12, DPRowHeight - 3);   // Dia's tab pill: 6pt in, 34 tall
@@ -96,11 +136,9 @@ void DPWashiNewTabRowIn(NSView *list, NSRect room) {
 // Dia's own row at the bottom hides while ours is at the top.
 static void DPNewTabCell_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPNewTabCell_layout, self);
-    BOOL hide = DPWashiLive(&DPWashiNewTabTop);
-    if (self.alphaValue != (hide ? 0 : 1)) self.alphaValue = hide ? 0 : 1;
+    if (self.alphaValue != 1) self.alphaValue = 1;   // (hidden instead, by DPWashiNewTabRowIn)
 }
 static NSView *DPNewTabCell_hitTest(NSView *self, SEL _cmd, NSPoint point) {
-    if (DPWashiLive(&DPWashiNewTabTop)) return nil;
     return DPCallOriginal(DPNewTabCell_hitTest, self, point);
 }
 
@@ -110,7 +148,6 @@ static void DPInstallWashiNewTabTop(void) {
 }
 
 static void DPApplyWashiNewTabTop(DPPatch *patch) {
-    for (NSView *cell in DPFindViews(DPNewTabCell)) { cell.alphaValue = DPWashiLive(patch) ? 0 : 1; }
     for (NSView *list in DPFindViews(DPDiaTabList)) list.needsLayout = YES;
 }
 
@@ -133,7 +170,7 @@ DP_PATCH(DPWashiNewTabTop) {
     .section = @"Sidebar",
     .requires = @"washiPaper",
     .rows = DPWashiArtNewTabTop,
-    .classes = DPClasses(DPDiaTabList, DPNewTabCell),
+    .classes = DPClasses(DPDiaTabList),
     .install = DPInstallWashiNewTabTop,
     .apply = DPApplyWashiNewTabTop,
     .verify = DPVerifyWashiNewTabTop,
