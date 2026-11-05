@@ -149,12 +149,16 @@ static void DPTapeOn(NSView *tab) {
     tape.shadowOffset = CGSizeMake(0, flipped ? 1 : -1);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(tab.window));
-    // On the corner of the tab's pill, not of its whole row (which runs to the window's edge): like Washi, it hangs
-    // 1pt off the left (clear of the window edge) and 3pt off the top, so its middle is 13pt in and 2.5pt down from the pill's top-left corner.
+    // On the corner of the tab's pill, not of its whole row (which runs to the window's edge): like Washi, it hangs off
+    // the pill's top edge, its middle 17pt in (so its end stays clear of the window's edge) and 2.5pt down.
     NSRect pill = DPTapePill(tab);
     CGFloat top = tab.isFlipped ? NSMinY(pill) : NSMaxY(pill);
-    tape.position = CGPointMake(NSMinX(pill) + 17, top + (tab.isFlipped ? 2.5 : -2.5));
-    tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -20 : 20) * M_PI / 180);
+    // The first tab in the list: the list's own top edge would cut the tape, so it sits lower and leans less.
+    NSView *cell = tab.superview;
+    BOOL first = cell.superview.isFlipped ? NSMinY(cell.frame) < 4 : NSMaxY(cell.frame) > NSHeight(cell.superview.bounds) - 4;
+    CGFloat inset = first ? 7 : 2.5;
+    tape.position = CGPointMake(NSMinX(pill) + 17, top + (tab.isFlipped ? inset : -inset));
+    tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -1 : 1) * (first ? 12 : 20) * M_PI / 180);
     if (tape.superlayer != tab.layer) [tab.layer addSublayer:tape];
     if (!DPTaped) DPTaped = [NSHashTable weakObjectsHashTable];
     [DPTaped addObject:tab];

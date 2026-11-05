@@ -112,19 +112,28 @@ static BOOL DPPressed(NSView *view) { return DPGet(view, &DPPressKey) != nil; }
 static CFTimeInterval DPLastScroll;
 static BOOL DPScrolling(void) { return CACurrentMediaTime() - DPLastScroll < .4; }
 
+// Room the tab list keeps under the favorites while they lean: the last row's corners and the first row's drop.
+CGFloat DPWashiFavoritesClearance(NSView *list) {
+    if (DPLean() <= 0) return 0;
+    BOOL any = NO;
+    for (NSView *sub in list.subviews) if (DPIsKind(sub, "_TtC10TabSurface11TabDockView") && sub.subviews.count && !sub.hidden) any = YES;
+    return any ? 5 : 0;
+}
+
 static void DPFeelTile(NSView *item) {
     if (!item.layer) return;
     NSUInteger place = 0;
     for (NSView *sib in item.superview.subviews) { if (sib == item) break; if (DPIsKind(sib, DPDiaPinnedTab)) place++; }
     BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(item), press = motion && DPPressed(item);
-    CGFloat tilt = DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] * DPLean() + (hover ? -.8 : 0);
-    // Dia cuts off anything above the first row of favorites: there, a tilted tile sits low enough that its corners
-    // stay in, and on hover it grows a touch instead of lifting into the edge.
+    // Every corner stays in its own row's room, however many rows of favorites there are: a tile leans no further than
+    // lifts its corners 1.5pt (rows are 6pt apart), the first row sits 2pt low so Dia's top edge doesn't cut it, and
+    // the tab list keeps clear of the last row (DPWashiFavoritesClearance).
+    CGFloat maxTilt = asin(1.5 / MAX(1, NSWidth(item.bounds) / 2)) * 180 / M_PI;
+    CGFloat tilt = MAX(-maxTilt, MIN(maxTilt, DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] * DPLean() + (hover ? -.8 : 0)));
     NSView *dock = item.superview;
     BOOL firstRow = dock.isFlipped ? NSMinY(item.frame) < 10 : NSMaxY(item.frame) > NSHeight(dock.bounds) - 10;
-    CGFloat rise = NSWidth(item.bounds) / 2 * fabs(sin(tilt * M_PI / 180)) + NSHeight(item.bounds) / 2 * (1 - cos(tilt * M_PI / 180));
-    CGFloat lift = firstRow ? -MIN(5, ceil(rise) + (tilt ? 1 : 0)) : (hover && !press ? 2.5 : 0);
-    CGFloat scale = press ? .94 : (firstRow && hover ? 1.03 : 1);   // Washi's .pin:active scale(.94)
+    CGFloat lift = firstRow ? (tilt ? -2 : 0) : (hover && !press ? 2.5 : 0);
+    CGFloat scale = press ? .94 : 1;   // Washi's .pin:active scale(.94)
     DPSpyOn(item, motion);
     DPFeelSet(item, DPFeel(item, tilt, lift, scale), press ? .14 : .38);
     DPPinTape(item, place);
@@ -150,8 +159,11 @@ static void DPFeelTab(NSView *tab) {
     if (!tab.layer) return;
     BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(tab), press = motion && DPPressed(tab);
     CGFloat lean = DPTabSelectedNow(tab) ? MAX(-1, MIN(1, DPTabRot(tab) * -.5 * DPLean())) : 0;   // never so far a corner leaves the sidebar   // Washi's .tab.on rotate(rot × -.5°)
+    // The first tab in the list doesn't lift: the list's top edge would cut it (and its tape).
+    NSView *cell = tab.superview;
+    BOOL first = cell.superview.isFlipped ? NSMinY(cell.frame) < 4 : NSMaxY(cell.frame) > NSHeight(cell.superview.bounds) - 4;
     DPSpyOn(tab, motion);
-    DPFeelSet(tab, DPFeel(tab, lean, hover && !press ? 1.5 : 0, press ? .97 : 1), press ? .14 : .38);
+    DPFeelSet(tab, DPFeel(tab, lean, hover && !press && !first ? 1.5 : 0, press ? .97 : 1), press ? .14 : .38);
 }
 
 // The handwritten name (Washi Handwriting) leans like Washi's Scrapbook space name.

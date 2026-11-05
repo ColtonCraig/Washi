@@ -62,8 +62,7 @@ static NSString *DPSpaceName(NSWindow *window) {
 static void DPHandWatch(NSWindow *window) {
     if (!window || DPGet(window, &DPHandWatchKey)) return;
     DPWashiHandWatcher *watcher = [DPWashiHandWatcher new];
-    watcher.window = window;
-    watcher.space = DPSpaceName(window);
+    watcher.window = window;   // its space starts unknown, so the first title with one in it lays the sidebar out
     [window addObserver:watcher forKeyPath:@"title" options:0 context:NULL];
     DPSet(window, &DPHandWatchKey, watcher);
 }
@@ -81,7 +80,10 @@ void DPWashiNewTabRowIn(NSView *list, NSRect room);
 void DPWashiTicketIn(NSView *list, NSRect room);
 void DPWashiTicketGone(NSView *list);
 
+CGFloat DPWashiFavoritesClearance(NSView *list);   // WashiScrapbook.m: room under tilted favorites
+
 static void DPHandIn(NSView *list) {
+    DPHandWatch(list.window);   // always: at launch the title has no space in it yet, and the name comes with it
     DPWashiHandLabel *label = DPGet(list, &DPHandKey);
     NSView *scroll = DPHandScroll(list);
     NSString *name = DPWashiLive(&DPWashiHand) ? DPSpaceName(list.window) : nil;
@@ -91,10 +93,11 @@ static void DPHandIn(NSView *list) {
     BOOL ours = moved && NSEqualRects(moved.rectValue, scroll.frame);
     NSRect frame = scroll ? (ours ? dia.rectValue : scroll.frame) : NSZeroRect;   // where Dia put it
     CGFloat nameTop = name.length ? DPHandRoom : 0, rowTop = scroll ? DPWashiNewTabRowRoom(list) : 0;
-    CGFloat top = nameTop + rowTop, bottom = scroll ? DPWashiTicketRoom(list) : 0;
+    CGFloat clear = scroll ? DPWashiFavoritesClearance(list) : 0;   // tilted favorites never touch the first tab
+    CGFloat top = clear + nameTop + rowTop, bottom = scroll ? DPWashiTicketRoom(list) : 0;
     if (scroll && NSHeight(frame) - top - bottom < 110) {   // a sidebar too short keeps its tabs: the ticket goes first
         bottom = 0;
-        if (NSHeight(frame) - top < 110) { top = rowTop; nameTop = 0; }
+        if (NSHeight(frame) - top < 110) { top = clear + rowTop; nameTop = 0; }
     }
     if (!bottom) DPWashiTicketGone(list);
     if (!nameTop && label) { [label removeFromSuperview]; DPSet(list, &DPHandKey, nil); label = nil; }
@@ -114,9 +117,9 @@ static void DPHandIn(NSView *list) {
     }
     DPHandWatch(list.window);
     if (bottom) DPWashiTicketIn(list, NSMakeRect(NSMinX(frame), list.isFlipped ? NSMaxY(frame) - bottom : NSMinY(frame), NSWidth(frame), bottom));
-    DPWashiNewTabRowIn(list, rowTop ? NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) + nameTop : NSMaxY(frame) - nameTop - rowTop, NSWidth(frame), rowTop) : NSZeroRect);
+    DPWashiNewTabRowIn(list, rowTop ? NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) + clear + nameTop : NSMaxY(frame) - clear - nameTop - rowTop, NSWidth(frame), rowTop) : NSZeroRect);
     if (!nameTop) return;
-    NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) : NSMaxY(frame) - DPHandRoom, NSWidth(frame), DPHandRoom);
+    NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) + clear : NSMaxY(frame) - clear - DPHandRoom, NSWidth(frame), DPHandRoom);
     if (!label) {
         label = [DPWashiHandLabel labelWithString:@""];
         label.font = DPCaveat(21);
