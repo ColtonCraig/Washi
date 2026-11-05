@@ -44,6 +44,8 @@ re-signing it.
   ```
 
   Add `--purge` to also remove DiaTweaks' files. Then run the install line again whenever you want Washi back.
+- **A toast still looks like Dia's:** Washi writes what Dia's toast window is made of to
+  `~/Library/Logs/DiaTweaks-Washi-toast.txt` the first time one shows. Send that file over and it can be fixed.
 - **"Permission denied" on a work Mac:** Dia was probably installed by IT and is owned by the system. Install Dia
   yourself from diabrowser.com (drag it to Applications), or ask IT, then run the line again.
 
@@ -51,4 +53,5 @@ re-signing it.
 
 One folder per tweak, each a DiaTweaks patch (`DP_PATCH`). All of them are options of **Washi** (`WashiPaper`) and do
 nothing while it's off. `WashiShared` holds the switches and helpers they share, and `WashiLook` the Settings page
-(the look picker and the drawings). Each pushed change is built on a Mac by `.github/workflows/dia-tweaks.yml`.
+(the look picker, each space's colors and the drawings). `WashiGuide` is the quick-start guide (Help › Washi
+Quick-start Guide). Each pushed change is built on a Mac by `.github/workflows/dia-tweaks.yml`.
