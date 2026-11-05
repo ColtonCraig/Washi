@@ -675,7 +675,7 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
             [DPLookHex(0xff0033) setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(t) + 11, NSMidY(t) - 8, 16, 16) xRadius:4 yRadius:4] fill];
             DPArtText(@"Now playing", NSMakePoint(NSMinX(t) + 46, NSMinY(t) + 3), DPCaveat(17), [ink colorWithAlphaComponent:.6]);
             DPArtText(@"The Scam that Broke Polls", NSMakePoint(NSMinX(t) + 46, NSMinY(t) + 24), DPWashiFigtree(11.5, NSFontWeightSemibold), ink);
-            for (NSUInteger i = 0; i < 3; i++) { CGFloat bh = @[ @9, @14, @6 ][i].doubleValue; [tape setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMaxX(t) - 22 + i * 5, NSMidY(t) + 7 - bh, 3, bh) xRadius:1 yRadius:1] fill]; }
+            for (NSUInteger i = 0; i < 3; i++) { static const CGFloat bars[] = { 9, 14, 6 }; CGFloat bh = bars[i]; [tape setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMaxX(t) - 22 + i * 5, NSMidY(t) + 7 - bh, 3, bh) xRadius:1 yRadius:1] fill]; }
         });
         DPLookTape(NSMakePoint(NSMaxX(t) - 30, NSMinY(t)), 30, 11, 6, tape);
     } else if ([spot isEqual:@"folders"]) {   // a manila folder in its color, its icon, its tabs on a line
