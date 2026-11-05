@@ -7,6 +7,7 @@
 
 extern DPPatch DPWashiScrapbook, DPWashiLift;
 static char DPSpyKey, DPPinTapeKey;
+static BOOL DPFlippedLayer(NSView *view);
 CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped);   // WashiTape.m
 void DPWashiTapeRecolor(CALayer *tape);
 
