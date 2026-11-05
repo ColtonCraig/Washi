@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 @interface NSObject (DPTapeSwiftFields)
 - (id)safeSwiftValueForKey:(NSString *)key;  // AXCoreUtilities: reads Swift properties the Obj-C runtime hides.
@@ -17,11 +18,12 @@ static const DPTapeChoice DPTapes[] = {
     { @"clover", @"Clover", 0x1f9d57 }, { @"lagoon", @"Lagoon", 0x0e9f9f }, { @"grape", @"Grape", 0x7b46ff }, { @"lime", @"Lime", 0x74b000 },
 };
 
-static NSMenu *DPTapeChoices(void) {
-    NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Tape"];
-    for (size_t i = 0; i < sizeof DPTapes / sizeof *DPTapes; i++)
-        [menu addItemWithTitle:DPTapes[i].name action:nil keyEquivalent:@""].representedObject = DPTapes[i].key;
-    return menu;
+// For the Washi look picker: the tapes, in order.
+NSUInteger DPWashiTapeCount(void) { return sizeof DPTapes / sizeof *DPTapes; }
+void DPWashiTapeAt(NSUInteger i, NSString **key, NSString **name, uint32_t *rgb) {
+    if (key) *key = DPTapes[i].key;
+    if (name) *name = DPTapes[i].name;
+    if (rgb) *rgb = DPTapes[i].rgb;
 }
 
 static uint32_t DPTapeRGB(void) {
@@ -110,7 +112,7 @@ static BOOL DPCalm(void) { return NSWorkspace.sharedWorkspace.accessibilityDispl
 static void DPTapeOn(NSView *tab) {
     if (!tab.layer) return;
     CALayer *tape = DPGet(tab, &DPTapeKey);
-    BOOL want = DPWashiTape.on && DPTapeTabSelected(tab) && !tab.hiddenOrHasHiddenAncestor;
+    BOOL want = DPWashiLive(&DPWashiTape) && DPTapeTabSelected(tab) && !tab.hiddenOrHasHiddenAncestor;
     if (!want) {
         if (tape) { [tape removeFromSuperlayer]; DPSet(tab, &DPTapeKey, nil); }
         return;
@@ -170,7 +172,7 @@ static void DPTapeTab_layout(NSView *self, SEL _cmd) {
 // Picking a tab doesn't lay the tabs out again, but it does repaint the selection fill: the cue to move the tape.
 static void DPTapeFill_updateLayer(NSView *self, SEL _cmd) {
     DPCallOriginal(DPTapeFill_updateLayer, self);
-    if (!DPWashiTape.on) return;
+    if (!DPWashiLive(&DPWashiTape)) return;
     static BOOL queued;
     if (queued) return;
     queued = YES;
@@ -197,9 +199,9 @@ static NSString *DPVerifyWashiTape(DPPatch *patch) {
         BOOL sel = DPTapeTabSelected(tab);
         CALayer *tape = DPGet(tab, &DPTapeKey);
         selected += sel; taped += tape && tape.superlayer == tab.layer;
-        if (!patch->on && tape) return @"tape left on a tab";
+        if (!DPWashiLive(patch) && tape) return @"tape left on a tab";
     }
-    if (patch->on && selected && !taped) return @"selected tab has no tape";
+    if (DPWashiLive(patch) && selected && !taped) return @"selected tab has no tape";
     return nil;
 }
 
@@ -210,11 +212,11 @@ DP_PATCH(DPWashiTape) {
     .detail = @"A strip of Washi tape on the selected tab, torn at the ends and stuck on at a tilt.",
     .symbol = @"bandage.fill",
     .tint = @"systemPinkColor",
-    .section = @"Washi",
+    .section = @"Sidebar",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaTabView, DPDiaColorFill),
     .choice = @"washiTapeChoice",
     .defaultChoice = @"tangerine",
-    .choices = DPTapeChoices,
     .install = DPInstallWashiTape,
     .apply = DPApplyWashiTape,
     .verify = DPVerifyWashiTape,

@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Washi Cards: the selected tab and the pinned favorites become scraps of Washi's card paper, the paper mixed toward
 // white with a faint ink edge and Washi's "cut" shadow (a hard offset, like paper cut out and laid on the desk, over a
@@ -136,7 +137,7 @@ static void DPCardTab(NSView *shape) {
     NSView *fill = shape.subviews.lastObject;   // ARCUI.FlippedView, holding the site's color
     for (NSView *sub in shape.subviews) if (!DPIsKind(sub, "_TtC5TabUIP33_903BE4B7F5DFD8B21A7A465D1A9EF8E416RimHighlightView") && ![sub isKindOfClass:DPWashiCardFill.class]) fill = sub;
     if (!fill) return;
-    BOOL on = DPWashiCards.on;
+    BOOL on = DPWashiLive(&DPWashiCards);
     DPCardIn(fill, nil, background, shape, 1, on);
     DPCardAppearance(tab, on && !shape.hidden);
 }
@@ -146,7 +147,7 @@ static void DPCardTile(NSView *item) {
     NSView *clip = nil, *well = nil;
     for (NSView *sub in item.subviews) for (NSView *inner in sub.subviews) if (DPIsKind(inner, DPDebossed)) { clip = sub; well = inner; }
     if (!clip) return;
-    DPCardIn(clip, well, item, clip, 2, DPWashiCards.on);
+    DPCardIn(clip, well, item, clip, 2, DPWashiLive(&DPWashiCards));
 }
 
 static void DPCardShape_layout(NSView *self, SEL _cmd) {
@@ -164,7 +165,7 @@ static void DPCardTile_layout(NSView *self, SEL _cmd) {
 // Dia puts the site's appearance back each time it repaints the selected tab's color.
 static void DPCardFill_updateLayer(NSView *self, SEL _cmd) {
     DPCallOriginal(DPCardFill_updateLayer, self);
-    if (!DPWashiCards.on) return;
+    if (!DPWashiLive(&DPWashiCards)) return;
     NSView *shape = DPCardAncestor(self, DPDiaTabShape);
     if (shape) DPCardTab(shape);
 }
@@ -187,12 +188,12 @@ static void DPApplyWashiCards(DPPatch *patch) {
 static NSString *DPVerifyWashiCards(DPPatch *patch) {
     for (NSView *item in DPFindViews(DPDiaPinnedTab)) {
         BOOL has = DPFindView(item, ^BOOL(NSView *v) { return [v isKindOfClass:DPWashiCardFill.class]; }) != nil;
-        if (has != patch->on) return patch->on ? @"a favorite has no card" : @"a card left on a favorite";
+        if (has != DPWashiLive(patch)) return DPWashiLive(patch) ? @"a favorite has no card" : @"a card left on a favorite";
     }
     for (NSView *shape in DPFindViews(DPDiaTabShape)) {
         if (shape.hiddenOrHasHiddenAncestor || !DPCardAncestor(shape, DPDiaTabView)) continue;
         BOOL has = DPFindView(shape, ^BOOL(NSView *v) { return [v isKindOfClass:DPWashiCardFill.class]; }) != nil;
-        if (has != patch->on) return patch->on ? @"the selected tab has no card" : @"a card left on a tab";
+        if (has != DPWashiLive(patch)) return DPWashiLive(patch) ? @"the selected tab has no card" : @"a card left on a tab";
     }
     return nil;
 }
@@ -204,7 +205,8 @@ DP_PATCH(DPWashiCards) {
     .detail = @"The selected tab and your favorites as scraps of Washi card paper, with Washi’s cut-paper shadow.",
     .symbol = @"rectangle.on.rectangle.angled.fill rectangle.on.rectangle",
     .tint = @"systemBrownColor",
-    .section = @"Washi",
+    .section = @"Sidebar",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaTabShape, DPDiaTabView, DPDiaPinnedTab, DPDiaColorFill, DPTabBackground, DPDebossed),
     .install = DPInstallWashiCards,
     .apply = DPApplyWashiCards,

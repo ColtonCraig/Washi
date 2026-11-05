@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Paper Sheet: the web page as a sheet laid on Washi's paper, with Washi's cut-paper shadow (a hard 2pt offset over a
 // soft one) under its edge. It uses the gap Dia leaves around the page, so it never moves the page; with
@@ -17,7 +18,7 @@ static CGFloat DPSheetRadius(NSView *container) {
 
 static void DPSheetIn(NSView *container) {
     NSView *shadow = DPGet(container, &DPSheetKey);
-    if (!DPWashiSheet.on) { [shadow removeFromSuperview]; DPSet(container, &DPSheetKey, nil); return; }
+    if (!DPWashiLive(&DPWashiSheet)) { [shadow removeFromSuperview]; DPSet(container, &DPSheetKey, nil); return; }
     if (!shadow) {
         shadow = DPWashiCutShadow(2, DPSheetRadius(container));
         shadow.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -45,7 +46,7 @@ static NSString *DPVerifyWashiSheet(DPPatch *patch) {
     for (NSView *container in DPFindViews(DPDiaContentContainer)) {
         if (container.hiddenOrHasHiddenAncestor) continue;
         BOOL has = [DPGet(container, &DPSheetKey) superview] == container;
-        if (has != patch->on) return patch->on ? @"page has no sheet shadow" : @"sheet shadow left under the page";
+        if (has != DPWashiLive(patch)) return DPWashiLive(patch) ? @"page has no sheet shadow" : @"sheet shadow left under the page";
     }
     return nil;
 }
@@ -57,7 +58,8 @@ DP_PATCH(DPWashiSheet) {
     .detail = @"The web page as a sheet laid on Washi’s paper, with the cut-paper shadow under its edge.",
     .symbol = @"doc.fill doc",
     .tint = @"systemBrownColor",
-    .section = @"Washi",
+    .section = @"Window",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaContentContainer),
     .disabledBy = @"edgeToEdge",   // no gap around the page to show it in
     .install = DPInstallWashiSheet,

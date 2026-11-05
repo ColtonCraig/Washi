@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 #import <CoreText/CoreText.h>
 #import "Caveat.h"
 
@@ -66,7 +67,7 @@ static NSView *DPHandScroll(NSView *list) {
 static void DPHandIn(NSView *list) {
     DPWashiHandLabel *label = DPGet(list, &DPHandKey);
     NSView *scroll = DPHandScroll(list);
-    NSString *name = DPWashiHand.on ? DPSpaceName(list.window) : nil;
+    NSString *name = DPWashiLive(&DPWashiHand) ? DPSpaceName(list.window) : nil;
     // The frame this tweak last gave the tab list, and Dia's from before it. When the list still has ours, Dia hasn't
     // placed it since, so it isn't moved again; off, Dia's goes back.
     NSValue *moved = scroll ? DPGet(scroll, &DPHandMovedKey) : nil, *dia = scroll ? DPGet(scroll, &DPHandDiaKey) : nil;
@@ -138,7 +139,7 @@ static NSString *DPVerifyWashiHand(DPPatch *patch) {
         if (list.hiddenOrHasHiddenAncestor) continue;
         NSTextField *label = DPGet(list, &DPHandKey);
         NSString *name = DPSpaceName(list.window);
-        if (!patch->on) { if (label.superview) return @"name left on the sidebar"; continue; }
+        if (!DPWashiLive(patch)) { if (label.superview) return @"name left on the sidebar"; continue; }
         if (!name.length || label.hidden) continue;
         if (!label.superview) return @"no space name on the sidebar";
         if (![label.stringValue isEqual:name]) return @"space name is out of date";
@@ -155,7 +156,8 @@ DP_PATCH(DPWashiHand) {
     .detail = @"The space’s name in Washi’s handwriting at the top of its tabs.",
     .symbol = @"pencil.and.scribble pencil",
     .tint = @"systemTealColor",
-    .section = @"Washi",
+    .section = @"Sidebar",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaTabList, DPTabListScroll),
     .install = DPInstallWashiHand,
     .apply = DPApplyWashiHand,

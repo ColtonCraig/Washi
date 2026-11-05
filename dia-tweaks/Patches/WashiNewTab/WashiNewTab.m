@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 #import "StdPatch/Hide.h"
 
 // Washi New Tab: Dia's own new tab page on Washi's paper, with Washi's hello in handwriting (good evening, and your
@@ -44,7 +45,7 @@ static BOOL DPInNewTab(NSView *view) {
 }
 
 static BOOL DPIsWashiNewTabLogo(NSView *view) {
-    return (DPIsKind(view, DPDiaNewTabLogo) || DPIsKind(view, DPDiaNewTabLogoParticles)) && DPInNewTab(view);
+    return DPWashiPaper.on && (DPIsKind(view, DPDiaNewTabLogo) || DPIsKind(view, DPDiaNewTabLogoParticles)) && DPInNewTab(view);
 }
 
 static NSString *DPGreeting(void) {
@@ -103,8 +104,8 @@ static void DPNewTabIn(NSView *page) {
     DPWashiHello *hello = DPGet(page, &DPHelloKey);
     NSView *logo = DPFindView(page, ^BOOL(NSView *v) { return DPIsKind(v, DPDiaNewTabLogo); });
     NSView *bar = DPFindView(page, ^BOOL(NSView *v) { return DPIsKind(v, DPDiaAssistantPanel); });
-    DPRowCards(page, DPWashiNewTab.on);
-    if (!DPWashiNewTab.on) {
+    DPRowCards(page, DPWashiLive(&DPWashiNewTab));
+    if (!DPWashiLive(&DPWashiNewTab)) {
         [paper removeFromSuperview]; [hello removeFromSuperview];
         DPSet(page, &DPNTPaperKey, nil); DPSet(page, &DPHelloKey, nil);
         return;
@@ -137,7 +138,7 @@ static void DPInstallWashiNewTab(void) {
     DPHook(DPDiaNewTabPage, @selector(layout), (IMP)DPNewTab_layout);
     static NSTimer *clock;
     clock = [NSTimer scheduledTimerWithTimeInterval:20 repeats:YES block:^(NSTimer *t) {
-        if (!DPWashiNewTab.on) return;
+        if (!DPWashiLive(&DPWashiNewTab)) return;
         for (NSView *page in DPFindViews(DPDiaNewTabPage)) [(DPWashiHello *)DPGet(page, &DPHelloKey) tick];
     }];
     clock.tolerance = 5;
@@ -153,9 +154,9 @@ static NSString *DPVerifyWashiNewTab(DPPatch *patch) {
     if (hides) return hides;
     for (NSView *page in DPFindViews(DPDiaNewTabPage)) {
         NSView *paper = DPGet(page, &DPNTPaperKey);
-        if ((paper.superview == page) != patch->on) return patch->on ? @"new tab page has no paper" : @"paper left on the new tab page";
+        if ((paper.superview == page) != DPWashiLive(patch)) return DPWashiLive(patch) ? @"new tab page has no paper" : @"paper left on the new tab page";
         DPWashiHello *hello = DPGet(page, &DPHelloKey);
-        if (patch->on && hello && !hello.hidden) {
+        if (DPWashiLive(patch) && hello && !hello.hidden) {
             NSView *bar = DPFindView(page, ^BOOL(NSView *v) { return DPIsKind(v, DPDiaAssistantPanel); });
             NSRect barFrame = [hello.superview convertRect:bar.bounds fromView:bar];
             if (NSIntersectsRect(hello.frame, barFrame)) return @"hello runs into the command bar";
@@ -175,7 +176,7 @@ static NSView *DPBarBox(NSView *panel) {
 
 static void DPCommandBarIn(NSView *panel) {
     NSView *box = DPBarBox(panel), *card = DPGet(panel, &DPBarCardKey), *shadow = DPGet(panel, &DPBarShadowKey);
-    if (!DPWashiCommandBar.on || !box) {
+    if (!DPWashiLive(&DPWashiCommandBar) || !box) {
         [card removeFromSuperview]; [shadow removeFromSuperview];
         DPSet(panel, &DPBarCardKey, nil); DPSet(panel, &DPBarShadowKey, nil);
         return;
@@ -207,7 +208,7 @@ static NSString *DPVerifyWashiCommandBar(DPPatch *patch) {
         NSView *box = DPBarBox(panel);
         if (!box || panel.hiddenOrHasHiddenAncestor) continue;
         BOOL has = [DPGet(panel, &DPBarCardKey) superview] == box;
-        if (has != patch->on) return patch->on ? @"command bar has no card" : @"card left on the command bar";
+        if (has != DPWashiLive(patch)) return DPWashiLive(patch) ? @"command bar has no card" : @"card left on the command bar";
     }
     return nil;
 }
@@ -219,7 +220,8 @@ DP_PATCH(DPWashiNewTab) {
     .detail = @"Dia’s new tab page on Washi’s paper, with a handwritten hello and the date where the logo was.",
     .symbol = @"sun.horizon.fill sun.horizon",
     .tint = @"systemOrangeColor",
-    .section = @"Washi",
+    .section = @"New Tab",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaNewTabPage, DPDiaNewTabLogo, DPDiaNewTabLogoParticles, DPDiaAssistantPanel),
     .hides = DPIsWashiNewTabLogo,
     .install = DPInstallWashiNewTab,
@@ -234,7 +236,8 @@ DP_PATCH(DPWashiCommandBar) {
     .detail = @"Dia’s Ask anything bar as a card of Washi’s paper, with the cut-paper shadow.",
     .symbol = @"text.bubble.fill text.bubble",
     .tint = @"systemIndigoColor",
-    .section = @"Washi",
+    .section = @"New Tab",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaAssistantPanel, DPDiaCommandBar),
     .install = DPInstallWashiCommandBar,
     .apply = DPApplyWashiCommandBar,

@@ -5,6 +5,7 @@
 // the window's appearance. It sits just above Dia's theme tint, so everything Dia draws on top stays as it is.
 
 extern DPPatch DPWashiPaper;
+NSArray<NSView *> *DPWashiLookRows(void);   // WashiLook.m
 static char DPPaperKey;
 
 typedef struct { NSString *key, *name; uint32_t light, dark; } DPPaperChoice;
@@ -26,11 +27,13 @@ NSColor *DPWashiPaperColor(BOOL dark) {
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
 }
 
-static NSMenu *DPPaperChoices(void) {
-    NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Paper"];
-    for (size_t i = 0; i < sizeof DPPapers / sizeof *DPPapers; i++)
-        [menu addItemWithTitle:DPPapers[i].name action:nil keyEquivalent:@""].representedObject = DPPapers[i].key;
-    return menu;
+// For the Washi look picker: the papers, in order.
+NSUInteger DPWashiPaperCount(void) { return sizeof DPPapers / sizeof *DPPapers; }
+void DPWashiPaperAt(NSUInteger i, NSString **key, NSString **name, uint32_t *light, uint32_t *dark) {
+    if (key) *key = DPPapers[i].key;
+    if (name) *name = DPPapers[i].name;
+    if (light) *light = DPPapers[i].light;
+    if (dark) *dark = DPPapers[i].dark;
 }
 
 static NSColor *DPHex(uint32_t rgb) {
@@ -148,6 +151,18 @@ static void DPPaperSidebar_layout(NSView *self, SEL _cmd) {
     if (tint) DPPaperOver(tint);
 }
 
+// Everything the Washi tweaks drew follows a new paper or tape at once.
+void DPWashiRepaintAll(void) {
+    for (NSWindow *window in NSApp.windows) {
+        NSView *root = window.contentView.superview ?: window.contentView;
+        if (!root) continue;
+        DPFindView(root, ^BOOL(NSView *view) {
+            if ([NSStringFromClass(view.class) hasPrefix:@"DPWashi"] && [view respondsToSelector:@selector(paint)]) [(id)view paint];
+            return NO;
+        });
+    }
+}
+
 static void DPApplyWashiPaper(DPPatch *patch) {
     for (NSView *host in DPPaperHosts()) {
         NSView *tint = DPPaperTintIn(host);
@@ -155,6 +170,12 @@ static void DPApplyWashiPaper(DPPatch *patch) {
         DPPaperOver(tint);
         [(DPWashiPaperView *)DPGet(tint.superview, &DPPaperKey) paint];
     }
+    // Washi is one switch: its options follow it, and a new paper repaints everything Washi drew.
+    for (NSUInteger k = 0; k < DPPatchCount; k++) {
+        DPPatch *option = DPPatches[k];
+        if (option != patch && DPRequired(option) == patch && option->apply && !option->unavailable) option->apply(option);
+    }
+    DPWashiRepaintAll();
 }
 
 static NSString *DPVerifyWashiPaper(DPPatch *patch) {
@@ -176,8 +197,8 @@ static void DPInstallWashiPaper(void) {
 DP_PATCH(DPWashiPaper) {
     .key = @"washiPaper",
     .order = 5,
-    .title = @"Washi Paper",
-    .detail = @"Washi’s paper behind the tabs and sidebar: its color and a fine grain, light and dark.",
+    .title = @"Washi",
+    .detail = @"Washi’s look in Dia: its paper and grain behind everything, with cards, tape and handwriting as options below. Pick your paper and tape here.",
     .symbol = @"doc.richtext.fill doc.fill",
     .tint = @"systemOrangeColor",
     .section = @"Washi",
@@ -185,7 +206,7 @@ DP_PATCH(DPWashiPaper) {
     .disabledBy = @"windowMaterial",   // a material or glass shows instead
     .choice = @"washiPaperChoice",
     .defaultChoice = @"cream",
-    .choices = DPPaperChoices,
+    .rows = DPWashiLookRows,
     .install = DPInstallWashiPaper,
     .apply = DPApplyWashiPaper,
     .verify = DPVerifyWashiPaper,

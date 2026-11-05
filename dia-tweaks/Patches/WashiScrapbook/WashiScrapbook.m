@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Two Washi feels for the sidebar, which share one transform per view:
 //  Washi Scrapbook: favorites tilted a little each way and the handwritten space name at a slant, like Washi's
@@ -15,7 +16,7 @@ void DPWashiTapeRecolor(CALayer *tape);
 // or the other. Washi hangs it over the edge; Dia clips the sidebar above the first row, so here it sits just inside.
 static void DPPinTape(NSView *item, NSUInteger place) {
     CALayer *tape = DPGet(item, &DPPinTapeKey);
-    if (!DPWashiScrapbook.on || !item.layer) { [tape removeFromSuperlayer]; DPSet(item, &DPPinTapeKey, nil); return; }
+    if (!DPWashiLive(&DPWashiScrapbook) || !item.layer) { [tape removeFromSuperlayer]; DPSet(item, &DPPinTapeKey, nil); return; }
     BOOL flipped = DPFlippedLayer(item);
     if (!tape) { tape = DPWashiTapeStrip(CGSizeMake(22, 9), flipped); DPSet(item, &DPPinTapeKey, tape); }
     else DPWashiTapeRecolor(tape);
@@ -90,17 +91,17 @@ static void DPFeelTile(NSView *item) {
     if (!item.layer) return;
     NSUInteger place = 0;
     for (NSView *sib in item.superview.subviews) { if (sib == item) break; if (DPIsKind(sib, DPDiaPinnedTab)) place++; }
-    BOOL hover = DPWashiLift.on && DPPointerIn(item);
-    CGFloat tilt = DPWashiScrapbook.on ? DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] : 0;
-    DPSpyOn(item, DPWashiLift.on);
+    BOOL hover = DPWashiLive(&DPWashiLift) && DPPointerIn(item);
+    CGFloat tilt = DPWashiLive(&DPWashiScrapbook) ? DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] : 0;
+    DPSpyOn(item, DPWashiLive(&DPWashiLift));
     DPFeelSet(item, DPFeel(item, tilt + (hover ? -.6 : 0), hover ? 2 : 0));
     DPPinTape(item, place);
 }
 
 static void DPFeelTab(NSView *tab) {
     if (!tab.layer) return;
-    BOOL hover = DPWashiLift.on && DPPointerIn(tab);
-    DPSpyOn(tab, DPWashiLift.on);
+    BOOL hover = DPWashiLive(&DPWashiLift) && DPPointerIn(tab);
+    DPSpyOn(tab, DPWashiLive(&DPWashiLift));
     DPFeelSet(tab, DPFeel(tab, 0, hover ? 1 : 0));
 }
 
@@ -112,7 +113,7 @@ static void DPFeelName(NSView *list) {
         if (![sub isKindOfClass:label] || !sub.layer) continue;
         CGFloat cx = NSMidX(sub.bounds), cy = NSMidY(sub.bounds);
         CGAffineTransform t = CGAffineTransformMakeTranslation(cx, cy);
-        t = CGAffineTransformRotate(t, (DPWashiScrapbook.on ? (DPFlippedLayer(sub) ? 1.6 : -1.6) : 0) * M_PI / 180);
+        t = CGAffineTransformRotate(t, (DPWashiLive(&DPWashiScrapbook) ? (DPFlippedLayer(sub) ? 1.6 : -1.6) : 0) * M_PI / 180);
         t = CGAffineTransformTranslate(t, -cx, -cy);
         if (!CGAffineTransformEqualToTransform(sub.layer.affineTransform, t)) sub.layer.affineTransform = t;
     }
@@ -141,7 +142,7 @@ static NSString *DPVerifyScrapbook(DPPatch *patch) {
     for (NSView *item in DPFindViews(DPDiaPinnedTab)) {
         if (item.hiddenOrHasHiddenAncestor || DPPointerIn(item)) continue;
         BOOL tilted = !CATransform3DIsIdentity(item.layer.sublayerTransform);
-        if (tilted != patch->on) return patch->on ? @"a favorite isn't tilted" : @"a favorite left tilted";
+        if (tilted != DPWashiLive(patch)) return DPWashiLive(patch) ? @"a favorite isn't tilted" : @"a favorite left tilted";
     }
     return nil;
 }
@@ -149,8 +150,8 @@ static NSString *DPVerifyScrapbook(DPPatch *patch) {
 static NSString *DPVerifyLift(DPPatch *patch) {
     for (NSView *tab in DPFindViews(DPDiaTabView)) {
         if (tab.hiddenOrHasHiddenAncestor) continue;
-        if ((DPGet(tab, &DPSpyKey) != nil) != patch->on) return patch->on ? @"a tab isn't watching the pointer" : @"a tab still watches the pointer";
-        if (!patch->on && !CATransform3DIsIdentity(tab.layer.sublayerTransform)) return @"a tab left lifted";
+        if ((DPGet(tab, &DPSpyKey) != nil) != DPWashiLive(patch)) return DPWashiLive(patch) ? @"a tab isn't watching the pointer" : @"a tab still watches the pointer";
+        if (!DPWashiLive(patch) && !CATransform3DIsIdentity(tab.layer.sublayerTransform)) return @"a tab left lifted";
     }
     return nil;
 }
@@ -162,7 +163,8 @@ DP_PATCH(DPWashiScrapbook) {
     .detail = @"Favorites tilted a little each way and the space name at a slant, like Washi’s Scrapbook look.",
     .symbol = @"book.closed.fill book.closed",
     .tint = @"systemPurpleColor",
-    .section = @"Washi",
+    .section = @"Sidebar",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaPinnedTab, DPDiaTabList),
     .install = DPInstallFeel,
     .apply = DPApplyFeel,
@@ -176,7 +178,8 @@ DP_PATCH(DPWashiLift) {
     .detail = @"Tabs and favorites lift off the paper under the pointer, on Washi’s spring.",
     .symbol = @"hand.point.up.left.fill hand.point.up.left",
     .tint = @"systemMintColor",
-    .section = @"Washi",
+    .section = @"Sidebar",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaPinnedTab, DPDiaTabView),
     .install = DPInstallFeel,
     .apply = DPApplyFeel,

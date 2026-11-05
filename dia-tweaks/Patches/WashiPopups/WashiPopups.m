@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Paper Pop-ups: Dia's pop-ups (the downloads list, the site menu and the rest that open from the browser window) on
 // Washi's card paper, in the window's own light or dark instead of Dia's dark glass. The pop-up keeps its own shape,
@@ -19,7 +20,7 @@ static void DPPopPaper(NSPopover *popover, NSView *anchor) {
     NSView *view = popover.contentViewController.view;
     if (!view) return;
     NSView *card = DPGet(popover, &DPPopCardKey);
-    if (!DPWashiPopups.on) {
+    if (!DPWashiLive(&DPWashiPopups)) {
         [card removeFromSuperview]; DPSet(popover, &DPPopCardKey, nil);
         id saved = DPGet(popover, &DPPopLookKey);
         if (saved) { popover.appearance = saved == NSNull.null ? nil : saved; DPSet(popover, &DPPopLookKey, nil); }
@@ -41,7 +42,7 @@ static void DPPopPaper(NSPopover *popover, NSView *anchor) {
 static BOOL DPPopFromDia(NSView *anchor) { return DPIsKind(anchor.window, DPDiaWindow); }
 
 static void DPPop_show(NSPopover *self, SEL _cmd, NSRect rect, NSView *anchor, NSRectEdge edge) {
-    BOOL ours = DPWashiPopups.on && DPPopFromDia(anchor);
+    BOOL ours = DPWashiLive(&DPWashiPopups) && DPPopFromDia(anchor);
     if (ours) {   // before it draws, so it never flashes dark
         if (!DPGet(self, &DPPopLookKey)) DPSet(self, &DPPopLookKey, self.appearance ?: (id)NSNull.null);
         self.appearance = DPPopWindowLook(anchor);
@@ -61,7 +62,8 @@ DP_PATCH(DPWashiPopups) {
     .detail = @"Dia’s pop-ups, like the downloads list, on Washi’s card paper in your light or dark.",
     .symbol = @"bubble.middle.bottom.fill bubble.middle.bottom",
     .tint = @"systemPinkColor",
-    .section = @"Washi",
+    .section = @"Window",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaWindow),
     .install = DPInstallWashiPopups,
 };

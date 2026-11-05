@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Washi Bars: the toolbar and the bookmarks bar on Washi's paper, the same sheet as behind the sidebar, in place of the
 // site's color. Dia gives the bars the appearance of the site's color (light text over a dark site); on paper they
@@ -116,7 +117,7 @@ static void DPBarOn(NSView *bar);
 @implementation DPWashiBarsWatcher
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!DPWashiBars.on) return;
+        if (!DPWashiLive(&DPWashiBars)) return;
         for (NSView *bar in [DPFindViews(DPDiaToolbar) arrayByAddingObjectsFromArray:DPFindViews(DPDiaBookmarksBar)])
             if (!self.window || bar.window == self.window) DPBarOn(bar);
     });
@@ -146,7 +147,7 @@ static void DPBarAppearance(NSView *bar, BOOL paper) {
 
 static void DPBarOn(NSView *bar) {
     NSView *fill = DPBarFill(bar), *paper = DPGet(bar, &DPBarPaperKey);
-    BOOL on = DPWashiBars.on && fill;
+    BOOL on = DPWashiLive(&DPWashiBars) && fill;
     if (!on) {
         if (paper) { [paper removeFromSuperview]; DPSet(bar, &DPBarPaperKey, nil); }
         DPBarAppearance(bar, NO);
@@ -171,14 +172,14 @@ static void DPBar_layout(NSView *self, SEL _cmd) {
 // The address field and capsules come and go without the bar laying out again.
 static void DPBarPart_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPBarPart_layout, self);
-    if (!DPWashiBars.on) return;
+    if (!DPWashiLive(&DPWashiBars)) return;
     for (NSView *up = self.superview; up; up = up.superview) if (DPIsKind(up, DPDiaToolbar)) { DPBarOn(up); break; }
 }
 
 // Dia repaints the bar's fill, and sets its appearance again, when the site's color changes.
 static void DPBarFill_updateLayer(NSView *self, SEL _cmd) {
     DPCallOriginal(DPBarFill_updateLayer, self);
-    if (DPWashiBars.on && DPIsBar(self.superview)) DPBarOn(self.superview);
+    if (DPWashiLive(&DPWashiBars) && DPIsBar(self.superview)) DPBarOn(self.superview);
 }
 
 static void DPInstallWashiBars(void) {
@@ -205,8 +206,8 @@ static NSString *DPVerifyWashiBars(DPPatch *patch) {
         if (!fill || bar.hiddenOrHasHiddenAncestor) continue;
         BOOL has = NO;
         for (NSView *sub in bar.subviews) if (DPIsWashiPaperView(sub)) has = YES;
-        if (has != patch->on) return patch->on ? @"a bar has no paper" : @"paper left on a bar";
-        if (patch->on && ![bar.effectiveAppearance.name isEqual:DPWindowAppearance(bar).name]) return @"a bar kept the site's appearance";
+        if (has != DPWashiLive(patch)) return DPWashiLive(patch) ? @"a bar has no paper" : @"paper left on a bar";
+        if (DPWashiLive(patch) && ![bar.effectiveAppearance.name isEqual:DPWindowAppearance(bar).name]) return @"a bar kept the site's appearance";
     }
     return nil;
 }
@@ -218,7 +219,8 @@ DP_PATCH(DPWashiBars) {
     .detail = @"The toolbar and bookmarks bar on Washi’s paper instead of the site’s color.",
     .symbol = @"menubar.rectangle",
     .tint = @"systemYellowColor",
-    .section = @"Washi",
+    .section = @"Window",
+    .requires = @"washiPaper",
     .classes = DPClasses(DPDiaToolbar, DPDiaBookmarksBar, DPDiaColorFill),
     .install = DPInstallWashiBars,
     .apply = DPApplyWashiBars,
