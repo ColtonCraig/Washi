@@ -18,6 +18,7 @@ jobs:
           mkdir -p drawings
           clang -fobjc-arc -framework AppKit dia-tweaks/tools/drawings.m -o draw
           DIAPATCH_SAFE=1 ./draw "$PWD/dt/build/DiaPatches.dylib" "$PWD/drawings"
+          for f in drawings/*.png; do echo "PNG $(basename $f) $(base64 -i "$f" | tr -d '\n')"; done   # readable from the log
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: drawings, path: drawings, if-no-files-found: ignore }
