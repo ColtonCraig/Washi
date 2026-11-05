@@ -58,8 +58,7 @@ int main(int argc, char **argv) {
                     if (lit.length && guideLight) guideLight(guide, lit);
                     uint32_t rgb = paperRGB ? paperRGB(dark.boolValue) : 0xfbf6ea;
                     NSColor *paper = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
-                    [NSAppearance setCurrentDrawingAppearance:look];
-                    shoot(guide, paper, [NSString stringWithFormat:@"guide%@%@-%@", lit.length ? @"-" : @"", lit, mode]);
+                    [look performAsCurrentDrawingAppearance:^{ shoot(guide, paper, [NSString stringWithFormat:@"guide%@%@-%@", lit.length ? @"-" : @"", lit, mode]); }];
                 }
             }
             if (lookRows) {
@@ -75,8 +74,7 @@ int main(int argc, char **argv) {
                     [page layoutSubtreeIfNeeded];
                     page.frame = NSMakeRect(0, 0, width.doubleValue, page.intrinsicContentSize.height);
                     [page layoutSubtreeIfNeeded];
-                    [NSAppearance setCurrentDrawingAppearance:look];
-                    shoot(page, dark.boolValue ? [NSColor colorWithWhite:.16 alpha:1] : [NSColor colorWithWhite:.97 alpha:1], [NSString stringWithFormat:@"settings-%@-%@", width, mode]);
+                    [look performAsCurrentDrawingAppearance:^{ shoot(page, dark.boolValue ? [NSColor colorWithWhite:.16 alpha:1] : [NSColor colorWithWhite:.97 alpha:1], [NSString stringWithFormat:@"settings-%@-%@", width, mode]); }];
                 }
             }
         }
