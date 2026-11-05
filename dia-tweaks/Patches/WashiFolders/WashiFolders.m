@@ -12,7 +12,7 @@ NSView *DPWashiCutShadow(CGFloat lift, CGFloat radius);   // WashiCards.m
 uint32_t DPWashiTapeRGBFor(NSWindow *window);            // WashiTape.m
 #define DPTabGroup "_TtC5TabUI16TabGroupCellView"
 #define DPTabTitleLabel "_TtC5ARCUI24FeatheredTruncatingLabel"
-static char DPFolderIconKey, DPFolderDiaAlphaKey, DPFolderManilaKey, DPFolderLineKey, DPFolderBoxAlphaKey, DPFolderDiaColorKey, DPFolderChevronKey;
+static char DPFolderIconKey, DPFolderDiaAlphaKey, DPFolderManilaKey, DPFolderLineKey, DPFolderBoxAlphaKey, DPFolderChevronKey;
 
 // Washi's words, in Washi's order: the name says most, and its first word most of all. Each with its SF Symbol.
 static NSArray<NSArray *> *DPFolderWords(void) {
@@ -96,6 +96,9 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
 
 @interface DPWashiManila : NSView
 @property (nonatomic, strong) NSColor *tint;   // Dia's folder color, or nil for manila
+@property (nonatomic, copy) NSString *title;   // the folder's name, written where Dia's was
+@property (nonatomic, strong) NSFont *font;
+@property (nonatomic) NSRect titleFrame;
 @end
 @implementation DPWashiManila
 - (BOOL)isFlipped { return YES; }
@@ -122,6 +125,8 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
     NSBezierPath *shadow = [folder copy]; [shadow transformUsingAffineTransform:down];
     [(self.tint ? [self.tint colorWithAlphaComponent:.4] : [NSColor colorWithWhite:0 alpha:.08]) setFill]; [shadow fill];
     [self.paper setFill]; [folder fill];
+    NSMutableParagraphStyle *tail = [NSMutableParagraphStyle new]; tail.lineBreakMode = NSLineBreakByTruncatingTail;
+    [self.title ?: @"" drawInRect:self.titleFrame withAttributes:@{ NSFontAttributeName: self.font ?: [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: DPManilaInk(), NSParagraphStyleAttributeName: tail }];
 }
 @end
 
@@ -139,12 +144,16 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
 @end
 
 // Dia's color for the folder: what its name is drawn in, unless that's just the ordinary text color.
+// Dia's color for the folder: what it draws the name in, unless that's just the ordinary text color. Read in the
+// folder's own light or dark, and never changed: Washi writes the name itself (in dark ink) and Dia's stays hidden.
 static NSColor *DPFolderColor(NSTextField *name) {
-    NSColor *dia = DPGet(name, &DPFolderDiaColorKey);
-    NSColor *now = name.textColor;
-    if (now && ![now isEqual:DPManilaInk()]) { dia = now; DPSet(name, &DPFolderDiaColorKey, now); }   // Dia's (it may have changed)
-    if (!dia || [dia isEqual:NSColor.labelColor] || [dia isEqual:NSColor.controlTextColor] || [dia isEqual:NSColor.textColor]) return nil;
-    NSColor *rgb = [dia colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+    NSColor *dia = nil;
+    NSAttributedString *text = name.attributedStringValue;
+    if (text.length) dia = [text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
+    if (!dia) dia = name.textColor;
+    if (!dia || [dia isEqual:NSColor.labelColor] || [dia isEqual:NSColor.controlTextColor] || [dia isEqual:NSColor.textColor] || [dia isEqual:NSColor.secondaryLabelColor]) return nil;
+    __block NSColor *rgb = nil;
+    [name.effectiveAppearance performAsCurrentDrawingAppearance:^{ rgb = [dia colorUsingColorSpace:NSColorSpace.sRGBColorSpace]; }];
     CGFloat sat = rgb ? MAX(rgb.redComponent, MAX(rgb.greenComponent, rgb.blueComponent)) - MIN(rgb.redComponent, MIN(rgb.greenComponent, rgb.blueComponent)) : 0;
     return sat > .12 ? rgb : nil;   // a grey is no color
 }
@@ -197,8 +206,7 @@ static void DPFolderIn(NSView *group) {
         DPSet(group, &DPFolderManilaKey, nil); DPSet(group, &DPFolderLineKey, nil);
         NSNumber *alpha = DPGet(group, &DPFolderBoxAlphaKey);
         if (box && alpha) { box.alphaValue = alpha.doubleValue; DPSet(group, &DPFolderBoxAlphaKey, nil); }
-        NSColor *dia = [name isKindOfClass:NSTextField.class] ? DPGet(name, &DPFolderDiaColorKey) : nil;
-        if (dia && [name.textColor isEqual:DPManilaInk()]) name.textColor = dia;
+        if (name.alphaValue == 0) name.alphaValue = 1;
         NSColor *chev = DPGet(group, &DPFolderChevronKey);
         if (chevron && chev) { chevron.contentTintColor = chev == (id)NSNull.null ? nil : chev; DPSet(group, &DPFolderChevronKey, nil); }
         return;
@@ -209,8 +217,15 @@ static void DPFolderIn(NSView *group) {
     if (manila.superview != group) [group addSubview:manila positioned:NSWindowBelow relativeTo:header];
     if (!NSEqualRects(manila.frame, header.frame)) manila.frame = header.frame;
     if (manila.tint != fc && ![manila.tint isEqual:fc]) { manila.tint = fc; manila.needsDisplay = YES; }
-    // Dark ink on the folder paper, light and dark alike.
-    if ([name isKindOfClass:NSTextField.class] && ![name.textColor isEqual:DPManilaInk()]) { (void)DPFolderColor(name); name.textColor = DPManilaInk(); }
+    // The name in dark ink on the folder paper, light and dark alike: Washi writes it, over where Dia's sits.
+    if ([name isKindOfClass:NSTextField.class]) {
+        NSRect tf = [manila convertRect:name.bounds fromView:name];
+        tf.size.width += 1;   // Dia's label fits its text exactly; the chevron sits right after it
+        if (![manila.title isEqual:name.stringValue] || ![manila.font isEqual:name.font] || !NSEqualRects(manila.titleFrame, tf)) {
+            manila.title = name.stringValue; manila.font = name.font; manila.titleFrame = tf; manila.needsDisplay = YES;
+        }
+        if (name.alphaValue != 0) name.alphaValue = 0;
+    }
     if (chevron) {
         if (!DPGet(group, &DPFolderChevronKey)) DPSet(group, &DPFolderChevronKey, chevron.contentTintColor ?: (id)NSNull.null);
         chevron.contentTintColor = [DPManilaInk() colorWithAlphaComponent:.5];

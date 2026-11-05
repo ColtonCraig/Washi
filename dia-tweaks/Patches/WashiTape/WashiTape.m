@@ -153,7 +153,7 @@ static void DPTapeOn(NSView *tab) {
     // 1pt off the left (clear of the window edge) and 3pt off the top, so its middle is 13pt in and 2.5pt down from the pill's top-left corner.
     NSRect pill = DPTapePill(tab);
     CGFloat top = tab.isFlipped ? NSMinY(pill) : NSMaxY(pill);
-    tape.position = CGPointMake(NSMinX(pill) + 13, top + (tab.isFlipped ? 2.5 : -2.5));
+    tape.position = CGPointMake(NSMinX(pill) + 17, top + (tab.isFlipped ? 2.5 : -2.5));
     tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -20 : 20) * M_PI / 180);
     if (tape.superlayer != tab.layer) [tab.layer addSublayer:tape];
     if (!DPTaped) DPTaped = [NSHashTable weakObjectsHashTable];

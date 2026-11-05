@@ -10,7 +10,7 @@ NSArray<NSView *> *DPWashiArtHand(void);   // WashiLook.m
 
 extern DPPatch DPWashiHand;
 #define DPTabListScroll "_TtC7TabListP33_9A67AB465A78F9E1122D59704CA866E621SpacePagingScrollView"
-static const CGFloat DPHandRoom = 30;   // the strip the name takes
+static const CGFloat DPHandRoom = 36;   // the strip the name takes
 static char DPHandKey, DPHandWatchKey, DPHandMovedKey, DPHandDiaKey;
 
 NSFont *DPCaveat(CGFloat size) {   // also for the other Washi tweaks
@@ -139,7 +139,7 @@ static void DPHandIn(NSView *list) {
         label.stringValue = name;
     }
     // 15pt in, like the tab icons; the line sits low in the strip, so Caveat's tall letters and tails both have room.
-    NSRect text = NSMakeRect(NSMinX(room) + 15, NSMinY(room) + 1, NSWidth(room) - 30, DPHandRoom - 2);
+    NSRect text = NSMakeRect(NSMinX(room) + 15, NSMinY(room) + (list.isFlipped ? 7 : 1), NSWidth(room) - 30, DPHandRoom - 8);   // clear of the favorites above
     if (!NSEqualRects(label.frame, text)) label.frame = text;
     DPHandWatch(list.window);
 }

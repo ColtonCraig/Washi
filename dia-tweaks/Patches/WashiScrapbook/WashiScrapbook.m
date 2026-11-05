@@ -149,7 +149,7 @@ static BOOL DPTabSelectedNow(NSView *tab) {
 static void DPFeelTab(NSView *tab) {
     if (!tab.layer) return;
     BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(tab), press = motion && DPPressed(tab);
-    CGFloat lean = DPTabSelectedNow(tab) ? DPTabRot(tab) * -.5 * DPLean() : 0;   // Washi's .tab.on rotate(rot × -.5°)
+    CGFloat lean = DPTabSelectedNow(tab) ? MAX(-1, MIN(1, DPTabRot(tab) * -.5 * DPLean())) : 0;   // never so far a corner leaves the sidebar   // Washi's .tab.on rotate(rot × -.5°)
     DPSpyOn(tab, motion);
     DPFeelSet(tab, DPFeel(tab, lean, hover && !press ? 1.5 : 0, press ? .97 : 1), press ? .14 : .38);
 }
