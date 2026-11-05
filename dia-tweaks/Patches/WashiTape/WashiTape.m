@@ -119,10 +119,10 @@ static void DPTapeOn(NSView *tab) {
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());
     // On the corner of the tab's pill, not of its whole row (which runs to the window's edge): like Washi, it hangs
-    // 4pt off the left and 3pt off the top, so its middle is 10pt in and 2.5pt down from the pill's top-left corner.
+    // 1pt off the left (clear of the window edge) and 3pt off the top, so its middle is 13pt in and 2.5pt down from the pill's top-left corner.
     NSRect pill = DPTapePill(tab);
     CGFloat top = tab.isFlipped ? NSMinY(pill) : NSMaxY(pill);
-    tape.position = CGPointMake(NSMinX(pill) + 10, top + (tab.isFlipped ? 2.5 : -2.5));
+    tape.position = CGPointMake(NSMinX(pill) + 13, top + (tab.isFlipped ? 2.5 : -2.5));
     tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -20 : 20) * M_PI / 180);
     if (tape.superlayer != tab.layer) [tab.layer addSublayer:tape];
     [CATransaction commit];
