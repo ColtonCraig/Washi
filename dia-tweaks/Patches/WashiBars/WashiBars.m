@@ -37,6 +37,13 @@ static BOOL DPBarDark(NSView *view) {
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
 @end
 
+// For the other Washi tweaks: a sheet of card paper with this corner radius.
+NSView *DPWashiCardSheet(NSRect frame, CGFloat radius) {
+    DPWashiBarCard *card = [[DPWashiBarCard alloc] initWithFrame:frame];
+    card.layer.cornerRadius = radius;
+    return card;
+}
+
 // The hairline under the toolbar, in the paper's ink instead of the site's color.
 @interface DPWashiBarLine : NSView
 @end

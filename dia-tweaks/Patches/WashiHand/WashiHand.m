@@ -11,7 +11,7 @@ extern DPPatch DPWashiHand;
 static const CGFloat DPHandRoom = 30;   // the strip the name takes
 static char DPHandKey, DPHandWatchKey, DPHandMovedKey, DPHandDiaKey;
 
-static NSFont *DPCaveat(CGFloat size) {
+NSFont *DPCaveat(CGFloat size) {   // also for the other Washi tweaks
     static CGFontRef font;
     static dispatch_once_t once;
     dispatch_once(&once, ^{

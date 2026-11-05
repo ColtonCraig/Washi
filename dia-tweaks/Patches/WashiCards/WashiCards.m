@@ -49,6 +49,7 @@ static NSColor *DPCardColor(BOOL dark) {
 // The shadow sits under the card, outside the rounded clip the card lives in: a hard offset and a soft one.
 @interface DPWashiCardShadow : NSView
 @property (nonatomic) CGFloat lift;   // 1 for a tab (Washi's --cut-sm), 2 for a favorite (--cut)
+@property (nonatomic) CGFloat radius;
 @end
 @implementation DPWashiCardShadow {
     CALayer *_soft;
@@ -56,6 +57,7 @@ static NSColor *DPCardColor(BOOL dark) {
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
         self.wantsLayer = YES;
+        _radius = 10;
         _soft = [CALayer layer];
         [self.layer addSublayer:_soft];
     }
@@ -66,7 +68,7 @@ static NSColor *DPCardColor(BOOL dark) {
 - (void)paint {
     BOOL dark = DPCardDark(self);
     CGColorRef ink = (dark ? NSColor.blackColor : [NSColor colorWithSRGBRed:43 / 255.0 green:33 / 255.0 blue:24 / 255.0 alpha:1]).CGColor;
-    CGPathRef path = CGPathCreateWithRoundedRect(self.bounds, 10, 10, NULL);
+    CGPathRef path = CGPathCreateWithRoundedRect(self.bounds, MIN(self.radius, NSHeight(self.bounds) / 2), MIN(self.radius, NSHeight(self.bounds) / 2), NULL);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     CALayer *hard = self.layer;
     hard.shadowPath = path; hard.shadowColor = ink; hard.shadowRadius = 0;
@@ -83,6 +85,13 @@ static NSColor *DPCardColor(BOOL dark) {
 - (void)layout { [super layout]; [self paint]; }
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
 @end
+
+// For the other Washi tweaks: Washi's cut-paper shadow for a card of that corner radius.
+NSView *DPWashiCutShadow(CGFloat lift, CGFloat radius) {
+    DPWashiCardShadow *shadow = [DPWashiCardShadow new];
+    shadow.lift = lift; shadow.radius = radius;
+    return shadow;
+}
 
 static NSView *DPCardAncestor(NSView *view, const char *kind) {
     for (NSView *up = view.superview; up; up = up.superview) if (DPIsKind(up, kind)) return up;
