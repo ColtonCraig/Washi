@@ -66,6 +66,25 @@ static CGPathRef DPTapeOutline(CGSize size, BOOL flipped) {
     return path;
 }
 
+// For the other Washi tweaks: a strip of this tape (the chosen color), torn at both ends, and a recolor for a new choice.
+CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped) {
+    CALayer *tape = [CALayer layer];
+    tape.bounds = (CGRect){ CGPointZero, size };
+    tape.contentsGravity = kCAGravityResizeAspectFill;
+    tape.contentsScale = 2;
+    tape.opacity = .82;
+    tape.zPosition = 1000;
+    tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());
+    CAShapeLayer *torn = [CAShapeLayer layer];
+    torn.frame = tape.bounds;
+    CGPathRef outline = DPTapeOutline(size, flipped);
+    torn.path = outline;
+    CGPathRelease(outline);
+    tape.mask = torn;
+    return tape;
+}
+void DPWashiTapeRecolor(CALayer *tape) { tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB()); }
+
 static BOOL DPTapeTabSelected(NSView *tab) {
     if (![tab respondsToSelector:@selector(safeSwiftValueForKey:)]) return NO;
     NSString *state = [[[[tab safeSwiftValueForKey:@"viewModel"] safeSwiftValueForKey:@"stateSubject"] safeSwiftValueForKey:@"currentValue"] description];

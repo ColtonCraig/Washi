@@ -12,7 +12,29 @@ void DPWashiPaperRepaint(NSView *view);
 NSView *DPWashiCardSheet(NSRect frame, CGFloat radius);   // WashiBars.m
 NSView *DPWashiCutShadow(CGFloat lift, CGFloat radius);   // WashiCards.m
 NSFont *DPCaveat(CGFloat size);                      // WashiHand.m
-static char DPNTPaperKey, DPHelloKey, DPBarCardKey, DPBarShadowKey;
+static char DPNTPaperKey, DPHelloKey, DPBarCardKey, DPBarShadowKey, DPRowCardKey, DPRowShadowKey;
+#define DPConnectRow "_TtC10NewTabPageP33_79FE2AF8AA62446573363F42ADABADD817ConnectAppRowView"
+
+// The new tab page's "Connect Slack / Google" rows: card paper with the small cut shadow, like Washi's rows.
+static void DPRowCards(NSView *page, BOOL want) {
+    DPFindView(page, ^BOOL(NSView *row) {
+        if (!DPIsKind(row, DPConnectRow)) return NO;
+        NSView *card = DPGet(row, &DPRowCardKey), *shadow = DPGet(row, &DPRowShadowKey);
+        if (!want || row.hidden) {
+            [card removeFromSuperview]; [shadow removeFromSuperview];
+            DPSet(row, &DPRowCardKey, nil); DPSet(row, &DPRowShadowKey, nil);
+            return NO;
+        }
+        CGFloat radius = MAX(row.layer.cornerRadius, 8);
+        if (!card) { card = DPWashiCardSheet(row.bounds, radius); card.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable; DPSet(row, &DPRowCardKey, card); }
+        if (row.subviews.firstObject != card) [row addSubview:card positioned:NSWindowBelow relativeTo:nil];
+        if (!NSEqualRects(card.frame, row.bounds)) card.frame = row.bounds;
+        if (!shadow) { shadow = DPWashiCutShadow(1, radius); DPSet(row, &DPRowShadowKey, shadow); }
+        if (shadow.superview != row.superview) [row.superview addSubview:shadow positioned:NSWindowBelow relativeTo:row];
+        if (!NSEqualRects(shadow.frame, row.frame)) shadow.frame = row.frame;
+        return NO;
+    });
+}
 
 #pragma mark The new tab page
 
@@ -81,6 +103,7 @@ static void DPNewTabIn(NSView *page) {
     DPWashiHello *hello = DPGet(page, &DPHelloKey);
     NSView *logo = DPFindView(page, ^BOOL(NSView *v) { return DPIsKind(v, DPDiaNewTabLogo); });
     NSView *bar = DPFindView(page, ^BOOL(NSView *v) { return DPIsKind(v, DPDiaAssistantPanel); });
+    DPRowCards(page, DPWashiNewTab.on);
     if (!DPWashiNewTab.on) {
         [paper removeFromSuperview]; [hello removeFromSuperview];
         DPSet(page, &DPNTPaperKey, nil); DPSet(page, &DPHelloKey, nil);

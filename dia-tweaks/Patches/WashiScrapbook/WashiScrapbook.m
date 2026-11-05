@@ -6,7 +6,26 @@
 //  on Washi's spring. Reduce Motion keeps the lift but drops the movement to it.
 
 extern DPPatch DPWashiScrapbook, DPWashiLift;
-static char DPSpyKey;
+static char DPSpyKey, DPPinTapeKey;
+CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped);   // WashiTape.m
+void DPWashiTapeRecolor(CALayer *tape);
+
+// Scrapbook pins each favorite with a strip of tape across its top, like Washi's: 22×9, centred, hanging 4pt over
+// the edge, leaning 5° one way or the other.
+static void DPPinTape(NSView *item, NSUInteger place) {
+    CALayer *tape = DPGet(item, &DPPinTapeKey);
+    if (!DPWashiScrapbook.on || !item.layer) { [tape removeFromSuperlayer]; DPSet(item, &DPPinTapeKey, nil); return; }
+    BOOL flipped = DPFlippedLayer(item);
+    if (!tape) { tape = DPWashiTapeStrip(CGSizeMake(22, 9), flipped); DPSet(item, &DPPinTapeKey, tape); }
+    else DPWashiTapeRecolor(tape);
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    CGFloat top = flipped ? NSMinY(item.bounds) : NSMaxY(item.bounds);
+    tape.position = CGPointMake(NSMidX(item.bounds), top + (flipped ? 0.5 : -0.5));   // its middle on the edge, so 4pt hangs over
+    CGFloat lean = (place % 2 ? -5 : 5) * M_PI / 180;
+    tape.affineTransform = CGAffineTransformMakeRotation(flipped ? lean : -lean);
+    if (tape.superlayer != item.layer) [item.layer addSublayer:tape];
+    [CATransaction commit];
+}
 
 static const CGFloat DPTilts[] = { -1.2, .9, .6, -.8, 1.1, -.5, .7, -1.0 };   // degrees, by a favorite's place
 
@@ -74,6 +93,7 @@ static void DPFeelTile(NSView *item) {
     CGFloat tilt = DPWashiScrapbook.on ? DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] : 0;
     DPSpyOn(item, DPWashiLift.on);
     DPFeelSet(item, DPFeel(item, tilt + (hover ? -.6 : 0), hover ? 2 : 0));
+    DPPinTape(item, place);
 }
 
 static void DPFeelTab(NSView *tab) {
