@@ -25,8 +25,13 @@ static inline CGFloat DPWashiTilt(void) {
 }
 
 // The space a window shows: Dia's window title is "Space: Tab". nil when it doesn't say.
+// A window with no space of its own (the floating sidebar, a pop-up) shows its parent window's.
+static inline NSWindow *DPWashiSpaceWindow(NSWindow *window) {
+    for (NSWindow *w = window; w; w = w.parentWindow) if ([w.title rangeOfString:@": "].location != NSNotFound) return w;
+    return window;
+}
 static inline NSString *DPWashiSpaceOf(NSWindow *window) {
-    NSString *title = window.title;
+    NSString *title = DPWashiSpaceWindow(window).title;
     NSRange at = [title rangeOfString:@": "];
     return at.location == NSNotFound || at.location == 0 ? nil : [title substringToIndex:at.location];
 }
@@ -35,6 +40,21 @@ static inline NSString *DPWashiSpaceTape(NSString *space) {
     if (!space) return nil;
     id v = [[DPWashiDefaults() dictionaryForKey:@"washiSpaceTapes"] objectForKey:space];
     return [v isKindOfClass:NSString.class] ? v : nil;
+}
+
+// A space's desk, tape and highlight (Washi's Spaces settings): returns which are its own, 1 desk, 2 tape, 4 highlight.
+unsigned DPWashiSpaceColors(NSString *space, uint32_t *desk, uint32_t *tape, uint32_t *s2);   // WashiTape.m
+// Washi's dark desk: the light one mixed 70% toward Washi's night ink (#120e0b), as Washi does.
+static inline uint32_t DPWashiNightDesk(uint32_t rgb) {
+    uint32_t out = 0;
+    for (int shift = 16; shift >= 0; shift -= 8) {
+        double c = ((rgb >> shift) & 255) * .3 + ((0x120e0b >> shift) & 255) * .7;
+        out |= (uint32_t)lround(c) << shift;
+    }
+    return out;
+}
+static inline NSColor *DPWashiRGB(uint32_t rgb) {
+    return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
 }
 
 // Scrapbook's tape on something "stuck down" (it needs Washi Tape too): a torn strip on `host`'s layer, centred at

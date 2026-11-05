@@ -27,6 +27,60 @@ int main(int argc, char **argv) {
             }
         }
         printf("drew %lu\n", (unsigned long)spots.count * 2);
+
+        // The quick-start guide and Washi's settings page (with some spaces), light and dark, as views.
+        void (*fake)(NSArray *) = dlsym(lib, "DPWashiFakeSpaces");
+        NSView *(*guideMake)(void) = dlsym(lib, "DPWashiGuideMake");
+        void (*guideLight)(NSView *, NSString *) = dlsym(lib, "DPWashiGuideLight");
+        NSArray *(*lookRows)(void) = dlsym(lib, "DPWashiLookRows");
+        uint32_t (*paperRGB)(BOOL) = dlsym(lib, "DPWashiMainPaperRGB");
+        if (fake) fake(@[ @"Work", @"Personal", @"MDM Projects" ]);
+        NSUserDefaults *d = [[NSUserDefaults alloc] initWithSuiteName:@"com.diapatches"];
+        [d setObject:@{ @"Work": @{ @"preset": @"tangerine", @"s2": @(0xff7aa8) }, @"Personal": @{ @"preset": @"lagoon" } } forKey:@"washiSpaceLooks"];
+        void (^shoot)(NSView *, NSColor *, NSString *) = ^(NSView *view, NSColor *back, NSString *name) {
+            NSBitmapImageRep *cache = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+            [view cacheDisplayInRect:view.bounds toBitmapImageRep:cache];
+            NSImage *image = [NSImage imageWithSize:view.bounds.size flipped:NO drawingHandler:^BOOL(NSRect r) {
+                [back setFill]; NSRectFill(r);
+                [cache drawInRect:r fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
+                return YES;
+            }];
+            NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:[image CGImageForProposedRect:NULL context:nil hints:nil]];
+            [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:[NSString stringWithFormat:@"%s/%@.png", argv[2], name] atomically:YES];
+        };
+        for (NSNumber *dark in @[ @NO, @YES ]) {
+            NSAppearance *look = [NSAppearance appearanceNamed:dark.boolValue ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
+            NSString *mode = dark.boolValue ? @"dark" : @"light";
+            if (guideMake) {
+                for (NSString *lit in @[ @"", @"tab" ]) {
+                    NSView *guide = guideMake();
+                    guide.appearance = look;
+                    if (lit.length && guideLight) guideLight(guide, lit);
+                    uint32_t rgb = paperRGB ? paperRGB(dark.boolValue) : 0xfbf6ea;
+                    NSColor *paper = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
+                    [NSAppearance setCurrentDrawingAppearance:look];
+                    shoot(guide, paper, [NSString stringWithFormat:@"guide%@%@-%@", lit.length ? @"-" : @"", lit, mode]);
+                }
+            }
+            if (lookRows) {
+                for (NSNumber *width in @[ @540, @380 ]) {
+                    NSView *page = lookRows().firstObject;
+                    page.appearance = look;
+                    NSWindow *w = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, width.doubleValue, 1400) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+                    w.appearance = look;
+                    page.translatesAutoresizingMaskIntoConstraints = YES;
+                    for (NSLayoutConstraint *c in page.constraints) c.active = NO;
+                    [w.contentView addSubview:page];
+                    page.frame = NSMakeRect(0, 0, width.doubleValue, 1400);
+                    [page layoutSubtreeIfNeeded];
+                    page.frame = NSMakeRect(0, 0, width.doubleValue, page.intrinsicContentSize.height);
+                    [page layoutSubtreeIfNeeded];
+                    [NSAppearance setCurrentDrawingAppearance:look];
+                    shoot(page, dark.boolValue ? [NSColor colorWithWhite:.16 alpha:1] : [NSColor colorWithWhite:.97 alpha:1], [NSString stringWithFormat:@"settings-%@-%@", width, mode]);
+                }
+            }
+        }
+        printf("drew the guide and Settings\n");
     }
     return 0;
 }

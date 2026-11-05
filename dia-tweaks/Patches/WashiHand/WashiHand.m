@@ -41,10 +41,29 @@ uint32_t DPWashiTapeRGBFor(NSWindow *window);   // WashiTape.m
 @end
 @implementation DPWashiHandLabel
 - (NSView *)hitTest:(NSPoint)point { return nil; }
+// A space with its own colors gets Washi's highlighter swash under its name instead, in its highlight color.
+- (BOOL)highlight:(uint32_t *)rgb { return (DPWashiSpaceColors(DPWashiSpaceOf(self.window), NULL, NULL, rgb) & 4) != 0; }
+- (void)drawRect:(NSRect)dirty {
+    uint32_t rgb;
+    if ([self highlight:&rgb]) {
+        BOOL dark = [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+        CGFloat w = MIN(ceil(self.attributedStringValue.size.width) + 6, NSWidth(self.bounds) - 2);
+        NSRect swash = NSMakeRect(1, self.isFlipped ? NSHeight(self.bounds) - 14 : 5, w, 9);
+        [NSGraphicsContext saveGraphicsState];
+        NSAffineTransform *t = [NSAffineTransform transform];
+        [t translateXBy:NSMidX(swash) yBy:NSMidY(swash)]; [t rotateByDegrees:self.isFlipped ? 1 : -1]; [t translateXBy:-NSMidX(swash) yBy:-NSMidY(swash)]; [t concat];
+        [[DPWashiRGB(rgb) colorWithAlphaComponent:dark ? .42 : .72] setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:swash xRadius:4.5 yRadius:4.5] fill];
+        [NSGraphicsContext restoreGraphicsState];
+    }
+    [super drawRect:dirty];
+}
+- (void)paint { [self underline]; self.needsDisplay = YES; }
 - (void)underline {
     if (!self.layer) return;
     if (!self.stroke) { self.stroke = [CALayer layer]; self.stroke.cornerRadius = 1; }
     if (self.stroke.superlayer != self.layer) [self.layer addSublayer:self.stroke];
+    self.stroke.hidden = [self highlight:NULL];
     uint32_t rgb = DPWashiTapeRGBFor(self.window);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     self.stroke.backgroundColor = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1].CGColor;

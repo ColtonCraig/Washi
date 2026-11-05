@@ -39,6 +39,18 @@ NSColor *DPWashiPaperColor(BOOL dark) {
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
 }
 
+uint32_t DPWashiMainPaperRGB(BOOL dark) {
+    DPPaperChoice paper = DPPaperFor(DPWashiPaper.on ? (DPChoice(&DPWashiPaper) ?: @"cream") : @"cream");
+    return dark ? paper.dark : paper.light;
+}
+
+// The desk under one window: its space's own (Washi's Spaces settings), or your paper.
+uint32_t DPWashiDeskRGBFor(NSWindow *window, BOOL dark) {
+    uint32_t desk;
+    if (DPWashiPaper.on && (DPWashiSpaceColors(DPWashiSpaceOf(window), &desk, NULL, NULL) & 1)) return dark ? DPWashiNightDesk(desk) : desk;
+    return DPWashiMainPaperRGB(dark);
+}
+
 // For the Washi look picker: the papers, in order.
 NSUInteger DPWashiPaperCount(void) { return DPPresetCount + 1; }   // the presets, then Custom
 void DPWashiPaperAt(NSUInteger i, NSString **key, NSString **name, uint32_t *light, uint32_t *dark) {
@@ -82,6 +94,8 @@ static NSImage *DPGrain(BOOL dark) {
 
 @implementation DPWashiPaperView {
     CALayer *_grain;
+    __weak NSWindow *_watched;   // the window whose title says the space
+    NSString *_space;
 }
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
@@ -99,12 +113,11 @@ static NSImage *DPGrain(BOOL dark) {
     return [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
 }
 - (void)paint {
-    NSString *key = DPChoice(&DPWashiPaper) ?: @"cream";
-    DPPaperChoice paper = DPPaperFor(key);
     BOOL dark = self.isDark;
+    uint32_t rgb = DPWashiDeskRGBFor(self.window, dark);
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) {
         ctx.duration = 0;
-        self.layer.backgroundColor = DPHex(dark ? paper.dark : paper.light).CGColor;
+        self.layer.backgroundColor = DPHex(rgb).CGColor;
         self->_grain.frame = self.layer.bounds;
         self->_grain.backgroundColor = [NSColor colorWithPatternImage:DPGrain(dark)].CGColor;
         self->_grain.opacity = DPWashiFeel(@"washiTexture") ? 1 : 0;   // Paper texture, on Washi's page
@@ -113,6 +126,34 @@ static NSImage *DPGrain(BOOL dark) {
 }
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
 - (void)layout { [super layout]; _grain.frame = self.layer.bounds; }
+// A space with its own desk: the paper follows the window into each space, washing over to the new color.
+- (void)viewDidMoveToWindow {
+    [super viewDidMoveToWindow];
+    NSWindow *want = self.window ? DPWashiSpaceWindow(self.window) : nil;
+    if (want != _watched) {
+        [_watched removeObserver:self forKeyPath:@"title"];
+        _watched = want;
+        [want addObserver:self forKeyPath:@"title" options:0 context:NULL];
+    }
+    _space = DPWashiSpaceOf(self.window);
+    [self paint];
+}
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    NSString *space = DPWashiSpaceOf(self.window);
+    if ([space isEqual:_space] || (!space && !_space)) return;   // the title changes with every page; only a new space matters
+    _space = space;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        CGColorRef before = self.layer.backgroundColor;
+        id from = before ? (__bridge id)before : nil;
+        [self paint];
+        if (!from || DPWashiCalm() || CGColorEqualToColor(before, self.layer.backgroundColor)) return;
+        CABasicAnimation *wash = [CABasicAnimation animationWithKeyPath:@"backgroundColor"];
+        wash.fromValue = from; wash.duration = .32;
+        wash.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.3 :.6 :.3 :1];
+        [self.layer addAnimation:wash forKey:@"washiDesk"];
+    });
+}
+- (void)dealloc { [_watched removeObserver:self forKeyPath:@"title"]; }
 @end
 
 // For the other Washi tweaks: a sheet of this paper (it follows its own appearance), and a repaint for a new choice.
@@ -199,6 +240,8 @@ static void DPApplyWashiPaper(DPPatch *patch) {
     DPWashiRefreshAll(patch);
     DPWashiApplyAppearance();
     DPWashiRepaintAll();
+    extern void DPWashiGuideFirstTime(void);   // WashiGuide.m: Help's item, and the guide once, the first time
+    if (patch->on) DPWashiGuideFirstTime();
 }
 
 static NSString *DPVerifyWashiPaper(DPPatch *patch) {

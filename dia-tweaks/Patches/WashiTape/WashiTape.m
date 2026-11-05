@@ -33,10 +33,59 @@ static uint32_t DPTapeRGBForKey(NSString *key) {
     return DPTapes[0].rgb;
 }
 static uint32_t DPTapeRGB(void) { return DPTapeRGBForKey(DPChoice(&DPWashiTape) ?: @"tangerine"); }
+uint32_t DPWashiMainTapeRGB(void) { return DPTapeRGB(); }
+// Washi's space palettes, as in Washi's Settings › Spaces: a desk (the paper the space sits on), its tape, and a
+// highlight. In Washi's order around the color wheel.
+typedef struct { NSString *key, *name; uint32_t desk, tape, s2; } DPPaletteChoice;
+static const DPPaletteChoice DPPalettes[] = {
+    { @"tangerine", @"Tangerine", 0xfdd3ae, 0xff6a3d, 0xffd84d }, { @"lime", @"Lime", 0xeaf3b4, 0x74b000, 0xff7aa8 },
+    { @"clover", @"Clover", 0xd2eec6, 0x1f9d57, 0xffe14d }, { @"lagoon", @"Lagoon", 0xc6ede6, 0x0e9f9f, 0xff9370 },
+    { @"blueberry", @"Blueberry", 0xcbd9f6, 0x3d63ff, 0xffd84d }, { @"grape", @"Grape", 0xe3d2f6, 0x7b46ff, 0xffd84d },
+    { @"bubblegum", @"Bubblegum", 0xfdd1dc, 0xff3d8d, 0x7fe0c9 },
+};
+static const uint32_t DPMainHighlight = 0xffd84d;   // Washi's own highlight, for a space on the main look
+NSUInteger DPWashiPaletteCount(void) { return sizeof DPPalettes / sizeof *DPPalettes; }
+void DPWashiPaletteAt(NSUInteger i, NSString **key, NSString **name, uint32_t *desk, uint32_t *tape, uint32_t *s2) {
+    if (key) *key = DPPalettes[i].key;
+    if (name) *name = DPPalettes[i].name;
+    if (desk) *desk = DPPalettes[i].desk;
+    if (tape) *tape = DPPalettes[i].tape;
+    if (s2) *s2 = DPPalettes[i].s2;
+}
+
+// A space's colors: its palette (`preset`), with any of desk, tape and highlight you set yourself on top. Saved as
+// washiSpaceLooks { space: { preset, desk, tape, s2 } }. A space with none of it is on the main look (its tape may
+// still come from the older washiSpaceTapes). Returns which of the three are the space's own: 1 desk, 2 tape, 4
+// highlight; the rest are the main look's.
+uint32_t DPWashiMainPaperRGB(BOOL dark);   // WashiPaper.m
+NSDictionary *DPWashiSpaceLookOf(NSString *space) {
+    if (!space) return nil;
+    id v = [[DPWashiDefaults() dictionaryForKey:@"washiSpaceLooks"] objectForKey:space];
+    return [v isKindOfClass:NSDictionary.class] && [v count] ? v : nil;
+}
+unsigned DPWashiSpaceColors(NSString *space, uint32_t *desk, uint32_t *tape, uint32_t *s2) {
+    NSDictionary *look = DPWashiSpaceLookOf(space);
+    const DPPaletteChoice *pal = NULL;
+    for (size_t i = 0; i < DPWashiPaletteCount(); i++) if ([DPPalettes[i].key isEqual:look[@"preset"]]) pal = &DPPalettes[i];
+    NSString *oldTape = DPWashiSpaceTape(space);
+    unsigned own = pal ? 7 : oldTape ? 2 : 0;
+    uint32_t d = pal ? pal->desk : DPWashiMainPaperRGB(NO), t = pal ? pal->tape : oldTape ? DPTapeRGBForKey(oldTape) : DPTapeRGB(), h = pal ? pal->s2 : DPMainHighlight;
+    NSArray *keys = @[ @"desk", @"tape", @"s2" ];
+    for (unsigned k = 0; k < 3; k++) {
+        id c = look[keys[k]];
+        if (![c isKindOfClass:NSNumber.class]) continue;
+        own |= 1u << k;
+        if (k == 0) d = [c unsignedIntValue]; else if (k == 1) t = [c unsignedIntValue]; else h = [c unsignedIntValue];
+    }
+    if (desk) *desk = d;
+    if (tape) *tape = t;
+    if (s2) *s2 = h;
+    return own;
+}
 // A window's tape: its space's own color, if it has one, else the main tape.
 uint32_t DPWashiTapeRGBFor(NSWindow *window) {
-    NSString *own = DPWashiSpaceTape(DPWashiSpaceOf(window));
-    return own ? DPTapeRGBForKey(own) : DPTapeRGB();
+    uint32_t tape; DPWashiSpaceColors(DPWashiSpaceOf(window), NULL, &tape, NULL);
+    return tape;
 }
 
 // The stripes: the tape color, and the tape color 62% of the way to white, 6pt each at -45°, like Washi's CSS.
@@ -204,8 +253,8 @@ static char DPDotKey, DPDotWatchKey;
 NSColor *DPWashiPaperColor(BOOL dark);   // WashiPaper.m
 
 static uint32_t DPTapeRGBForSpace(NSString *space) {
-    NSString *own = DPWashiSpaceTape(space);
-    return own ? DPTapeRGBForKey(own) : DPTapeRGB();
+    uint32_t tape; DPWashiSpaceColors(space, NULL, &tape, NULL);
+    return tape;
 }
 
 static void DPDotOn(NSView *item) {
@@ -219,7 +268,8 @@ static void DPDotOn(NSView *item) {
     BOOL dark = [[item.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
     uint32_t rgb = DPTapeRGBForSpace(space);
     NSColor *tape = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
-    NSColor *color = here ? tape : [[DPWashiPaperColor(dark) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:.45 ofColor:tape];
+    extern uint32_t DPWashiDeskRGBFor(NSWindow *window, BOOL dark);
+    NSColor *color = here ? tape : [DPWashiRGB(DPWashiDeskRGBFor(item.window, dark)) blendedColorWithFraction:.45 ofColor:tape];
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     dot.layer.cornerRadius = NSHeight(dia.frame) / 2;
     dot.layer.backgroundColor = color.CGColor;
@@ -266,7 +316,10 @@ static void DPDot_layout(NSView *self, SEL _cmd) {
 }
 
 // For the Spaces list on Washi's page: the spaces in the switcher, in its order.
+static NSArray<NSString *> *DPFakeSpaces;   // for drawing Washi's page with no Dia around (tools/drawings.m)
+void DPWashiFakeSpaces(NSArray<NSString *> *spaces) { DPFakeSpaces = spaces; }
 NSArray<NSString *> *DPWashiSpaces(void) {
+    if (DPFakeSpaces) return DPFakeSpaces;
     NSMutableArray *spaces = [NSMutableArray new];
     for (NSView *item in DPDotItems.allObjects) {
         if (!item.window.isVisible) continue;
