@@ -307,9 +307,9 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         NSRect page2 = NSMakeRect(x + side, y + 20, w - side - 5, h - 25);
         polaroid = NSMakeRect(NSMinX(page2) + NSWidth(page2) * .16, NSMinY(page2) + 5, NSWidth(page2) * .68, NSHeight(page2) - 9);
         [[NSColor colorWithWhite:0 alpha:dark ? .45 : .2] setFill]; [[NSBezierPath bezierPathWithRect:NSOffsetRect(polaroid, 1.5, 2)] fill];
-        [[card blendedColorWithFraction:.3 ofColor:NSColor.whiteColor] setFill]; NSRectFill(polaroid);
+        [[card blendedColorWithFraction:.3 ofColor:NSColor.whiteColor] setFill]; NSRectFillUsingOperation(polaroid, NSCompositingOperationSourceOver);
         NSRect photo = NSMakeRect(NSMinX(polaroid) + 4, NSMinY(polaroid) + 4, NSWidth(polaroid) - 8, NSHeight(polaroid) - 18);
-        [(dark ? DPLookHex(0x2a2a2a) : DPLookHex(0xdfe6ee)) setFill]; NSRectFill(photo);
+        [(dark ? DPLookHex(0x2a2a2a) : DPLookHex(0xdfe6ee)) setFill]; NSRectFillUsingOperation(photo, NSCompositingOperationSourceOver);
         NSDictionary *hand = @{ NSFontAttributeName: DPCaveat(9), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.8] };
         NSSize hs = [@"github.com" sizeWithAttributes:hand];
         [@"github.com" drawAtPoint:NSMakePoint(NSMidX(polaroid) - hs.width / 2, NSMaxY(photo) + 1) withAttributes:hand];
@@ -392,8 +392,8 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         NSRect chip = NSMakeRect(pad, y + 1, 24, 14);
         NSBezierPath *left = [NSBezierPath bezierPathWithRoundedRect:chip xRadius:4 yRadius:4];
         [NSGraphicsContext saveGraphicsState]; [left addClip];
-        [k[0] setFill]; NSRectFill(chip);
-        [k[1] setFill]; NSRectFill(NSMakeRect(NSMidX(chip), NSMinY(chip), NSWidth(chip) / 2, NSHeight(chip)));
+        [k[0] setFill]; NSRectFillUsingOperation(chip, NSCompositingOperationSourceOver);
+        [k[1] setFill]; NSRectFillUsingOperation(NSMakeRect(NSMidX(chip), NSMinY(chip), NSWidth(chip) / 2, NSHeight(chip)), NSCompositingOperationSourceOver);
         [NSGraphicsContext restoreGraphicsState];
         [[label colorWithAlphaComponent:.18] setStroke]; [left stroke];
         [k[2] drawAtPoint:NSMakePoint(pad + 32, y) withAttributes:bold];
@@ -414,7 +414,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         NSRect dot = NSMakeRect(NSMidX(hit) - 17, y + 2, 34, 34);
         NSBezierPath *circle = [NSBezierPath bezierPathWithOvalInRect:dot];
         [NSGraphicsContext saveGraphicsState]; [circle addClip];
-        [DPLookHex(l) setFill]; NSRectFill(dot);
+        [DPLookHex(l) setFill]; NSRectFillUsingOperation(dot, NSCompositingOperationSourceOver);
         NSBezierPath *lower = [NSBezierPath bezierPath];   // the dark paper, the lower right half
         [lower moveToPoint:NSMakePoint(NSMaxX(dot), NSMinY(dot))]; [lower lineToPoint:NSMakePoint(NSMaxX(dot), NSMaxY(dot))]; [lower lineToPoint:NSMakePoint(NSMinX(dot), NSMaxY(dot))]; [lower closePath];
         [DPLookHex(d) setFill]; [lower fill];
@@ -455,7 +455,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     NSArray<NSString *> *spaces = DPWashiSpaces();
     if (spaces.count > 1) {
         CGFloat sy = y + 30 + 18;
-        [[label colorWithAlphaComponent:.1] setFill]; NSRectFill(NSMakeRect(pad, sy - 10, W - pad * 2, 1));
+        [[label colorWithAlphaComponent:.1] setFill]; NSRectFillUsingOperation(NSMakeRect(pad, sy - 10, W - pad * 2, 1), NSCompositingOperationSourceOver);
         [@"Spaces" drawAtPoint:NSMakePoint(pad, sy) withAttributes:bold];
         [@"Give a space its own tape: its tabs, Scrapbook tape and dot use it." drawInRect:NSMakeRect(pad + 54, sy + 1, W - pad * 2 - 54, 15) withAttributes:small];
         NSDictionary *spaceName = @{ NSFontAttributeName: DPCaveat(17), NSForegroundColorAttributeName: label };
@@ -483,7 +483,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     }
     // Feel: each a title and a line under it, with its switch on the right.
     CGFloat top = [self feelTopFor:W];
-    [[label colorWithAlphaComponent:.1] setFill]; NSRectFill(NSMakeRect(pad, top - 10, W - pad * 2, 1));
+    [[label colorWithAlphaComponent:.1] setFill]; NSRectFillUsingOperation(NSMakeRect(pad, top - 10, W - pad * 2, 1), NSCompositingOperationSourceOver);
     [@"Feel" drawAtPoint:NSMakePoint(pad, top) withAttributes:bold];
     NSArray *rows = DPFeelRows();
     for (NSUInteger i = 0; i < rows.count; i++) {
@@ -595,16 +595,22 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
         CGFloat tw = (w - 56) / 3;
         for (NSUInteger i = 0; i < 3; i++) {
             NSRect t = NSMakeRect(x + 16 + i * (tw + 12), y + 18, tw, 32);
-            CGFloat lean = i == 1 ? 3.5 : -3;
-            DPArtLean(t, lean, ^{ DPArtCard(t, 8, card, dark, 2); DPLookTape(NSMakePoint(NSMidX(t), NSMinY(t) + 2), 22, 8, i % 2 ? -6 : 6, tape); });
+            CGFloat lean = i == 1 ? 5 : i ? -4 : -6;
+            DPArtLean(t, lean, ^{ DPArtCard(t, 8, card, dark, 2); DPLookTape(NSMakePoint(NSMidX(t), NSMinY(t) + 1), 30, 11, i % 2 ? -6 : 6, tape); });
         }
         NSRect name = NSMakeRect(x + 16, y + 62, 110, 34);
         DPArtLean(name, -2.5, ^{ DPArtText(@"Personal", NSMakePoint(NSMinX(name), NSMinY(name)), DPCaveat(28), ink); });
         NSRect stamp = NSMakeRect(x + w - 50, y + 72, 30, 30);
         DPArtLean(stamp, -12, ^{ DPArtCard(stamp, 15, card, dark, 1); DPArtLine(NSMidX(stamp) - 6, NSMidY(stamp) - 1, 12, 2.2, faint); });
-        NSBezierPath *wig = [NSBezierPath bezierPath]; wig.lineWidth = 1.3;
-        [wig appendBezierPathWithArcWithCenter:NSMakePoint(NSMidX(stamp), NSMidY(stamp)) radius:21 startAngle:200 endAngle:250];
-        [[ink colorWithAlphaComponent:.35] setStroke]; [wig stroke];
+        // wiggle marks either side of the stamp
+        [[ink colorWithAlphaComponent:.4] setStroke];
+        for (NSNumber *side in @[ @-1, @1 ]) {
+            NSBezierPath *wig = [NSBezierPath bezierPath]; wig.lineWidth = 1.4; wig.lineCapStyle = NSLineCapStyleRound;
+            CGFloat sx = NSMidX(stamp) + side.doubleValue * 21;
+            [wig moveToPoint:NSMakePoint(sx, NSMidY(stamp) - 7)];
+            [wig curveToPoint:NSMakePoint(sx, NSMidY(stamp) + 7) controlPoint1:NSMakePoint(sx + side.doubleValue * 5, NSMidY(stamp) - 3) controlPoint2:NSMakePoint(sx + side.doubleValue * 5, NSMidY(stamp) + 3)];
+            [wig stroke];
+        }
     } else if ([spot isEqual:@"lift"]) {   // a tab lifting under the pointer, a new tab dropping in
         DPArtTab(NSMakeRect(x + 12, y + 14, w - 24, 28), @"Resting tab", blue, NO, card, dark, ink);
         NSRect up = NSMakeRect(x + 12, y + 48, w - 24, 30);
@@ -626,7 +632,7 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
         NSRect field = NSMakeRect(x + 66, y + 14, w - 80, 24);
         DPArtCard(field, 7, card, dark, 0);
         DPArtText(@"github.com / Washi", NSMakePoint(NSMinX(field) + 10, NSMinY(field) + 4), DPWashiFigtree(12, NSFontWeightSemibold), [ink colorWithAlphaComponent:.8]);
-        [[ink colorWithAlphaComponent:.12] setFill]; NSRectFill(NSMakeRect(x, y + 48, w, 1));
+        [[ink colorWithAlphaComponent:.12] setFill]; NSRectFillUsingOperation(NSMakeRect(x, y + 48, w, 1), NSCompositingOperationSourceOver);
         NSArray *marks = @[ @"Docs", @"Okta", @"Jira" ];
         for (NSUInteger i = 0; i < 3; i++) { [@[ green, blue, orange ][i] setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(x + 16 + i * 58, y + 60, 10, 10) xRadius:2 yRadius:2] fill]; DPArtText(marks[i], NSMakePoint(x + 30 + i * 58, y + 57), DPWashiFigtree(11.5, NSFontWeightMedium), [ink colorWithAlphaComponent:.7]); }
         NSRect page = NSMakeRect(x + 8, y + 84, w - 16, 60);
@@ -696,10 +702,10 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
     } else if ([spot isEqual:@"polaroid"]) {   // a link's preview as a polaroid
         NSRect p = NSMakeRect(cx - 64, y + 12, 128, h - 24);
         DPArtLean(p, -2, ^{
-            [[NSColor colorWithWhite:0 alpha:dark ? .45 : .2] setFill]; NSRectFill(NSOffsetRect(p, 2, 3));
-            [[card blendedColorWithFraction:.3 ofColor:NSColor.whiteColor] setFill]; NSRectFill(p);
+            [[NSColor colorWithWhite:0 alpha:dark ? .45 : .2] setFill]; NSRectFillUsingOperation(NSOffsetRect(p, 2, 3), NSCompositingOperationSourceOver);
+            [[card blendedColorWithFraction:.3 ofColor:NSColor.whiteColor] setFill]; NSRectFillUsingOperation(p, NSCompositingOperationSourceOver);
             NSRect photo = NSMakeRect(NSMinX(p) + 7, NSMinY(p) + 7, NSWidth(p) - 14, NSHeight(p) - 34);
-            [(dark ? DPLookHex(0x2c3440) : DPLookHex(0xdfe6ee)) setFill]; NSRectFill(photo);
+            [(dark ? DPLookHex(0x2c3440) : DPLookHex(0xdfe6ee)) setFill]; NSRectFillUsingOperation(photo, NSCompositingOperationSourceOver);
             DPArtLine(NSMinX(photo) + 8, NSMinY(photo) + 10, 50, 5, [NSColor colorWithWhite:dark ? 1 : 0 alpha:.15]);
             NSDictionary *hand = @{ NSFontAttributeName: DPCaveat(18), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.85] };
             NSSize hs = [@"github.com" sizeWithAttributes:hand];
