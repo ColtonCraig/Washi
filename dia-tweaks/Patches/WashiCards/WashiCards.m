@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtCards(void);   // WashiLook.m
 
 // Washi Cards: the selected tab and the pinned favorites become scraps of Washi's card paper, the paper mixed toward
 // white with a faint ink edge and Washi's "cut" shadow (a hard offset, like paper cut out and laid on the desk, over a
@@ -207,6 +208,7 @@ DP_PATCH(DPWashiCards) {
     .tint = @"systemBrownColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtCards,
     .classes = DPClasses(DPDiaTabShape, DPDiaTabView, DPDiaPinnedTab, DPDiaColorFill, DPTabBackground, DPDebossed),
     .install = DPInstallWashiCards,
     .apply = DPApplyWashiCards,

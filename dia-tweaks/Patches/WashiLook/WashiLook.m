@@ -72,62 +72,118 @@ void DPWashiApplyAppearance(void) {
     NSMutableArray<NSValue *> *_paperHits, *_tapeHits, *_modeHits;
     NSLayoutConstraint *_height;
     CGFloat _needed;
+    NSArray<NSSwitch *> *_feel;
 }
+extern DPPatch DPWashiScrapbook;
+// Feel, like Washi's: Paper texture, Scrapbook, Animations.
+static NSArray<NSArray<NSString *> *> *DPFeelRows(void) {
+    return @[ @[ @"washiTexture", @"Paper texture", @"The grain on every scrap of paper" ],
+              @[ @"washiScrapbook", @"Scrapbook", @"Tape on what’s stuck down, crooked scraps, a slanted name" ],
+              @[ @"washiMotion", @"Animations", @"Turn off for a calmer Dia: nothing springs or fades" ] ];
+}
+static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? DPWashiScrapbook.on : DPWashiFeel(key); }
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
         _paperHits = [NSMutableArray new]; _tapeHits = [NSMutableArray new]; _modeHits = [NSMutableArray new];
         _needed = 420;
         self.identifier = @"Your Look";
+        NSMutableArray *feel = [NSMutableArray new];
+        for (NSArray *row in DPFeelRows()) {
+            NSSwitch *sw = [NSSwitch new];
+            sw.controlSize = NSControlSizeSmall;
+            sw.identifier = row[0]; sw.accessibilityLabel = row[1];
+            sw.target = self; sw.action = @selector(feel:);
+            [self addSubview:sw]; [feel addObject:sw];
+        }
+        _feel = feel;
+        [self syncFeel];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(changed) name:DPPatchesDidChangeNotification object:nil];
     }
     return self;
 }
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
-- (void)changed { self.needsDisplay = YES; }
+- (void)changed { [self syncFeel]; self.needsDisplay = YES; }
+- (void)syncFeel { for (NSSwitch *sw in _feel) sw.state = DPFeelOn(sw.identifier) ? NSControlStateValueOn : NSControlStateValueOff; }
+- (void)feel:(NSSwitch *)sw {
+    BOOL on = sw.state == NSControlStateValueOn;
+    if ([sw.identifier isEqual:@"washiScrapbook"]) {
+        DPSetPatch(&DPWashiScrapbook, on, YES);
+        [NSNotificationCenter.defaultCenter postNotificationName:DPPatchesDidChangeNotification object:nil];   // its switch below follows
+    } else {
+        [DPWashiDefaults() setBool:on forKey:sw.identifier];
+        if (DPWashiPaper.on && DPWashiPaper.apply) DPWashiPaper.apply(&DPWashiPaper);
+    }
+}
+- (CGFloat)feelTopFor:(CGFloat)W {
+    CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62);
+    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 70 + 30 + 18;
+}
 - (BOOL)isFlipped { return YES; }
 - (NSSize)intrinsicContentSize { return NSMakeSize(NSViewNoIntrinsicMetric, _needed); }
 - (void)setHeightConstraint:(NSLayoutConstraint *)c { _height = c; }
 // Everything below the drawings has a fixed height; the drawings grow with the width.
 - (CGFloat)neededFor:(CGFloat)W {
-    CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62);
-    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 58 + 12 + 34 + 10;
+    return [self feelTopFor:W] + 24 + 3 * 40 + 4;
 }
 - (void)layout {
     [super layout];
-    CGFloat need = [self neededFor:NSWidth(self.bounds)];
+    CGFloat need = [self neededFor:NSWidth(self.bounds)], top = [self feelTopFor:NSWidth(self.bounds)];
+    for (NSUInteger i = 0; i < _feel.count; i++) {
+        NSSize size = _feel[i].fittingSize;
+        _feel[i].frame = NSMakeRect(NSWidth(self.bounds) - 4 - size.width, top + 24 + i * 40 + (34 - size.height) / 2, size.width, size.height);
+    }
     if (fabs(need - _needed) > .5) { _needed = need; _height.constant = need; [self invalidateIntrinsicContentSize]; }
 }
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; self.needsDisplay = YES; }
 
 // A small Dia in this paper: sidebar with favorites, the name, tabs (the selected one a card with tape), the toolbar
-// with its address field, and the page laid on the paper as a sheet.
-- (void)drawMiniIn:(NSRect)r dark:(BOOL)dark paper:(NSColor *)paper tape:(NSColor *)tape {
+// with its address field, and the page laid on the paper as a sheet. `spot` picks out the part one option changes: the
+// rest goes pale behind a veil of paper and that part gets a dashed ring in the tape color. It also draws the extras
+// some options add: a pop-up, Washi's new tab, a tab lifting under the pointer.
+void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString *spot) {
     NSColor *ink = DPLookInk(dark), *card = DPLookCard(paper, dark);
+    NSColor *shade = [NSColor colorWithWhite:0 alpha:dark ? .35 : .12];
+    BOOL tilt = [spot isEqual:@"scrapbook"], lift = [spot isEqual:@"lift"], newTab = [spot isEqual:@"newtab"] || [spot isEqual:@"commandbar"];
+    NSMutableArray<NSValue *> *spots = [NSMutableArray new];
     NSBezierPath *window = [NSBezierPath bezierPathWithRoundedRect:r xRadius:9 yRadius:9];
     [paper setFill]; [window fill];
     [[ink colorWithAlphaComponent:.14] setStroke]; window.lineWidth = 1; [window stroke];
     [NSGraphicsContext saveGraphicsState];
     [window addClip];
     CGFloat side = round(NSWidth(r) * .3), x = NSMinX(r), y = NSMinY(r), w = NSWidth(r), h = NSHeight(r);
-    // traffic lights
     NSArray *lights = @[ DPLookHex(0xff5f57), DPLookHex(0xfebc2e), DPLookHex(0x28c840) ];
     for (NSUInteger i = 0; i < 3; i++) { [lights[i] setFill]; [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(x + 7 + i * 7, y + 7, 4.5, 4.5)] fill]; }
-    // favorites: two cards with tape
+    // favorites: two cards, tilted and taped in Scrapbook
+    NSRect favs = NSZeroRect;
     for (NSUInteger i = 0; i < 2; i++) {
         NSRect tile = NSMakeRect(x + 6 + i * ((side - 15) / 2 + 3), y + 18, (side - 15) / 2, 13);
-        [[NSColor colorWithWhite:0 alpha:dark ? .35 : .12] setFill];
-        [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(tile, 1, 1) xRadius:3 yRadius:3] fill];
+        favs = i ? NSUnionRect(favs, tile) : tile;
+        [NSGraphicsContext saveGraphicsState];
+        if (tilt) { NSAffineTransform *t = [NSAffineTransform transform]; [t translateXBy:NSMidX(tile) yBy:NSMidY(tile)]; [t rotateByDegrees:i ? 4 : -4]; [t translateXBy:-NSMidX(tile) yBy:-NSMidY(tile)]; [t concat]; }
+        [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(tile, 1, 1) xRadius:3 yRadius:3] fill];
         [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:tile xRadius:3 yRadius:3] fill];
-        DPLookTape(NSMakePoint(NSMidX(tile), NSMinY(tile) + 1.5), 9, 3.5, i ? -6 : 6, tape);
+        if (tilt || !spot) DPLookTape(NSMakePoint(NSMidX(tile), NSMinY(tile) + 2), 9, 3.5, i ? -6 : 6, tape);
+        [NSGraphicsContext restoreGraphicsState];
     }
     // the space name, in handwriting
+    NSRect name = NSMakeRect(x + 6, y + 33, side - 12, 13);
+    NSAffineTransform *lean = [NSAffineTransform transform];
+    [NSGraphicsContext saveGraphicsState];
+    if (tilt) { [lean translateXBy:NSMidX(name) yBy:NSMidY(name)]; [lean rotateByDegrees:-3]; [lean translateXBy:-NSMidX(name) yBy:-NSMidY(name)]; [lean concat]; }
     [@"Personal" drawAtPoint:NSMakePoint(x + 7, y + 33) withAttributes:@{ NSFontAttributeName: DPCaveat(10.5), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.86] }];
-    // tabs: the second is the selected card with its tape
+    [NSGraphicsContext restoreGraphicsState];
+    // tabs: the second is the selected card with its tape; the third lifts under a pointer for Paper Hover
+    NSRect selected = NSZeroRect, lifted = NSZeroRect;
     for (NSUInteger i = 0; i < 4; i++) {
         NSRect row = NSMakeRect(x + 5, y + 48 + i * 12, side - 10, 10);
+        if (lift && i == 2) {
+            row = NSOffsetRect(row, 0, -1.5); lifted = row;
+            [[NSColor colorWithWhite:0 alpha:dark ? .3 : .1] setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(row, .5, 1.5) xRadius:3 yRadius:3] fill];
+            [[ink colorWithAlphaComponent:.07] setFill]; [[NSBezierPath bezierPathWithRoundedRect:row xRadius:3 yRadius:3] fill];
+        }
         if (i == 1) {
-            [[NSColor colorWithWhite:0 alpha:dark ? .35 : .12] setFill];
-            [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(row, .8, .8) xRadius:3 yRadius:3] fill];
+            selected = row;
+            [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(row, .8, .8) xRadius:3 yRadius:3] fill];
             [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:row xRadius:3 yRadius:3] fill];
             DPLookTape(NSMakePoint(NSMinX(row) + 4, NSMinY(row) + 1), 8, 3, -20, tape);
         }
@@ -136,23 +192,77 @@ void DPWashiApplyAppearance(void) {
         [[ink colorWithAlphaComponent:i == 1 ? .55 : .28] setFill];
         [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(row) + 11, NSMidY(row) - 1.2, (NSWidth(row) - 18) * (i % 2 ? .8 : .6), 2.4) xRadius:1.2 yRadius:1.2] fill];
     }
+    if (lift) { // the pointer
+        NSPoint tip = NSMakePoint(NSMaxX(lifted) - 8, NSMidY(lifted) + 1);
+        NSBezierPath *arrow = [NSBezierPath bezierPath];
+        [arrow moveToPoint:tip]; [arrow lineToPoint:NSMakePoint(tip.x, tip.y + 9)]; [arrow lineToPoint:NSMakePoint(tip.x + 2.5, tip.y + 6.5)];
+        [arrow lineToPoint:NSMakePoint(tip.x + 6, tip.y + 6)]; [arrow closePath];
+        [NSColor.blackColor setFill]; [arrow fill]; [NSColor.whiteColor setStroke]; arrow.lineWidth = .8; [arrow stroke];
+    }
     // toolbar: the address field as a card
+    NSRect bar = NSMakeRect(x + side, y, w - side, 19);
     NSRect field = NSMakeRect(x + side + 22, y + 6, w - side - 30, 9);
     [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:field xRadius:3 yRadius:3] fill];
     [[ink colorWithAlphaComponent:.1] setStroke]; [[NSBezierPath bezierPathWithRoundedRect:field xRadius:3 yRadius:3] stroke];
     [[ink colorWithAlphaComponent:.3] setFill];
     for (NSUInteger i = 0; i < 2; i++) [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(x + side + 4 + i * 8, y + 8.5, 4, 4)] fill];
-    // the page, a sheet on the paper
+    // the page: a sheet on the paper, or Washi's new tab
     NSRect page = NSMakeRect(x + side, y + 20, w - side - 5, h - 25);
     [[NSColor colorWithWhite:0 alpha:dark ? .4 : .13] setFill];
     [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(page, 1.5, 1.5) xRadius:5 yRadius:5] fill];
-    [(dark ? DPLookHex(0x232323) : DPLookHex(0xffffff)) setFill];
-    [[NSBezierPath bezierPathWithRoundedRect:page xRadius:5 yRadius:5] fill];
-    NSColor *text = dark ? [NSColor colorWithWhite:1 alpha:.22] : [NSColor colorWithWhite:0 alpha:.13];
-    [text setFill];
-    [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(page) + 10, NSMinY(page) + 10, NSWidth(page) * .45, 5) xRadius:2 yRadius:2] fill];
-    for (NSUInteger i = 0; i < 4; i++)
-        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(page) + 10, NSMinY(page) + 22 + i * 8, (NSWidth(page) - 20) * (i == 3 ? .55 : .9), 3) xRadius:1.5 yRadius:1.5] fill];
+    NSRect commandBar = NSZeroRect;
+    if (newTab) {
+        [paper setFill]; [[NSBezierPath bezierPathWithRoundedRect:page xRadius:5 yRadius:5] fill];
+        [[ink colorWithAlphaComponent:.1] setStroke]; [[NSBezierPath bezierPathWithRoundedRect:page xRadius:5 yRadius:5] stroke];
+        NSDictionary *hello = @{ NSFontAttributeName: DPCaveat(13), NSForegroundColorAttributeName: ink };
+        NSSize hs = [@"Good evening" sizeWithAttributes:hello];
+        [@"Good evening" drawAtPoint:NSMakePoint(NSMidX(page) - hs.width / 2, NSMinY(page) + 12) withAttributes:hello];
+        commandBar = NSMakeRect(NSMinX(page) + NSWidth(page) * .18, NSMinY(page) + 32, NSWidth(page) * .64, 16);
+        [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(commandBar, 1, 1) xRadius:4 yRadius:4] fill];
+        [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:commandBar xRadius:4 yRadius:4] fill];
+        [[ink colorWithAlphaComponent:.25] setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(commandBar) + 6, NSMidY(commandBar) - 1.2, NSWidth(commandBar) * .4, 2.4) xRadius:1.2 yRadius:1.2] fill];
+    } else {
+        [(dark ? DPLookHex(0x232323) : DPLookHex(0xffffff)) setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:page xRadius:5 yRadius:5] fill];
+        NSColor *text = dark ? [NSColor colorWithWhite:1 alpha:.22] : [NSColor colorWithWhite:0 alpha:.13];
+        [text setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(page) + 10, NSMinY(page) + 10, NSWidth(page) * .45, 5) xRadius:2 yRadius:2] fill];
+        for (NSUInteger i = 0; i < 4; i++)
+            [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(page) + 10, NSMinY(page) + 22 + i * 8, (NSWidth(page) - 20) * (i == 3 ? .55 : .9), 3) xRadius:1.5 yRadius:1.5] fill];
+    }
+    // a pop-up hanging from the sidebar's top, for Paper Pop-ups
+    NSRect popup = NSZeroRect;
+    if ([spot isEqual:@"popups"]) {
+        popup = NSMakeRect(x + side - 30, y + 14, 56, 40);
+        [[NSColor colorWithWhite:0 alpha:dark ? .45 : .18] setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(popup, 0, 2) xRadius:6 yRadius:6] fill];
+        [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:popup xRadius:6 yRadius:6] fill];
+        [[ink colorWithAlphaComponent:.14] setStroke]; [[NSBezierPath bezierPathWithRoundedRect:popup xRadius:6 yRadius:6] stroke];
+        [[ink colorWithAlphaComponent:.3] setFill];
+        for (NSUInteger i = 0; i < 3; i++) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(popup) + 6, NSMinY(popup) + 8 + i * 10, 34 - i * 6, 2.4) xRadius:1.2 yRadius:1.2] fill];
+    }
+    // What the option changes.
+    if ([spot isEqual:@"tape"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(NSMakeRect(NSMinX(selected), NSMinY(selected) - 3, 14, 8), -1, -1)]];
+    else if ([spot isEqual:@"cards"]) { [spots addObject:[NSValue valueWithRect:NSInsetRect(favs, -2, -2)]]; [spots addObject:[NSValue valueWithRect:NSInsetRect(selected, -2, -2)]]; }
+    else if ([spot isEqual:@"hand"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(name, -1, -1)]];
+    else if (tilt) { [spots addObject:[NSValue valueWithRect:NSInsetRect(favs, -3, -3)]]; [spots addObject:[NSValue valueWithRect:NSInsetRect(name, -1, -1)]]; }
+    else if (lift) [spots addObject:[NSValue valueWithRect:NSInsetRect(lifted, -2, -2)]];
+    else if ([spot isEqual:@"bars"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(bar, 1, 1)]];
+    else if ([spot isEqual:@"sheet"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, -3, -3)]];
+    else if ([spot isEqual:@"popups"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(popup, -2, -2)]];
+    else if ([spot isEqual:@"newtab"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, 1, 1)]];
+    else if ([spot isEqual:@"commandbar"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(commandBar, -2, -2)]];
+    if (spots.count) {
+        NSBezierPath *veil = [NSBezierPath bezierPathWithRect:r];
+        veil.windingRule = NSWindingRuleEvenOdd;
+        for (NSValue *v in spots) [veil appendBezierPath:[NSBezierPath bezierPathWithRoundedRect:v.rectValue xRadius:4 yRadius:4]];
+        [[paper colorWithAlphaComponent:.6] setFill]; [veil fill];
+        for (NSValue *v in spots) {
+            NSBezierPath *ring = [NSBezierPath bezierPathWithRoundedRect:v.rectValue xRadius:4 yRadius:4];
+            CGFloat dash[] = { 3, 2 }; [ring setLineDash:dash count:2 phase:0]; ring.lineWidth = 1.4;
+            [tape setStroke]; [ring stroke];
+        }
+    }
     [NSGraphicsContext restoreGraphicsState];
 }
 
@@ -188,7 +298,7 @@ void DPWashiApplyAppearance(void) {
     NSDictionary *hand = @{ NSFontAttributeName: DPCaveat(19), NSForegroundColorAttributeName: label };
     for (NSUInteger i = 0; i < 2; i++) {
         NSRect r = NSMakeRect(pad + i * (pw + gap), 44, pw, ph);
-        [self drawMiniIn:r dark:i == 1 paper:DPLookHex(i ? dark : light) tape:tape];
+        DPWashiDrawMini(r, i == 1, DPLookHex(i ? dark : light), tape, nil);
         NSString *name = i ? @"Dark" : @"Light";
         NSSize s = [name sizeWithAttributes:hand];
         [name drawAtPoint:NSMakePoint(NSMidX(r) - s.width / 2, NSMaxY(r) + 2) withAttributes:hand];
@@ -251,6 +361,16 @@ void DPWashiApplyAppearance(void) {
         if (i == ti) { NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dot, -3, -3)]; ring.lineWidth = 2; [label setStroke]; [ring stroke]; }
         [_tapeHits addObject:[NSValue valueWithRect:hit]];
     }
+    // Feel: each a title and a line under it, with its switch on the right.
+    CGFloat top = [self feelTopFor:W];
+    [[label colorWithAlphaComponent:.1] setFill]; NSRectFill(NSMakeRect(pad, top - 10, W - pad * 2, 1));
+    [@"Feel" drawAtPoint:NSMakePoint(pad, top) withAttributes:bold];
+    NSArray *rows = DPFeelRows();
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        CGFloat ry = top + 24 + i * 40;
+        [rows[i][1] drawAtPoint:NSMakePoint(pad, ry + 1) withAttributes:@{ NSFontAttributeName: [NSFont systemFontOfSize:13], NSForegroundColorAttributeName: label }];
+        [rows[i][2] drawInRect:NSMakeRect(pad, ry + 18, W - pad * 2 - 56, 15) withAttributes:small];
+    }
 }
 
 - (void)choose:(DPPatch *)patch key:(NSString *)key {
@@ -288,3 +408,69 @@ NSArray<NSView *> *DPWashiLookRows(void) {
     [view setHeightConstraint:height];
     return @[ view ];
 }
+
+#pragma mark The drawings under each option
+
+// Under each Washi option's switch on its page: the little Dia, in your paper and the Settings window's light or
+// dark, with the part that option changes picked out. Scrapbook also gets how crooked it should be.
+@interface DPWashiArtView : NSView
+@property (nonatomic, copy) NSString *spot;
+@end
+@implementation DPWashiArtView {
+    NSSegmentedControl *_tilt;
+}
+- (BOOL)isFlipped { return YES; }
+- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; self.needsDisplay = YES; }
+- (instancetype)initWithSpot:(NSString *)spot {
+    if ((self = [super initWithFrame:NSZeroRect])) {
+        _spot = [spot copy];
+        self.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.heightAnchor constraintEqualToConstant:132].active = YES;
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(changed) name:DPPatchesDidChangeNotification object:nil];
+        if ([spot isEqual:@"scrapbook"]) {
+            _tilt = [NSSegmentedControl segmentedControlWithLabels:@[ @"Subtle", @"Playful", @"Wild" ] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(tilted:)];
+            _tilt.controlSize = NSControlSizeSmall;
+            NSString *v = [DPWashiDefaults() stringForKey:@"washiTilt"];
+            _tilt.selectedSegment = [v isEqual:@"playful"] ? 1 : [v isEqual:@"wild"] ? 2 : 0;
+            [self addSubview:_tilt];
+        }
+    }
+    return self;
+}
+- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
+- (void)changed { self.needsDisplay = YES; }
+- (void)tilted:(NSSegmentedControl *)control {
+    [DPWashiDefaults() setObject:@[ @"subtle", @"playful", @"wild" ][control.selectedSegment] forKey:@"washiTilt"];
+    if (DPWashiPaper.on && DPWashiPaper.apply) DPWashiPaper.apply(&DPWashiPaper);
+}
+- (NSRect)artRect { CGFloat w = MIN(200, NSWidth(self.bounds) * .5); return NSMakeRect(0, 4, w, 124); }
+- (void)layout {
+    [super layout];
+    if (!_tilt) return;
+    NSRect art = [self artRect];
+    NSSize size = _tilt.fittingSize;
+    _tilt.frame = NSMakeRect(NSMaxX(art) + 18, 40, MIN(size.width, NSWidth(self.bounds) - NSMaxX(art) - 18), size.height);
+}
+- (void)drawRect:(NSRect)dirty {
+    BOOL dark = [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    uint32_t light, darkRGB, tapeRGB;
+    DPWashiPaperAt(DPLookPaperIndex(), NULL, NULL, &light, &darkRGB);
+    DPWashiTapeAt(DPLookTapeIndex(), NULL, NULL, &tapeRGB);
+    NSRect art = [self artRect];
+    art.size.height = MIN(NSHeight(art), round(NSWidth(art) * .62));
+    DPWashiDrawMini(art, dark, DPLookHex(dark ? darkRGB : light), DPLookHex(tapeRGB), _spot);
+    if (_tilt) [@"How crooked" drawAtPoint:NSMakePoint(NSMaxX(art) + 18, 18) withAttributes:@{ NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: NSColor.labelColor }];
+}
+@end
+
+#define DPWashiArt(fn, spot) NSArray<NSView *> *fn(void) { return @[ [[DPWashiArtView alloc] initWithSpot:spot] ]; }
+DPWashiArt(DPWashiArtTape, @"tape")
+DPWashiArt(DPWashiArtCards, @"cards")
+DPWashiArt(DPWashiArtHand, @"hand")
+DPWashiArt(DPWashiArtScrapbook, @"scrapbook")
+DPWashiArt(DPWashiArtLift, @"lift")
+DPWashiArt(DPWashiArtBars, @"bars")
+DPWashiArt(DPWashiArtSheet, @"sheet")
+DPWashiArt(DPWashiArtPopups, @"popups")
+DPWashiArt(DPWashiArtNewTab, @"newtab")
+DPWashiArt(DPWashiArtCommandBar, @"commandbar")

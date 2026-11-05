@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtBars(void);   // WashiLook.m
 
 // Washi Bars: the toolbar and the bookmarks bar on Washi's paper, the same sheet as behind the sidebar, in place of the
 // site's color. Dia gives the bars the appearance of the site's color (light text over a dark site); on paper they
@@ -221,6 +222,7 @@ DP_PATCH(DPWashiBars) {
     .tint = @"systemYellowColor",
     .section = @"Window",
     .requires = @"washiPaper",
+    .rows = DPWashiArtBars,
     .classes = DPClasses(DPDiaToolbar, DPDiaBookmarksBar, DPDiaColorFill),
     .install = DPInstallWashiBars,
     .apply = DPApplyWashiBars,

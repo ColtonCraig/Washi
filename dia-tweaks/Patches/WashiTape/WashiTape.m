@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtTape(void);   // WashiLook.m
 
 @interface NSObject (DPTapeSwiftFields)
 - (id)safeSwiftValueForKey:(NSString *)key;  // AXCoreUtilities: reads Swift properties the Obj-C runtime hides.
@@ -107,7 +108,7 @@ static NSRect DPTapePill(NSView *tab) {
     return NSInsetRect(tab.bounds, 6, 2);
 }
 
-static BOOL DPCalm(void) { return NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion; }
+static BOOL DPCalm(void) { return DPWashiCalm(); }
 
 static void DPTapeOn(NSView *tab) {
     if (!tab.layer) return;
@@ -214,6 +215,7 @@ DP_PATCH(DPWashiTape) {
     .tint = @"systemPinkColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtTape,
     .classes = DPClasses(DPDiaTabView, DPDiaColorFill),
     .choice = @"washiTapeChoice",
     .defaultChoice = @"tangerine",

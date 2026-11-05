@@ -1,5 +1,7 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtCommandBar(void);   // WashiLook.m
+NSArray<NSView *> *DPWashiArtNewTab(void);   // WashiLook.m
 #import "StdPatch/Hide.h"
 
 // Washi New Tab: Dia's own new tab page on Washi's paper, with Washi's hello in handwriting (good evening, and your
@@ -222,6 +224,7 @@ DP_PATCH(DPWashiNewTab) {
     .tint = @"systemOrangeColor",
     .section = @"New Tab",
     .requires = @"washiPaper",
+    .rows = DPWashiArtNewTab,
     .classes = DPClasses(DPDiaNewTabPage, DPDiaNewTabLogo, DPDiaNewTabLogoParticles, DPDiaAssistantPanel),
     .hides = DPIsWashiNewTabLogo,
     .install = DPInstallWashiNewTab,
@@ -238,6 +241,7 @@ DP_PATCH(DPWashiCommandBar) {
     .tint = @"systemIndigoColor",
     .section = @"New Tab",
     .requires = @"washiPaper",
+    .rows = DPWashiArtCommandBar,
     .classes = DPClasses(DPDiaAssistantPanel, DPDiaCommandBar),
     .install = DPInstallWashiCommandBar,
     .apply = DPApplyWashiCommandBar,

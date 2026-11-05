@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtHand(void);   // WashiLook.m
 #import <CoreText/CoreText.h>
 #import "Caveat.h"
 
@@ -107,7 +108,7 @@ static void DPHandIn(NSView *list) {
     label.hidden = NO;
     if (label.superview != list) [list addSubview:label positioned:NSWindowAbove relativeTo:scroll];
     if (![label.stringValue isEqual:name]) {
-        if (label.stringValue.length && !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
+        if (label.stringValue.length && !DPWashiCalm()) {
             CATransition *fade = [CATransition animation];
             fade.type = kCATransitionFade; fade.duration = .2;
             fade.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.215 :.61 :.355 :1];
@@ -158,6 +159,7 @@ DP_PATCH(DPWashiHand) {
     .tint = @"systemTealColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtHand,
     .classes = DPClasses(DPDiaTabList, DPTabListScroll),
     .install = DPInstallWashiHand,
     .apply = DPApplyWashiHand,

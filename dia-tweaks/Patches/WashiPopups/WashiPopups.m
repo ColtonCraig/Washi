@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtPopups(void);   // WashiLook.m
 
 // Paper Pop-ups: Dia's pop-ups (the downloads list, the site menu and the rest that open from the browser window) on
 // Washi's card paper, in the window's own light or dark instead of Dia's dark glass. The pop-up keeps its own shape,
@@ -64,6 +65,7 @@ DP_PATCH(DPWashiPopups) {
     .tint = @"systemPinkColor",
     .section = @"Window",
     .requires = @"washiPaper",
+    .rows = DPWashiArtPopups,
     .classes = DPClasses(DPDiaWindow),
     .install = DPInstallWashiPopups,
 };

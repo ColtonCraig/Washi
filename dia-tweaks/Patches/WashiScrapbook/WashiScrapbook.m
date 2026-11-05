@@ -1,5 +1,7 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtLift(void);   // WashiLook.m
+NSArray<NSView *> *DPWashiArtScrapbook(void);   // WashiLook.m
 
 // Two Washi feels for the sidebar, which share one transform per view:
 //  Washi Scrapbook: favorites tilted a little each way and the handwritten space name at a slant, like Washi's
@@ -52,7 +54,7 @@ static CATransform3D DPFeel(NSView *view, CGFloat degrees, CGFloat lift) {
 static void DPFeelSet(NSView *view, CATransform3D target) {
     CALayer *layer = view.layer;
     if (!layer || CATransform3DEqualToTransform(layer.sublayerTransform, target)) return;
-    if (!NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion && view.window.isVisible) {
+    if (!DPWashiCalm() && view.window.isVisible) {
         CABasicAnimation *move = [CABasicAnimation animationWithKeyPath:@"sublayerTransform"];
         move.fromValue = [NSValue valueWithCATransform3D:layer.presentationLayer ? layer.presentationLayer.sublayerTransform : layer.sublayerTransform];
         move.toValue = [NSValue valueWithCATransform3D:target];
@@ -92,7 +94,7 @@ static void DPFeelTile(NSView *item) {
     NSUInteger place = 0;
     for (NSView *sib in item.superview.subviews) { if (sib == item) break; if (DPIsKind(sib, DPDiaPinnedTab)) place++; }
     BOOL hover = DPWashiLive(&DPWashiLift) && DPPointerIn(item);
-    CGFloat tilt = DPWashiLive(&DPWashiScrapbook) ? DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] : 0;
+    CGFloat tilt = DPWashiLive(&DPWashiScrapbook) ? DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] * DPWashiTilt() : 0;
     DPSpyOn(item, DPWashiLive(&DPWashiLift));
     DPFeelSet(item, DPFeel(item, tilt + (hover ? -.6 : 0), hover ? 2 : 0));
     DPPinTape(item, place);
@@ -113,7 +115,7 @@ static void DPFeelName(NSView *list) {
         if (![sub isKindOfClass:label] || !sub.layer) continue;
         CGFloat cx = NSMidX(sub.bounds), cy = NSMidY(sub.bounds);
         CGAffineTransform t = CGAffineTransformMakeTranslation(cx, cy);
-        t = CGAffineTransformRotate(t, (DPWashiLive(&DPWashiScrapbook) ? (DPFlippedLayer(sub) ? 1.6 : -1.6) : 0) * M_PI / 180);
+        t = CGAffineTransformRotate(t, (DPWashiLive(&DPWashiScrapbook) ? (DPFlippedLayer(sub) ? 1.6 : -1.6) * MIN(DPWashiTilt(), 2.2) : 0) * M_PI / 180);
         t = CGAffineTransformTranslate(t, -cx, -cy);
         if (!CGAffineTransformEqualToTransform(sub.layer.affineTransform, t)) sub.layer.affineTransform = t;
     }
@@ -165,6 +167,7 @@ DP_PATCH(DPWashiScrapbook) {
     .tint = @"systemPurpleColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtScrapbook,
     .classes = DPClasses(DPDiaPinnedTab, DPDiaTabList),
     .install = DPInstallFeel,
     .apply = DPApplyFeel,
@@ -180,6 +183,7 @@ DP_PATCH(DPWashiLift) {
     .tint = @"systemMintColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtLift,
     .classes = DPClasses(DPDiaPinnedTab, DPDiaTabView),
     .install = DPInstallFeel,
     .apply = DPApplyFeel,

@@ -1,4 +1,5 @@
 #import "StdPatch/StdPatch.h"
+#import "Patches/WashiShared/WashiShared.h"
 
 // Washi Paper: Washi's paper behind Dia's tabs and sidebar, the paper color with a fine grain on it, in place of the
 // theme color. Light and dark each get their Washi paper (Cream and Cocoa, Newsprint and Ink, and so on), following
@@ -96,7 +97,7 @@ static NSImage *DPGrain(BOOL dark) {
         self.layer.backgroundColor = DPHex(dark ? paper.dark : paper.light).CGColor;
         self->_grain.frame = self.layer.bounds;
         self->_grain.backgroundColor = [NSColor colorWithPatternImage:DPGrain(dark)].CGColor;
-        self->_grain.opacity = 1;
+        self->_grain.opacity = DPWashiFeel(@"washiTexture") ? 1 : 0;   // Paper texture, on Washi's page
         self->_grain.compositingFilter = dark ? nil : @"multiplyBlendMode";
     }];
 }

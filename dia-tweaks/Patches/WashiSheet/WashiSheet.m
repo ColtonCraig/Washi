@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtSheet(void);   // WashiLook.m
 
 // Paper Sheet: the web page as a sheet laid on Washi's paper, with Washi's cut-paper shadow (a hard 2pt offset over a
 // soft one) under its edge. It uses the gap Dia leaves around the page, so it never moves the page; with
@@ -60,6 +61,7 @@ DP_PATCH(DPWashiSheet) {
     .tint = @"systemBrownColor",
     .section = @"Window",
     .requires = @"washiPaper",
+    .rows = DPWashiArtSheet,
     .classes = DPClasses(DPDiaContentContainer),
     .disabledBy = @"edgeToEdge",   // no gap around the page to show it in
     .install = DPInstallWashiSheet,
