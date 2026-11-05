@@ -61,6 +61,7 @@ static NSImage *DPGrain(BOOL dark) {
 }
 
 @interface DPWashiPaperView : NSView
+- (void)paint;
 @end
 
 @implementation DPWashiPaperView {
@@ -98,6 +99,11 @@ static NSImage *DPGrain(BOOL dark) {
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self paint]; }
 - (void)layout { [super layout]; _grain.frame = self.layer.bounds; }
 @end
+
+// For the other Washi tweaks: a sheet of this paper (it follows its own appearance), and a repaint for a new choice.
+NSView *DPWashiPaperMake(NSRect frame) { return [[DPWashiPaperView alloc] initWithFrame:frame]; }
+BOOL DPIsWashiPaperView(NSView *view) { return [view isKindOfClass:DPWashiPaperView.class]; }
+void DPWashiPaperRepaint(NSView *view) { if (DPIsWashiPaperView(view)) [(DPWashiPaperView *)view paint]; }
 
 // The theme tint behind one window or the floating sidebar (the same lookup Window Material uses).
 static NSView *DPPaperTintIn(NSView *view) {
