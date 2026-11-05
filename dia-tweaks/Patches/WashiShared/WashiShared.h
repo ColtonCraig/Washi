@@ -23,3 +23,16 @@ static inline CGFloat DPWashiTilt(void) {
     NSString *v = [DPWashiDefaults() stringForKey:@"washiTilt"];
     return [v isEqual:@"playful"] ? 2.2 : [v isEqual:@"wild"] ? 3.6 : 1;
 }
+
+// The space a window shows: Dia's window title is "Space: Tab". nil when it doesn't say.
+static inline NSString *DPWashiSpaceOf(NSWindow *window) {
+    NSString *title = window.title;
+    NSRange at = [title rangeOfString:@": "];
+    return at.location == NSNotFound || at.location == 0 ? nil : [title substringToIndex:at.location];
+}
+// A space's own tape (from the Spaces list on Washi's page), or nil for the main one.
+static inline NSString *DPWashiSpaceTape(NSString *space) {
+    if (!space) return nil;
+    id v = [[DPWashiDefaults() dictionaryForKey:@"washiSpaceTapes"] objectForKey:space];
+    return [v isKindOfClass:NSString.class] ? v : nil;
+}

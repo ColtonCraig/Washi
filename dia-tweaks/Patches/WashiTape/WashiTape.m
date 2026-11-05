@@ -27,16 +27,23 @@ void DPWashiTapeAt(NSUInteger i, NSString **key, NSString **name, uint32_t *rgb)
     if (rgb) *rgb = DPTapes[i].rgb;
 }
 
-static uint32_t DPTapeRGB(void) {
-    NSString *key = DPChoice(&DPWashiTape) ?: @"tangerine";
+static uint32_t DPTapeRGBForKey(NSString *key) {
     for (size_t i = 0; i < sizeof DPTapes / sizeof *DPTapes; i++) if ([DPTapes[i].key isEqual:key]) return DPTapes[i].rgb;
     return DPTapes[0].rgb;
+}
+static uint32_t DPTapeRGB(void) { return DPTapeRGBForKey(DPChoice(&DPWashiTape) ?: @"tangerine"); }
+// A window's tape: its space's own color, if it has one, else the main tape.
+uint32_t DPWashiTapeRGBFor(NSWindow *window) {
+    NSString *own = DPWashiSpaceTape(DPWashiSpaceOf(window));
+    return own ? DPTapeRGBForKey(own) : DPTapeRGB();
 }
 
 // The stripes: the tape color, and the tape color 62% of the way to white, 6pt each at -45°, like Washi's CSS.
 static CGImageRef DPTapeStripes(uint32_t rgb) {
-    static CGImageRef cached; static uint32_t cachedRGB = 0xffffffff;
-    if (cached && cachedRGB == rgb) return cached;
+    static NSMutableDictionary<NSNumber *, id> *cache;   // one per color: spaces can each have their own
+    if (!cache) cache = [NSMutableDictionary new];
+    id hit = cache[@(rgb)];
+    if (hit) return (__bridge CGImageRef)hit;
     const int scale = 2, w = 34 * scale, h = 17 * scale;
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, 0, space, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
@@ -51,10 +58,10 @@ static CGImageRef DPTapeStripes(uint32_t rgb) {
         CGContextClosePath(ctx);
     }
     CGContextFillPath(ctx);
-    if (cached) CGImageRelease(cached);
-    cached = CGBitmapContextCreateImage(ctx); cachedRGB = rgb;
+    CGImageRef image = CGBitmapContextCreateImage(ctx);
+    cache[@(rgb)] = (__bridge_transfer id)image;
     CGContextRelease(ctx); CGColorSpaceRelease(space);
-    return cached;
+    return image;
 }
 
 // Torn ends: the same outline as Washi's clip-path, in a 28×11 strip.
@@ -70,14 +77,14 @@ static CGPathRef DPTapeOutline(CGSize size, BOOL flipped) {
 }
 
 // For the other Washi tweaks: a strip of this tape (the chosen color), torn at both ends, and a recolor for a new choice.
-CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped) {
+CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped, NSWindow *window) {
     CALayer *tape = [CALayer layer];
     tape.bounds = (CGRect){ CGPointZero, size };
     tape.contentsGravity = kCAGravityResizeAspectFill;
     tape.contentsScale = 2;
     tape.opacity = .82;
     tape.zPosition = 1000;
-    tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());
+    tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(window));
     CAShapeLayer *torn = [CAShapeLayer layer];
     torn.frame = tape.bounds;
     CGPathRef outline = DPTapeOutline(size, flipped);
@@ -86,7 +93,7 @@ CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped) {
     tape.mask = torn;
     return tape;
 }
-void DPWashiTapeRecolor(CALayer *tape) { tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB()); }
+void DPWashiTapeRecolor(CALayer *tape, NSWindow *window) { tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(window)); }
 
 static BOOL DPTapeTabSelected(NSView *tab) {
     if (![tab respondsToSelector:@selector(safeSwiftValueForKey:)]) return NO;
@@ -139,7 +146,7 @@ static void DPTapeOn(NSView *tab) {
     CGPathRelease(outline);
     tape.shadowOffset = CGSizeMake(0, flipped ? 1 : -1);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
-    tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());
+    tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(tab.window));
     // On the corner of the tab's pill, not of its whole row (which runs to the window's edge): like Washi, it hangs
     // 1pt off the left (clear of the window edge) and 3pt off the top, so its middle is 13pt in and 2.5pt down from the pill's top-left corner.
     NSRect pill = DPTapePill(tab);
@@ -180,7 +187,79 @@ static void DPTapeFill_updateLayer(NSView *self, SEL _cmd) {
     dispatch_async(dispatch_get_main_queue(), ^{ queued = NO; DPTapeAll(); });
 }
 
+#pragma mark The space dots
+
+// The dots at the bottom of the sidebar, one per space, take each space's tape: the one you're in in full, the others
+// faded into the paper. Ours sit exactly over Dia's, so Dia's clicks and hover still work.
+static char DPDotKey, DPDotWatchKey;
+NSColor *DPWashiPaperColor(BOOL dark);   // WashiPaper.m
+
+static uint32_t DPTapeRGBForSpace(NSString *space) {
+    NSString *own = DPWashiSpaceTape(space);
+    return own ? DPTapeRGBForKey(own) : DPTapeRGB();
+}
+
+static void DPDotOn(NSView *item) {
+    NSView *dia = item.subviews.firstObject, *dot = DPGet(item, &DPDotKey);
+    NSString *space = item.accessibilityLabel;
+    if (!DPWashiLive(&DPWashiTape) || !dia || !space.length) { [dot removeFromSuperview]; DPSet(item, &DPDotKey, nil); return; }
+    if (!dot) { dot = [NSView new]; dot.wantsLayer = YES; DPSet(item, &DPDotKey, dot); }
+    if (dot.superview != item) [item addSubview:dot positioned:NSWindowAbove relativeTo:dia];
+    if (!NSEqualRects(dot.frame, dia.frame)) dot.frame = dia.frame;
+    BOOL here = [space isEqual:DPWashiSpaceOf(item.window)];
+    BOOL dark = [[item.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    uint32_t rgb = DPTapeRGBForSpace(space);
+    NSColor *tape = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
+    NSColor *color = here ? tape : [[DPWashiPaperColor(dark) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:.45 ofColor:tape];
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    dot.layer.cornerRadius = NSHeight(dia.frame) / 2;
+    dot.layer.backgroundColor = color.CGColor;
+    [CATransaction commit];
+}
+
+static void DPDots(NSWindow *window) {
+    for (NSView *item in DPFindViews(DPDiaSpaceSwitcherItem)) if (!window || item.window == window) DPDotOn(item);
+}
+
+// A new space in the window title: its tab's tape and the dots follow.
+@interface DPWashiTapeWatcher : NSObject
+@property (nonatomic, weak) NSWindow *window;
+@end
+@implementation DPWashiTapeWatcher
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!DPWashiLive(&DPWashiTape)) return;
+        DPDots(self.window);
+        for (NSView *tab in DPFindViews(DPDiaTabView)) if (tab.window == self.window) tab.needsLayout = YES;
+    });
+}
+- (void)dealloc { [_window removeObserver:self forKeyPath:@"title"]; }
+@end
+
+static void DPDot_layout(NSView *self, SEL _cmd) {
+    DPCallOriginal(DPDot_layout, self);
+    DPDotOn(self);
+    NSWindow *window = self.window;
+    if (window && !DPGet(window, &DPDotWatchKey)) {
+        DPWashiTapeWatcher *watcher = [DPWashiTapeWatcher new];
+        watcher.window = window;
+        [window addObserver:watcher forKeyPath:@"title" options:0 context:NULL];
+        DPSet(window, &DPDotWatchKey, watcher);
+    }
+}
+
+// For the Spaces list on Washi's page: the spaces in the switcher, in its order.
+NSArray<NSString *> *DPWashiSpaces(void) {
+    NSMutableArray *spaces = [NSMutableArray new];
+    for (NSView *item in DPFindViews(DPDiaSpaceSwitcherItem)) {
+        NSString *name = item.accessibilityLabel;
+        if (name.length && ![spaces containsObject:name]) [spaces addObject:name];
+    }
+    return spaces;
+}
+
 static void DPInstallWashiTape(void) {
+    DPHook(DPDiaSpaceSwitcherItem, @selector(layout), (IMP)DPDot_layout);
     DPHook(DPDiaTabView, @selector(layout), (IMP)DPTapeTab_layout);
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPTapeFill_updateLayer);
 }
@@ -188,9 +267,11 @@ static void DPInstallWashiTape(void) {
 static void DPApplyWashiTape(DPPatch *patch) {
     for (NSView *tab in DPFindViews(DPDiaTabView)) {
         CALayer *tape = DPGet(tab, &DPTapeKey);
-        if (tape) tape.contents = (__bridge id)DPTapeStripes(DPTapeRGB());   // a new color shows at once
+        if (tape) tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(tab.window));   // a new color shows at once
         DPTapeOn(tab);
     }
+    for (NSView *item in DPFindViews(DPDiaPinnedTab)) item.needsLayout = YES;   // Scrapbook's tape on favorites follows
+    DPDots(nil);
 }
 
 static NSString *DPVerifyWashiTape(DPPatch *patch) {
@@ -210,7 +291,7 @@ DP_PATCH(DPWashiTape) {
     .key = @"washiTape",
     .order = 6,
     .title = @"Washi Tape",
-    .detail = @"A strip of Washi tape on the selected tab, torn at the ends and stuck on at a tilt.",
+    .detail = @"A strip of Washi tape on the selected tab, torn at the ends and stuck on at a tilt, and the space dots in each space’s tape. In Scrapbook, favorites get tape too.",
     .symbol = @"bandage.fill",
     .tint = @"systemPinkColor",
     .section = @"Sidebar",

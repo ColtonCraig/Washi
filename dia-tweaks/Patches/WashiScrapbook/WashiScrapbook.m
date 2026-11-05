@@ -8,20 +8,21 @@ NSArray<NSView *> *DPWashiArtScrapbook(void);   // WashiLook.m
 //  Scrapbook look. Paper Hover: a tab lifts a point under the pointer and a favorite two, with a touch more tilt,
 //  on Washi's spring. Reduce Motion keeps the lift but drops the movement to it.
 
-extern DPPatch DPWashiScrapbook, DPWashiLift;
+extern DPPatch DPWashiScrapbook, DPWashiLift, DPWashiTape;
 static char DPSpyKey, DPPinTapeKey;
 static BOOL DPFlippedLayer(NSView *view);
-CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped);   // WashiTape.m
-void DPWashiTapeRecolor(CALayer *tape);
+CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped, NSWindow *window);   // WashiTape.m
+void DPWashiTapeRecolor(CALayer *tape, NSWindow *window);
 
-// Scrapbook pins each favorite with a strip of tape across its top, like Washi's: 22×9, centred, leaning 5° one way
+// Scrapbook pins each favorite with a strip of tape across its top (while Washi Tape is on), like Washi's: 22×9, centred, leaning 5° one way
 // or the other. Washi hangs it over the edge; Dia clips the sidebar above the first row, so here it sits just inside.
 static void DPPinTape(NSView *item, NSUInteger place) {
     CALayer *tape = DPGet(item, &DPPinTapeKey);
-    if (!DPWashiLive(&DPWashiScrapbook) || !item.layer) { [tape removeFromSuperlayer]; DPSet(item, &DPPinTapeKey, nil); return; }
+    if (!DPWashiLive(&DPWashiScrapbook) || !DPWashiLive(&DPWashiTape) || !item.layer) { [tape removeFromSuperlayer];   // tape anywhere needs Washi Tape
+        DPSet(item, &DPPinTapeKey, nil); return; }
     BOOL flipped = DPFlippedLayer(item);
-    if (!tape) { tape = DPWashiTapeStrip(CGSizeMake(22, 9), flipped); DPSet(item, &DPPinTapeKey, tape); }
-    else DPWashiTapeRecolor(tape);
+    if (!tape) { tape = DPWashiTapeStrip(CGSizeMake(22, 9), flipped, item.window); DPSet(item, &DPPinTapeKey, tape); }
+    else DPWashiTapeRecolor(tape, item.window);
     [CATransaction begin]; [CATransaction setDisableActions:YES];
     CGFloat top = flipped ? NSMinY(item.bounds) : NSMaxY(item.bounds);
     tape.position = CGPointMake(NSMidX(item.bounds), top + (flipped ? 5.5 : -5.5));   // just inside the top edge: Dia clips anything above the first row

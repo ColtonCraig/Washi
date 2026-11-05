@@ -11,6 +11,7 @@ void DPWashiPaperAt(NSUInteger i, NSString **key, NSString **name, uint32_t *lig
 NSUInteger DPWashiTapeCount(void);
 void DPWashiTapeAt(NSUInteger i, NSString **key, NSString **name, uint32_t *rgb);
 NSFont *DPCaveat(CGFloat size);
+NSArray<NSString *> *DPWashiSpaces(void);   // WashiTape.m
 
 static NSColor *DPLookHex(uint32_t rgb) {
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
@@ -73,6 +74,7 @@ void DPWashiApplyAppearance(void) {
     NSLayoutConstraint *_height;
     CGFloat _needed;
     NSArray<NSSwitch *> *_feel;
+    NSMutableArray<NSArray *> *_spaceHits;   // rect, space, tape key ("" for the main tape)
 }
 extern DPPatch DPWashiScrapbook;
 // Feel, like Washi's: Paper texture, Scrapbook, Animations.
@@ -84,7 +86,7 @@ static NSArray<NSArray<NSString *> *> *DPFeelRows(void) {
 static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? DPWashiScrapbook.on : DPWashiFeel(key); }
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
-        _paperHits = [NSMutableArray new]; _tapeHits = [NSMutableArray new]; _modeHits = [NSMutableArray new];
+        _paperHits = [NSMutableArray new]; _tapeHits = [NSMutableArray new]; _modeHits = [NSMutableArray new]; _spaceHits = [NSMutableArray new];
         _needed = 420;
         self.identifier = @"Your Look";
         NSMutableArray *feel = [NSMutableArray new];
@@ -116,8 +118,10 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
 }
 - (CGFloat)feelTopFor:(CGFloat)W {
     CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62);
-    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 70 + 30 + 18;
+    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 70 + 30 + 18 + [self spacesHeight];
 }
+// Spaces, when there's more than one: each can have its own tape.
+- (CGFloat)spacesHeight { NSUInteger n = DPWashiSpaces().count; return n > 1 ? 44 + n * 32 : 0; }
 - (BOOL)isFlipped { return YES; }
 - (NSSize)intrinsicContentSize { return NSMakeSize(NSViewNoIntrinsicMetric, _needed); }
 - (void)setHeightConstraint:(NSLayoutConstraint *)c { _height = c; }
@@ -143,7 +147,11 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
 void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString *spot) {
     NSColor *ink = DPLookInk(dark), *card = DPLookCard(paper, dark);
     NSColor *shade = [NSColor colorWithWhite:0 alpha:dark ? .35 : .12];
-    BOOL tilt = [spot isEqual:@"scrapbook"], lift = [spot isEqual:@"lift"], newTab = [spot isEqual:@"newtab"] || [spot isEqual:@"commandbar"];
+    // Drawn as your switches are now, with the option being shown always on.
+    extern DPPatch DPWashiTape, DPWashiScrapbook, DPWashiCards, DPWashiHand;
+    BOOL tapeOn = DPWashiTape.on || [spot isEqual:@"tape"], cardsOn = DPWashiCards.on || [spot isEqual:@"cards"], handOn = DPWashiHand.on || [spot isEqual:@"hand"];
+    BOOL tilt = DPWashiScrapbook.on || [spot isEqual:@"scrapbook"], lift = [spot isEqual:@"lift"], newTab = [spot isEqual:@"newtab"] || [spot isEqual:@"commandbar"];
+    NSColor *plain = [ink colorWithAlphaComponent:dark ? .12 : .08];   // Dia's own grey, where Washi Cards is off
     NSMutableArray<NSValue *> *spots = [NSMutableArray new];
     NSBezierPath *window = [NSBezierPath bezierPathWithRoundedRect:r xRadius:9 yRadius:9];
     [paper setFill]; [window fill];
@@ -160,9 +168,9 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         favs = i ? NSUnionRect(favs, tile) : tile;
         [NSGraphicsContext saveGraphicsState];
         if (tilt) { NSAffineTransform *t = [NSAffineTransform transform]; [t translateXBy:NSMidX(tile) yBy:NSMidY(tile)]; [t rotateByDegrees:i ? 4 : -4]; [t translateXBy:-NSMidX(tile) yBy:-NSMidY(tile)]; [t concat]; }
-        [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(tile, 1, 1) xRadius:3 yRadius:3] fill];
-        [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:tile xRadius:3 yRadius:3] fill];
-        if (tilt || !spot) DPLookTape(NSMakePoint(NSMidX(tile), NSMinY(tile) + 2), 9, 3.5, i ? -6 : 6, tape);
+        if (cardsOn) { [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(tile, 1, 1) xRadius:3 yRadius:3] fill]; }
+        [(cardsOn ? card : plain) setFill]; [[NSBezierPath bezierPathWithRoundedRect:tile xRadius:3 yRadius:3] fill];
+        if (tilt && tapeOn) DPLookTape(NSMakePoint(NSMidX(tile), NSMinY(tile) + 2), 9, 3.5, i ? -6 : 6, tape);
         [NSGraphicsContext restoreGraphicsState];
     }
     // the space name, in handwriting
@@ -170,7 +178,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     NSAffineTransform *lean = [NSAffineTransform transform];
     [NSGraphicsContext saveGraphicsState];
     if (tilt) { [lean translateXBy:NSMidX(name) yBy:NSMidY(name)]; [lean rotateByDegrees:-3]; [lean translateXBy:-NSMidX(name) yBy:-NSMidY(name)]; [lean concat]; }
-    [@"Personal" drawAtPoint:NSMakePoint(x + 7, y + 33) withAttributes:@{ NSFontAttributeName: DPCaveat(10.5), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.86] }];
+    if (handOn) [@"Personal" drawAtPoint:NSMakePoint(x + 7, y + 33) withAttributes:@{ NSFontAttributeName: DPCaveat(10.5), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.86] }];
     [NSGraphicsContext restoreGraphicsState];
     // tabs: the second is the selected card with its tape; the third lifts under a pointer for Paper Hover
     NSRect selected = NSZeroRect, lifted = NSZeroRect;
@@ -183,9 +191,9 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         }
         if (i == 1) {
             selected = row;
-            [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(row, .8, .8) xRadius:3 yRadius:3] fill];
-            [card setFill]; [[NSBezierPath bezierPathWithRoundedRect:row xRadius:3 yRadius:3] fill];
-            DPLookTape(NSMakePoint(NSMinX(row) + 4, NSMinY(row) + 1), 8, 3, -20, tape);
+            if (cardsOn) { [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(row, .8, .8) xRadius:3 yRadius:3] fill]; }
+            [(cardsOn ? card : plain) setFill]; [[NSBezierPath bezierPathWithRoundedRect:row xRadius:3 yRadius:3] fill];
+            if (tapeOn) DPLookTape(NSMakePoint(NSMinX(row) + 4, NSMinY(row) + 1), 8, 3, -20, tape);
         }
         [[ink colorWithAlphaComponent:.3] setFill];
         [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(row) + 4, NSMidY(row) - 2, 4, 4) xRadius:1 yRadius:1] fill];
@@ -361,6 +369,37 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         if (i == ti) { NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dot, -3, -3)]; ring.lineWidth = 2; [label setStroke]; [ring stroke]; }
         [_tapeHits addObject:[NSValue valueWithRect:hit]];
     }
+    // Spaces: a row each, its name and the same dots, with "Same" for the main tape.
+    [_spaceHits removeAllObjects];
+    NSArray<NSString *> *spaces = DPWashiSpaces();
+    if (spaces.count > 1) {
+        CGFloat sy = y + 30 + 18;
+        [[label colorWithAlphaComponent:.1] setFill]; NSRectFill(NSMakeRect(pad, sy - 10, W - pad * 2, 1));
+        [@"Spaces" drawAtPoint:NSMakePoint(pad, sy) withAttributes:bold];
+        [@"Give a space its own tape: its tabs, Scrapbook tape and dot use it." drawInRect:NSMakeRect(pad + 54, sy + 1, W - pad * 2 - 54, 15) withAttributes:small];
+        NSDictionary *spaceName = @{ NSFontAttributeName: DPCaveat(17), NSForegroundColorAttributeName: label };
+        NSMutableParagraphStyle *tail = [NSMutableParagraphStyle new]; tail.lineBreakMode = NSLineBreakByTruncatingTail;
+        for (NSUInteger r = 0; r < spaces.count; r++) {
+            CGFloat ry = sy + 26 + r * 32;
+            NSString *own = DPWashiSpaceTape(spaces[r]) ?: @"";
+            NSMutableDictionary *nameAttrs = [spaceName mutableCopy]; nameAttrs[NSParagraphStyleAttributeName] = tail;
+            [spaces[r] drawInRect:NSMakeRect(pad, ry + 2, 66, 24) withAttributes:nameAttrs];
+            for (NSUInteger i = 0; i <= DPWashiTapeCount(); i++) {
+                NSRect hit = NSMakeRect(pad + 74 + i * 34, ry, 30, 30), dot = NSInsetRect(hit, 5, 5);
+                NSString *key = @"";
+                if (i == 0) {   // Same as the main tape: a dashed ring
+                    NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:dot];
+                    CGFloat dash[] = { 2.5, 2 }; [ring setLineDash:dash count:2 phase:0]; ring.lineWidth = 1.4;
+                    [tape setStroke]; [ring stroke];
+                } else {
+                    uint32_t rgb; DPWashiTapeAt(i - 1, &key, NULL, &rgb);
+                    [DPLookHex(rgb) setFill]; [[NSBezierPath bezierPathWithOvalInRect:dot] fill];
+                }
+                if ([own isEqual:key]) { NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dot, -3, -3)]; ring.lineWidth = 2; [label setStroke]; [ring stroke]; }
+                [_spaceHits addObject:@[ [NSValue valueWithRect:hit], spaces[r], key ]];
+            }
+        }
+    }
     // Feel: each a title and a line under it, with its switch on the right.
     CGFloat top = [self feelTopFor:W];
     [[label colorWithAlphaComponent:.1] setFill]; NSRectFill(NSMakeRect(pad, top - 10, W - pad * 2, 1));
@@ -389,6 +428,15 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
             self.needsDisplay = YES;
             return;
         }
+    for (NSArray *hit in _spaceHits)
+        if (NSPointInRect(at, [hit[0] rectValue])) {
+            NSMutableDictionary *all = [[DPWashiDefaults() dictionaryForKey:@"washiSpaceTapes"] mutableCopy] ?: [NSMutableDictionary new];
+            if ([hit[2] length]) all[hit[1]] = hit[2]; else [all removeObjectForKey:hit[1]];
+            [DPWashiDefaults() setObject:all forKey:@"washiSpaceTapes"];
+            if (DPWashiPaper.on && DPWashiPaper.apply) DPWashiPaper.apply(&DPWashiPaper);
+            self.needsDisplay = YES;
+            return;
+        }
     for (NSUInteger i = 0; i < _paperHits.count; i++)
         if (NSPointInRect(at, _paperHits[i].rectValue)) { NSString *k; DPWashiPaperAt(i, &k, NULL, NULL, NULL); [self choose:&DPWashiPaper key:k]; return; }
     for (NSUInteger i = 0; i < _tapeHits.count; i++)
@@ -397,6 +445,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
 
 - (void)resetCursorRects {
     for (NSValue *v in [[_paperHits arrayByAddingObjectsFromArray:_tapeHits] arrayByAddingObjectsFromArray:_modeHits]) [self addCursorRect:v.rectValue cursor:NSCursor.pointingHandCursor];
+    for (NSArray *hit in _spaceHits) [self addCursorRect:[hit[0] rectValue] cursor:NSCursor.pointingHandCursor];
 }
 @end
 
