@@ -19,24 +19,29 @@ static NSArray<NSArray *> *DPFolderWords(void) {
     static NSArray *words;
     if (words) return words;
     NSArray *raw = @[
-        @[ @"wrench.and.screwdriver", @"admin|console|mdm|tools?|it|okta|jamf|kandji|iru|hexnode|intune|maas360|addigy|mosyle|devices?|help ?desk|support|tickets?|servicenow|zendesk|freshservice" ],
+        // the ones your Washi had for your teams
+        @[ @"cloud.fill", @"okta|sso|identity|idp|entra|azure ad" ],
+        @[ @"shippingbox.fill", @"bluetally|inventory|assets?|hardware|asset tags?|snipe-?it" ],
+        @[ @"house.fill", @"mdm|jamf|kandji|iru|hexnode|intune|addigy|mosyle|devices?" ],
+        @[ @"book.fill", @"drive|docs?|google docs|sheets|notes?|wiki|confluence|notion" ],
+        @[ @"wrench.and.screwdriver.fill", @"admin|console|mdm|tools?|it|okta|jamf|kandji|iru|hexnode|intune|maas360|addigy|mosyle|devices?|help ?desk|support|tickets?|servicenow|zendesk|freshservice" ],
         @[ @"chevron.left.forwardslash.chevron.right", @"code|dev|developer|github|gitlab|git|bitbucket|repos?|engineering|api|stack ?overflow|vercel|netlify|aws|cloudflare" ],
-        @[ @"book", @"docs?|drive|notes?|wiki|confluence|notion|reading|read|books?|learn|learning|school|study|courses?|articles?|research" ],
-        @[ @"chart.bar", @"data|dashboards?|analytics|reports?|metrics|numbers|sheets?|stats|kpis?|datadog|grafana|looker|tableau" ],
-        @[ @"banknote", @"money|bank|banking|finance|budget|expenses?|bills?|tax|taxes|invoices?|payroll|rippling|gusto|shopping|shop|amazon|crypto" ],
+        @[ @"book.fill", @"docs?|drive|notes?|wiki|confluence|notion|reading|read|books?|learn|learning|school|study|courses?|articles?|research" ],
+        @[ @"chart.bar.fill", @"data|dashboards?|analytics|reports?|metrics|numbers|sheets?|stats|kpis?|datadog|grafana|looker|tableau" ],
+        @[ @"banknote.fill", @"money|bank|banking|finance|budget|expenses?|bills?|tax|taxes|invoices?|payroll|rippling|gusto|shopping|shop|amazon|crypto" ],
         @[ @"calendar", @"calendar|plans?|planning|meetings?|schedule|events?|agenda|todo|to-do|tasks?|projects?|jira|asana|linear|trello" ],
         @[ @"airplane", @"travel|trips?|flights?|hotels?|vacation|holiday|airbnb|booking|maps?" ],
         @[ @"music.note", @"music|songs?|spotify|playlists?|podcasts?|soundcloud|bandcamp|vinyl|records?" ],
-        @[ @"camera", @"photos?|pictures?|video|videos|youtube|vimeo|netflix|watch|movies?|tv|camera" ],
-        @[ @"gamecontroller", @"games?|gaming|steam|twitch|play|xbox|playstation|nintendo" ],
-        @[ @"paintpalette", @"design|art|figma|dribbble|behance|inspo|inspiration|ideas board|canva|fonts?" ],
-        @[ @"newspaper", @"news|feeds?|rss|headlines|reddit|blogs?|newsletters?|press" ],
-        @[ @"house", @"home|house|family|kids|personal|life|chores|recipes?|cooking" ],
-        @[ @"briefcase", @"work|job|jobs|office|company|team|clients?|hr|careers?|hudl|slack|zoom|teams" ],
-        @[ @"lightbulb", @"ideas?|brainstorm|someday|inbox|later|misc" ],
-        @[ @"heart", @"favou?rites?|faves?|loved?|health|fitness|gym|wellness" ],
-        @[ @"cloud", @"cloud|storage|backups?|dropbox|icloud|onedrive|box" ],
-        @[ @"leaf", @"garden|plants?|growing|grow|habits?" ],
+        @[ @"camera.fill", @"photos?|pictures?|video|videos|youtube|vimeo|netflix|watch|movies?|tv|camera" ],
+        @[ @"gamecontroller.fill", @"games?|gaming|steam|twitch|play|xbox|playstation|nintendo" ],
+        @[ @"paintpalette.fill", @"design|art|figma|dribbble|behance|inspo|inspiration|ideas board|canva|fonts?" ],
+        @[ @"newspaper.fill", @"news|feeds?|rss|headlines|reddit|blogs?|newsletters?|press" ],
+        @[ @"house.fill", @"home|house|family|kids|personal|life|chores|recipes?|cooking" ],
+        @[ @"briefcase.fill", @"work|job|jobs|office|company|team|clients?|hr|careers?|hudl|slack|zoom|teams" ],
+        @[ @"lightbulb.fill", @"ideas?|brainstorm|someday|inbox|later|misc" ],
+        @[ @"heart.fill", @"favou?rites?|faves?|loved?|health|fitness|gym|wellness" ],
+        @[ @"cloud.fill", @"cloud|storage|backups?|dropbox|icloud|onedrive|box" ],
+        @[ @"leaf.fill", @"garden|plants?|growing|grow|habits?" ],
         @[ @"magnifyingglass", @"search|find|lookups?|references?" ],
     ];
     NSMutableArray *built = [NSMutableArray new];
@@ -99,6 +104,7 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
 @property (nonatomic, copy) NSString *title;   // the folder's name, written where Dia's was
 @property (nonatomic, strong) NSFont *font;
 @property (nonatomic) NSRect titleFrame;
+@property (nonatomic) NSInteger count;   // tabs in the folder
 @end
 @implementation DPWashiManila
 - (BOOL)isFlipped { return YES; }
@@ -125,8 +131,8 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
     // Light: Washi's manila, or light paper with 30% of the folder's color. Dark: the dark paper with 30% of it (a dark
     // manila when it has none), so a folder sits in the dark sidebar instead of glaring out of it.
     NSColor *tint = [self.tint colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
-    NSColor *base = self.dark ? [DPHex(0x2e2820) blendedColorWithFraction:.3 ofColor:tint ?: DPHex(0xc9a44f)]
-                              : tint ? [DPHex(0xfdf8ec) blendedColorWithFraction:.3 ofColor:tint] : DPHex(0xf2d58f);
+    NSColor *base = self.dark ? [DPHex(0x2e2820) blendedColorWithFraction:.34 ofColor:tint ?: DPHex(0xc9a44f)]
+                              : tint ? [DPHex(0xfdf8ec) blendedColorWithFraction:.38 ofColor:tint] : DPHex(0xf2d58f);
     return self.hover ? [base blendedColorWithFraction:self.dark ? .08 : .22 ofColor:NSColor.whiteColor] : base;
 }
 - (void)drawRect:(NSRect)dirty {
@@ -149,7 +155,15 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
     [(self.tint ? [self.tint colorWithAlphaComponent:.4] : [NSColor colorWithWhite:0 alpha:.08]) setFill]; [shadow fill];
     [self.paper setFill]; [folder fill];
     NSMutableParagraphStyle *tail = [NSMutableParagraphStyle new]; tail.lineBreakMode = NSLineBreakByTruncatingTail;
-    [self.title ?: @"" drawInRect:self.titleFrame withAttributes:@{ NSFontAttributeName: self.font ?: [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: self.dark ? DPHex(0xf3ece2) : DPManilaInk(), NSParagraphStyleAttributeName: tail }];
+    extern NSFont *DPWashiUIFont(CGFloat size, NSFontWeight weight);
+    NSRect titleFrame = self.titleFrame; titleFrame.origin.y -= 1; titleFrame.size.height += 2; titleFrame.size.width += 6;
+    if (self.count && !self.hover) {   // Washi's count, at the right (Dia's ✕ shows there on hover)
+        NSString *n = [NSString stringWithFormat:@"%ld", (long)self.count];
+        NSDictionary *ct = @{ NSFontAttributeName: DPWashiUIFont(12, NSFontWeightSemibold), NSForegroundColorAttributeName: [(self.dark ? DPHex(0xf3ece2) : DPManilaInk()) colorWithAlphaComponent:.5] };
+        NSSize cs = [n sizeWithAttributes:ct];
+        [n drawAtPoint:NSMakePoint(NSWidth(self.bounds) - 14 - cs.width, (NSHeight(self.bounds) + 5) / 2 - cs.height / 2) withAttributes:ct];
+    }
+    [self.title ?: @"" drawInRect:titleFrame withAttributes:@{ NSFontAttributeName: DPWashiUIFont(MAX(self.font.pointSize, 13), NSFontWeightSemibold), NSForegroundColorAttributeName: self.dark ? DPHex(0xf3ece2) : DPManilaInk(), NSParagraphStyleAttributeName: tail }];
 }
 @end
 
@@ -178,7 +192,10 @@ static NSColor *DPFolderColor(NSTextField *name) {
     __block NSColor *rgb = nil;
     [name.effectiveAppearance performAsCurrentDrawingAppearance:^{ rgb = [dia colorUsingColorSpace:NSColorSpace.sRGBColorSpace]; }];
     CGFloat sat = rgb ? MAX(rgb.redComponent, MAX(rgb.greenComponent, rgb.blueComponent)) - MIN(rgb.redComponent, MIN(rgb.greenComponent, rgb.blueComponent)) : 0;
-    return sat > .12 ? rgb : nil;   // a grey is no color
+    if (sat <= .12) return nil;   // a grey is no color
+    // Dia's folder colors are muted; Washi's were clear pastels. The same hue, with its color lifted.
+    CGFloat h, sa, b, a; [rgb getHue:&h saturation:&sa brightness:&b alpha:&a];
+    return [NSColor colorWithHue:h saturation:MAX(sa, .62) brightness:MIN(MAX(b, .62), .86) alpha:1];
 }
 
 // A folder's color, remembered by its name: Dia redraws the name grey or white while you hover or pick a tab in it,
@@ -194,9 +211,15 @@ static NSColor *DPFolderTint(NSTextField *name) {
 
 static void DPFolderIn(NSView *group) {
     BOOL on = DPWashiLive(&DPWashiFolders);
-    // The icon: Dia's default (its "Album") is swapped; any other icon is one you chose.
-    NSImageView *dia = (NSImageView *)DPFindView(group, ^BOOL(NSView *v) { return [v isKindOfClass:NSImageView.class] && [v.accessibilityLabel isEqual:@"Album"]; });
+    // The icon: what Dia picks by itself (its "Album", or the first tab's site logo) is swapped for Washi's paper icon;
+    // one you chose in Dia (a symbol or emoji, which Dia names) always stays.
     NSImageView *mine = DPGet(group, &DPFolderIconKey);
+    NSImageView *dia = (NSImageView *)DPFindView(group, ^BOOL(NSView *v) {
+        if (![v isKindOfClass:NSImageView.class] || v == mine || v.hidden || NSWidth(v.frame) < 15 || NSWidth(v.frame) > 18) return NO;
+        if (!DPIsKind(v.superview, "_TtC5ARCUI11FlippedView") || NSWidth(v.superview.frame) > 20) return NO;   // the header's icon spot
+        NSString *label = v.accessibilityLabel;
+        return !label.length || [label isEqual:@"Album"];
+    });
     NSTextField *name = (NSTextField *)DPFirstOf(group, DPTabTitleLabel);
     NSString *symbol = on && dia && !dia.hidden ? DPFolderIconFor([name isKindOfClass:NSTextField.class] ? name.stringValue : @"", DPFolderTabs(group)) : nil;
     if (!symbol) {
@@ -208,7 +231,7 @@ static void DPFolderIn(NSView *group) {
         if (mine.superview != dia.superview) [dia.superview addSubview:mine positioned:NSWindowAbove relativeTo:dia];
         if (!NSEqualRects(mine.frame, dia.frame)) mine.frame = dia.frame;
         if (![mine.identifier isEqual:symbol]) {
-            NSImageSymbolConfiguration *config = [NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightSemibold];
+            NSImageSymbolConfiguration *config = [NSImageSymbolConfiguration configurationWithPointSize:14 weight:NSFontWeightSemibold];
             mine.image = [[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil] imageWithSymbolConfiguration:config];
             mine.identifier = symbol;
         }
@@ -263,6 +286,8 @@ static void DPFolderIn(NSView *group) {
             manila.title = name.stringValue; manila.font = name.font; manila.titleFrame = tf; manila.needsDisplay = YES;
         }
         if (name.alphaValue != 0) name.alphaValue = 0;
+        NSInteger count = (NSInteger)DPFolderTabs(group).count;
+        if (manila.count != count) { manila.count = count; manila.needsDisplay = YES; }
     }
     if (chevron) {
         if (!DPGet(group, &DPFolderChevronKey)) DPSet(group, &DPFolderChevronKey, chevron.contentTintColor ?: (id)NSNull.null);

@@ -56,7 +56,9 @@ static NSFont *DPLettering(NSView *label, NSFont *dia) {
     NSFont *base = DPGet(label, &DPDiaFontKey) ?: dia;
     BOOL system = [base.fontName hasPrefix:@"."] || [base.familyName isEqual:[NSFont systemFontOfSize:12].familyName];
     if (!system) return dia;   // a font Dia chose on purpose (a monospace address…) stays
-    return DPWashiFigtree(base.pointSize, DPWeightOf(base));
+    // Sidebar names (tabs, folders, New Tab) at Washi's size: 14 where Dia has 13.
+    CGFloat size = DPIsKind(label, DPTabLabel) && fabs(base.pointSize - 13) < .6 ? 14 : base.pointSize;
+    return DPWashiFigtree(size, DPWeightOf(base));
 }
 
 static void DPType_setFont(NSTextField *self, SEL _cmd, NSFont *font) {
@@ -76,8 +78,22 @@ static NSAttributedString *DPLetteringText(NSView *label, NSAttributedString *te
     return changed ? mine : text;
 }
 
+// A tab's name in Washi's ink (Dia's is a grey-black): only a tab's, and only where Dia left the ordinary text color.
+static NSAttributedString *DPLetteringInk(NSTextField *label, NSAttributedString *text) {
+    if (!DPWashiLive(&DPWashiType) || !text.length) return text;
+    NSView *tab = label.superview;
+    for (int i = 0; tab && i < 5 && !DPIsKind(tab, DPDiaTabView); i++) tab = tab.superview;
+    if (!DPIsKind(tab, DPDiaTabView)) return text;
+    NSColor *c = [text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
+    if (c && ![c isEqual:NSColor.labelColor] && ![c isEqual:NSColor.controlTextColor] && ![c isEqual:NSColor.textColor]) return text;
+    BOOL dark = [[label.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    NSMutableAttributedString *inked = [text mutableCopy];
+    [inked addAttribute:NSForegroundColorAttributeName value:dark ? [NSColor colorWithSRGBRed:.953 green:.925 blue:.886 alpha:1] : [NSColor colorWithSRGBRed:43 / 255.0 green:33 / 255.0 blue:24 / 255.0 alpha:1] range:NSMakeRange(0, inked.length)];
+    return inked;
+}
+
 static void DPType_setText(NSTextField *self, SEL _cmd, NSAttributedString *text) {
-    DPCallOriginal(DPType_setText, self, DPLetteringText(self, text));
+    DPCallOriginal(DPType_setText, self, DPLetteringInk(self, DPLetteringText(self, text)));
 }
 
 static void DPRetype(NSTextField *label) {
