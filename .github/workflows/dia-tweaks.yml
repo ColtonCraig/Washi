@@ -1,0 +1,14 @@
+name: Dia tweaks build
+# Builds DiaTweaks with Washi's tweaks on a Mac (no Dia needed), the same way get.sh does on Colton's Mac.
+on:
+  push: { paths: ['dia-tweaks/**', '.github/workflows/dia-tweaks.yml'] }
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git clone -q --depth 1 https://github.com/JaceThings/DiaTweaks dt
+          cp -R dia-tweaks/Patches/* dt/src/dylib/Patches/
+          cd dt && make && python3 -c "import json;d=json.load(open('build/patches.json'));print([p.get('key') for p in (d if isinstance(d,list) else d.get('patches',[])) if 'washi' in str(p.get('key','')).lower()])"
