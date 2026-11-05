@@ -15,7 +15,7 @@ static NSFont *DPCaveat(CGFloat size) {
     static CGFontRef font;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        CFDataRef data = CFDataCreateWithBytesNoCopy(NULL, DPCaveat, sizeof DPCaveat, kCFAllocatorNull);
+        CFDataRef data = CFDataCreateWithBytesNoCopy(NULL, DPCaveatData, sizeof DPCaveatData, kCFAllocatorNull);
         CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
         font = CGFontCreateWithDataProvider(provider);
         CGDataProviderRelease(provider); CFRelease(data);
