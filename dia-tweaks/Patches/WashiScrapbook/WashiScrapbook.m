@@ -148,6 +148,39 @@ static CGFloat DPTabRot(NSView *tab) {
     return ((CGFloat)(h % 2001) / 1000.0) - 1;
 }
 
+// Washi Cards: a tab under the pointer gets Washi's hover, a wash of paper-white (.tab:hover), instead of Dia's grey.
+NSColor *DPWashiPaperColor(BOOL dark);   // WashiPaper.m
+#define DPTabHighlight "_TtC5TabUIP33_903BE4B7F5DFD8B21A7A465D1A9EF8E416TabHighlightView"
+static char DPWashKey, DPDiaHighlightKey;
+static void DPHoverWash(NSView *tab, BOOL show) {
+    NSView *background = nil, *highlight = nil;
+    for (NSView *sub in tab.subviews) for (NSView *inner in sub.subviews) if (DPIsKind(inner, DPTabHighlight)) { background = sub; highlight = inner; }
+    if (!highlight) return;
+    NSView *wash = DPGet(tab, &DPWashKey);
+    BOOL cards = DPWashiLive(&DPWashiCards);
+    if (!cards) {
+        [wash removeFromSuperview]; DPSet(tab, &DPWashKey, nil);
+        NSNumber *a = DPGet(highlight, &DPDiaHighlightKey);
+        if (a) { highlight.alphaValue = a.doubleValue; DPSet(highlight, &DPDiaHighlightKey, nil); }
+        return;
+    }
+    if (!DPGet(highlight, &DPDiaHighlightKey)) DPSet(highlight, &DPDiaHighlightKey, @(highlight.alphaValue));
+    if (highlight.alphaValue != 0) highlight.alphaValue = 0;
+    if (!wash) { wash = [NSView new]; wash.wantsLayer = YES; wash.layer.cornerRadius = 10; DPSet(tab, &DPWashKey, wash); }
+    if (wash.superview != background) [background addSubview:wash positioned:NSWindowAbove relativeTo:highlight];
+    if (!NSEqualRects(wash.frame, highlight.frame)) wash.frame = highlight.frame;
+    BOOL dark = [[tab.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+    NSColor *white = [[DPWashiPaperColor(dark) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:dark ? .14 : .8 ofColor:NSColor.whiteColor];
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    wash.layer.backgroundColor = [white colorWithAlphaComponent:dark ? .7 : .55].CGColor;
+    [CATransaction commit];
+    float want = show ? 1 : 0;
+    if (wash.layer.opacity != want) {
+        if (!DPWashiCalm()) { CABasicAnimation *f = [CABasicAnimation animationWithKeyPath:@"opacity"]; f.fromValue = @(wash.layer.presentationLayer.opacity); f.toValue = @(want); f.duration = .12; [wash.layer addAnimation:f forKey:@"washiWash"]; }
+        wash.layer.opacity = want;
+    }
+}
+
 static BOOL DPTabSelectedNow(NSView *tab) {
     for (NSView *background in tab.subviews)
         for (NSView *shape in background.subviews)
@@ -157,12 +190,13 @@ static BOOL DPTabSelectedNow(NSView *tab) {
 
 static void DPFeelTab(NSView *tab) {
     if (!tab.layer) return;
-    BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(tab), press = motion && DPPressed(tab);
+    BOOL motion = DPWashiLive(&DPWashiLift), pointer = !DPScrolling() && DPPointerIn(tab), hover = motion && pointer, press = motion && DPPressed(tab);
+    DPHoverWash(tab, pointer && !DPTabSelectedNow(tab));
     CGFloat lean = DPTabSelectedNow(tab) ? MAX(-1, MIN(1, DPTabRot(tab) * -.5 * DPLean())) : 0;   // never so far a corner leaves the sidebar   // Washi's .tab.on rotate(rot × -.5°)
     // The first tab in the list doesn't lift: the list's top edge would cut it (and its tape).
     NSView *cell = tab.superview;
     BOOL first = cell.superview.isFlipped ? NSMinY(cell.frame) < 4 : NSMaxY(cell.frame) > NSHeight(cell.superview.bounds) - 4;
-    DPSpyOn(tab, motion);
+    DPSpyOn(tab, motion || DPWashiLive(&DPWashiCards));   // the pointer matters to Cards' hover too
     DPFeelSet(tab, DPFeel(tab, lean, hover && !press && !first ? 1.5 : 0, press ? .97 : 1), press ? .14 : .38);
 }
 
@@ -254,6 +288,45 @@ static void DPFeelTab_moved(NSView *self, SEL _cmd) {
     });
 }
 
+#pragma mark Closing a tab
+
+// Paper Motion: a closed tab crumples away like Washi's (14pt left, a little smaller, fading, .2s). Dia takes the tab
+// out at once, so what crumples is a picture of it, taken as it goes. Only right after its ✕ was clicked or ⌘W
+// pressed: tabs leaving because of a scroll, a drag or another space never crumple.
+static CFTimeInterval DPClosingUntil;
+static void DPClosing(void) { DPClosingUntil = CACurrentMediaTime() + .6; }
+
+static void DPCrumple(NSView *tab) {
+    NSView *list = tab.superview;
+    while (list && !DPIsKind(list, DPDiaTabList)) list = list.superview;
+    if (!list.layer || NSIsEmptyRect(tab.bounds) || tab.hiddenOrHasHiddenAncestor) return;
+    NSBitmapImageRep *rep = [tab bitmapImageRepForCachingDisplayInRect:tab.bounds];
+    if (!rep) return;
+    [tab cacheDisplayInRect:tab.bounds toBitmapImageRep:rep];
+    CALayer *ghost = [CALayer layer];
+    ghost.contents = (__bridge id)rep.CGImage;
+    ghost.contentsScale = tab.window.backingScaleFactor ?: 2;
+    ghost.frame = [list convertRect:tab.bounds fromView:tab];
+    ghost.zPosition = 500;
+    [list.layer addSublayer:ghost];
+    [CATransaction begin];
+    [CATransaction setCompletionBlock:^{ [ghost removeFromSuperlayer]; }];
+    CABasicAnimation *left = [CABasicAnimation animationWithKeyPath:@"transform.translation.x"]; left.toValue = @-14; left.additive = YES;
+    CABasicAnimation *shrink = [CABasicAnimation animationWithKeyPath:@"transform.scale"]; shrink.toValue = @.96;
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"]; fade.toValue = @0;
+    CAAnimationGroup *crumple = [CAAnimationGroup animation];
+    crumple.animations = @[ left, shrink, fade ]; crumple.duration = .2;
+    crumple.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.4 :0 :1 :1];
+    crumple.fillMode = kCAFillModeForwards; crumple.removedOnCompletion = NO;
+    [ghost addAnimation:crumple forKey:@"washiCrumple"];
+    [CATransaction commit];
+}
+
+static void DPFeelTab_leaving(NSView *self, SEL _cmd, NSWindow *window) {
+    if (!window && self.window && CACurrentMediaTime() < DPClosingUntil && DPWashiLive(&DPWashiLift) && !DPWashiCalm() && !DPScrolling()) DPCrumple(self);
+    DPCallOriginal(DPFeelTab_leaving, self, window);
+}
+
 #pragma mark The downloads button
 
 // Paper Motion: the downloads arrow bobs while something downloads, and when it's done the button lands with a
@@ -329,6 +402,18 @@ static void DPInstallFeel(void) {
     done = YES;
     DPLaunched = CACurrentMediaTime();
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel handler:^NSEvent *(NSEvent *e) { DPLastScroll = CACurrentMediaTime(); return e; }];
+    // ⌘W, or a click on a tab's ✕: the tab leaving next is being closed.
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown | NSEventMaskLeftMouseDown | NSEventMaskOtherMouseDown handler:^NSEvent *(NSEvent *e) {
+        if (e.type == NSEventTypeKeyDown) {
+            if ((e.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) == NSEventModifierFlagCommand && [e.charactersIgnoringModifiers isEqual:@"w"]) DPClosing();
+        } else if (e.type == NSEventTypeOtherMouseDown) DPClosing();   // a middle click closes a tab
+        else {
+            NSView *root = e.window.contentView.superview ?: e.window.contentView;
+            NSView *hit = [root hitTest:[root.superview ?: root convertPoint:e.locationInWindow fromView:nil]];
+            for (NSView *v = hit; v; v = v.superview) if ([v.accessibilityLabel isEqual:@"Close tab"]) { DPClosing(); break; }
+        }
+        return e;
+    }];
     DPSeenTabs = [NSHashTable weakObjectsHashTable];
     DPArriving = [NSMutableArray new];
     DPHook(DPDiaPinnedTab, @selector(layout), (IMP)DPFeelTile_layout);
@@ -338,6 +423,7 @@ static void DPInstallFeel(void) {
     DPHook(DPDiaTabView, @selector(mouseUp:), (IMP)DPFeelTab_mouseUp);
     DPHook(DPDiaPinnedTab, @selector(mouseDown:), (IMP)DPFeelTile_mouseDown);
     DPHook(DPDiaTabView, @selector(viewDidMoveToWindow), (IMP)DPFeelTab_moved);
+    DPHook(DPDiaTabView, @selector(viewWillMoveToWindow:), (IMP)DPFeelTab_leaving);
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPFeelFill_updateLayer);
     DPHook("_TtC5ARCUI16HoverableControl", @selector(mouseEntered:), (IMP)DPFeelStamp_entered);
     DPHook(DPDiaDownloadsButton, @selector(layout), (IMP)DPFeelDownloads_layout);
@@ -364,7 +450,8 @@ static NSString *DPVerifyScrapbook(DPPatch *patch) {
 static NSString *DPVerifyLift(DPPatch *patch) {
     for (NSView *tab in DPFindViews(DPDiaTabView)) {
         if (tab.hiddenOrHasHiddenAncestor) continue;
-        if ((DPGet(tab, &DPSpyKey) != nil) != DPWashiLive(patch)) return DPWashiLive(patch) ? @"a tab isn't watching the pointer" : @"a tab still watches the pointer";
+        BOOL want = DPWashiLive(patch) || DPWashiLive(&DPWashiCards);   // Cards' hover wants the pointer too
+        if ((DPGet(tab, &DPSpyKey) != nil) != want) return want ? @"a tab isn't watching the pointer" : @"a tab still watches the pointer";
     }
     return nil;
 }
@@ -389,7 +476,7 @@ DP_PATCH(DPWashiLift) {
     .key = @"washiLift",
     .order = 10,
     .title = @"Paper Motion",
-    .detail = @"Tabs and favorites lift under the pointer and press in when clicked; a new tab slaps down and a space’s tabs rise in; the downloads arrow bobs while it works and lands when it’s done. On Washi’s spring.",
+    .detail = @"Tabs and favorites lift under the pointer and press in when clicked; a new tab slaps down, a closed one crumples away, and a space’s tabs rise in; the downloads arrow bobs while it works and lands when it’s done. On Washi’s spring.",
     .symbol = @"hand.point.up.left.fill hand.point.up.left",
     .tint = @"systemMintColor",
     .section = @"Sidebar",

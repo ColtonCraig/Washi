@@ -178,7 +178,9 @@ static void DPInstallWashiCards(void) {
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPCardFill_updateLayer);
 }
 
+void DPWashiRefreshAll(DPPatch *from);   // WashiPaper.m
 static void DPApplyWashiCards(DPPatch *patch) {
+    DPWashiRefreshAll(patch);   // the tab hover (WashiScrapbook.m) and the folders look again
     for (NSView *shape in DPFindViews(DPDiaTabShape)) DPCardTab(shape);
     for (NSView *item in DPFindViews(DPDiaPinnedTab)) DPCardTile(item);
     // A new paper shows at once.

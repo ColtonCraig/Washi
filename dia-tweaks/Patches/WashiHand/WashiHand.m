@@ -10,7 +10,7 @@ NSArray<NSView *> *DPWashiArtHand(void);   // WashiLook.m
 
 extern DPPatch DPWashiHand;
 #define DPTabListScroll "_TtC7TabListP33_9A67AB465A78F9E1122D59704CA866E621SpacePagingScrollView"
-static const CGFloat DPHandRoom = 36;   // the strip the name takes
+static const CGFloat DPHandRoom = 42;   // the strip the name takes
 static char DPHandKey, DPHandWatchKey, DPHandMovedKey, DPHandDiaKey;
 
 NSFont *DPCaveat(CGFloat size) {   // also for the other Washi tweaks
@@ -34,10 +34,26 @@ static NSString *DPSpaceName(NSWindow *window) {
     return [title substringToIndex:at.location];
 }
 
+// Washi's space name: Caveat Bold at 26, and under its first letters a short stroke of the space's tape (34×2).
+uint32_t DPWashiTapeRGBFor(NSWindow *window);   // WashiTape.m
 @interface DPWashiHandLabel : NSTextField
+@property (nonatomic, strong) CALayer *stroke;
 @end
 @implementation DPWashiHandLabel
 - (NSView *)hitTest:(NSPoint)point { return nil; }
+- (void)underline {
+    if (!self.layer) return;
+    if (!self.stroke) { self.stroke = [CALayer layer]; self.stroke.cornerRadius = 1; }
+    if (self.stroke.superlayer != self.layer) [self.layer addSublayer:self.stroke];
+    uint32_t rgb = DPWashiTapeRGBFor(self.window);
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    self.stroke.backgroundColor = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1].CGColor;
+    BOOL flipped = self.isFlipped || self.layer.geometryFlipped;
+    self.stroke.frame = CGRectMake(3, flipped ? NSHeight(self.bounds) - 3 : 1, 34, 2);
+    [CATransaction commit];
+}
+- (void)layout { [super layout]; [self underline]; }
+- (void)viewDidMoveToWindow { [super viewDidMoveToWindow]; [self underline]; }
 @end
 
 @interface DPWashiHandWatcher : NSObject
@@ -122,7 +138,7 @@ static void DPHandIn(NSView *list) {
     NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) + clear : NSMaxY(frame) - clear - DPHandRoom, NSWidth(frame), DPHandRoom);
     if (!label) {
         label = [DPWashiHandLabel labelWithString:@""];
-        label.font = DPCaveat(21);
+        label.font = DPCaveat(26);
         label.textColor = NSColor.labelColor;
         label.alphaValue = .86;
         label.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -133,17 +149,13 @@ static void DPHandIn(NSView *list) {
     label.hidden = NO;
     if (label.superview != list) [list addSubview:label positioned:NSWindowAbove relativeTo:scroll];
     if (![label.stringValue isEqual:name]) {
-        if (label.stringValue.length && !DPWashiCalm()) {
-            CATransition *fade = [CATransition animation];
-            fade.type = kCATransitionFade; fade.duration = .2;
-            fade.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.215 :.61 :.355 :1];
-            [label.layer addAnimation:fade forKey:@"washiName"];
-        }
         label.stringValue = name;
+        DPWashiRiseIn(label, 6, 0, 1, .3, 0);   // Washi's .sname rises in, each time it's a new space
     }
     // 15pt in, like the tab icons; the line sits low in the strip, so Caveat's tall letters and tails both have room.
     NSRect text = NSMakeRect(NSMinX(room) + 15, NSMinY(room) + (list.isFlipped ? 7 : 1), NSWidth(room) - 30, DPHandRoom - 8);   // clear of the favorites above
     if (!NSEqualRects(label.frame, text)) label.frame = text;
+    [label underline];   // the space's tape, which follows the space
     DPHandWatch(list.window);
 }
 
