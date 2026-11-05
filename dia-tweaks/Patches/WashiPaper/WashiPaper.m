@@ -6,6 +6,7 @@
 
 extern DPPatch DPWashiPaper;
 NSArray<NSView *> *DPWashiLookRows(void);   // WashiLook.m
+void DPWashiApplyAppearance(void);
 static char DPPaperKey;
 
 typedef struct { NSString *key, *name; uint32_t light, dark; } DPPaperChoice;
@@ -175,6 +176,7 @@ static void DPApplyWashiPaper(DPPatch *patch) {
         DPPatch *option = DPPatches[k];
         if (option != patch && DPRequired(option) == patch && option->apply && !option->unavailable) option->apply(option);
     }
+    DPWashiApplyAppearance();
     DPWashiRepaintAll();
 }
 
@@ -192,6 +194,7 @@ static NSString *DPVerifyWashiPaper(DPPatch *patch) {
 static void DPInstallWashiPaper(void) {
     DPHook(DPDiaWindowFrame, @selector(layout), (IMP)DPPaperFrame_layout);
     DPHook(DPDiaFloatingSidebar, @selector(layout), (IMP)DPPaperSidebar_layout);
+    dispatch_async(dispatch_get_main_queue(), ^{ DPWashiApplyAppearance(); });   // Light, Dark or Match my Mac, from the look picker
 }
 
 DP_PATCH(DPWashiPaper) {

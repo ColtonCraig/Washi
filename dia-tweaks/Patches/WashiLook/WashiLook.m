@@ -51,12 +51,32 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
 @interface DPWashiLookView : NSView
 @end
 
+// Light, dark or Match my Mac, for all of Dia, like Washi's Appearance. Saved with the tweaks' settings.
+static NSUserDefaults *DPLookDefaults(void) {
+    static NSUserDefaults *d;
+    if (!d) d = [[NSUserDefaults alloc] initWithSuiteName:@"com.diapatches"];
+    return d;
+}
+static NSString *DPLookMode(void) {
+    NSString *mode = [DPLookDefaults() stringForKey:@"washiAppearance"];
+    return [@[ @"light", @"dark" ] containsObject:mode] ? mode : @"auto";
+}
+void DPWashiApplyAppearance(void) {
+    NSString *mode = DPWashiPaper.on ? DPLookMode() : @"auto";
+    NSAppearance *want = [mode isEqual:@"light"] ? [NSAppearance appearanceNamed:NSAppearanceNameAqua]
+                       : [mode isEqual:@"dark"] ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua] : nil;
+    if (NSApp.appearance != want && ![NSApp.appearance.name isEqual:want.name]) NSApp.appearance = want;
+}
+
 @implementation DPWashiLookView {
-    NSMutableArray<NSValue *> *_paperHits, *_tapeHits;
+    NSMutableArray<NSValue *> *_paperHits, *_tapeHits, *_modeHits;
+    NSLayoutConstraint *_height;
+    CGFloat _needed;
 }
 - (instancetype)initWithFrame:(NSRect)frame {
     if ((self = [super initWithFrame:frame])) {
-        _paperHits = [NSMutableArray new]; _tapeHits = [NSMutableArray new];
+        _paperHits = [NSMutableArray new]; _tapeHits = [NSMutableArray new]; _modeHits = [NSMutableArray new];
+        _needed = 420;
         self.identifier = @"Your Look";
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(changed) name:DPPatchesDidChangeNotification object:nil];
     }
@@ -65,7 +85,18 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 - (void)changed { self.needsDisplay = YES; }
 - (BOOL)isFlipped { return YES; }
-- (NSSize)intrinsicContentSize { return NSMakeSize(NSViewNoIntrinsicMetric, 352); }
+- (NSSize)intrinsicContentSize { return NSMakeSize(NSViewNoIntrinsicMetric, _needed); }
+- (void)setHeightConstraint:(NSLayoutConstraint *)c { _height = c; }
+// Everything below the drawings has a fixed height; the drawings grow with the width.
+- (CGFloat)neededFor:(CGFloat)W {
+    CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62);
+    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 58 + 12 + 34 + 10;
+}
+- (void)layout {
+    [super layout];
+    CGFloat need = [self neededFor:NSWidth(self.bounds)];
+    if (fabs(need - _needed) > .5) { _needed = need; _height.constant = need; [self invalidateIntrinsicContentSize]; }
+}
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; self.needsDisplay = YES; }
 
 // A small Dia in this paper: sidebar with favorites, the name, tabs (the selected one a card with tape), the toolbar
@@ -134,22 +165,41 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
     CGFloat W = NSWidth(self.bounds), pad = 4, gap = 14;
     CGFloat pw = floor((W - pad * 2 - gap) / 2), ph = round(pw * .62);
     // The two drawings, light and dark, with their names in handwriting.
+    NSDictionary *bold = @{ NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: label };
+    // Appearance: Light, Dark or Match my Mac, a segmented row like Washi's.
+    [@"Appearance" drawAtPoint:NSMakePoint(pad, 10) withAttributes:bold];
+    [_modeHits removeAllObjects];
+    NSArray *modes = @[ @[ @"light", @"Light" ], @[ @"dark", @"Dark" ], @[ @"auto", @"Match my Mac" ] ];
+    CGFloat segX = pad + 84, segW = MIN(W - segX - pad, 300);
+    NSRect seg = NSMakeRect(segX, 4, segW, 28);
+    [[label colorWithAlphaComponent:.07] setFill]; [[NSBezierPath bezierPathWithRoundedRect:seg xRadius:9 yRadius:9] fill];
+    NSString *mode = DPLookMode();
+    NSMutableParagraphStyle *mid = [NSMutableParagraphStyle new]; mid.alignment = NSTextAlignmentCenter; mid.lineBreakMode = NSLineBreakByTruncatingTail;
+    for (NSUInteger i = 0; i < 3; i++) {
+        NSRect cellRect = NSInsetRect(NSMakeRect(segX + i * segW / 3, 4, segW / 3, 28), 3, 3);
+        BOOL on = [mode isEqual:modes[i][0]];
+        if (on) {
+            [[NSColor colorWithWhite:0 alpha:.12] setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(cellRect, 0, 1) xRadius:7 yRadius:7] fill];
+            [NSColor.controlBackgroundColor setFill]; [[NSBezierPath bezierPathWithRoundedRect:cellRect xRadius:7 yRadius:7] fill];
+        }
+        [modes[i][1] drawInRect:NSMakeRect(NSMinX(cellRect) + 2, NSMidY(cellRect) - 8, NSWidth(cellRect) - 4, 16) withAttributes:@{ NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: on ? label : second, NSParagraphStyleAttributeName: mid }];
+        [_modeHits addObject:[NSValue valueWithRect:cellRect]];
+    }
     NSDictionary *hand = @{ NSFontAttributeName: DPCaveat(19), NSForegroundColorAttributeName: label };
     for (NSUInteger i = 0; i < 2; i++) {
-        NSRect r = NSMakeRect(pad + i * (pw + gap), 4, pw, ph);
+        NSRect r = NSMakeRect(pad + i * (pw + gap), 44, pw, ph);
         [self drawMiniIn:r dark:i == 1 paper:DPLookHex(i ? dark : light) tape:tape];
         NSString *name = i ? @"Dark" : @"Light";
         NSSize s = [name sizeWithAttributes:hand];
         [name drawAtPoint:NSMakePoint(NSMidX(r) - s.width / 2, NSMaxY(r) + 2) withAttributes:hand];
     }
     // The key: which color goes where.
-    CGFloat y = 4 + ph + 32;
+    CGFloat y = 44 + ph + 32;
     NSArray *key = @[
         @[ DPLookHex(light), DPLookHex(dark), @"Paper", @"behind the sidebar, the toolbar and the page" ],
         @[ DPLookCard(DPLookHex(light), NO), DPLookCard(DPLookHex(dark), YES), @"Card", @"the selected tab, favorites, the address field, pop-ups" ],
         @[ tape, tape, @"Tape", @"the selected tab, and favorites in Scrapbook" ],
     ];
-    NSDictionary *bold = @{ NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: label };
     NSMutableParagraphStyle *clip = [NSMutableParagraphStyle new]; clip.lineBreakMode = NSLineBreakByTruncatingTail;
     NSDictionary *small = @{ NSFontAttributeName: [NSFont systemFontOfSize:11.5], NSForegroundColorAttributeName: second, NSParagraphStyleAttributeName: clip };
     for (NSArray *k in key) {
@@ -191,11 +241,11 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
     }
     // Tape: a dot for each.
     y += 70;
-    [@"Tape" drawAtPoint:NSMakePoint(pad, y) withAttributes:bold];
+    [@"Tape" drawAtPoint:NSMakePoint(pad, y + 6) withAttributes:bold];
     [_tapeHits removeAllObjects];
     for (NSUInteger i = 0; i < DPWashiTapeCount(); i++) {
         uint32_t rgb; DPWashiTapeAt(i, NULL, NULL, &rgb);
-        NSRect hit = NSMakeRect(pad + 74 + i * 34, y - 6, 30, 30);
+        NSRect hit = NSMakeRect(pad + 74 + i * 34, y, 30, 30);
         NSRect dot = NSInsetRect(hit, 4, 4);
         [DPLookHex(rgb) setFill]; [[NSBezierPath bezierPathWithOvalInRect:dot] fill];
         if (i == ti) { NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dot, -3, -3)]; ring.lineWidth = 2; [label setStroke]; [ring stroke]; }
@@ -211,6 +261,14 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
 
 - (void)mouseDown:(NSEvent *)event {
     NSPoint at = [self convertPoint:event.locationInWindow fromView:nil];
+    NSArray *modes = @[ @"light", @"dark", @"auto" ];
+    for (NSUInteger i = 0; i < _modeHits.count; i++)
+        if (NSPointInRect(at, _modeHits[i].rectValue)) {
+            [DPLookDefaults() setObject:modes[i] forKey:@"washiAppearance"];
+            DPWashiApplyAppearance();
+            self.needsDisplay = YES;
+            return;
+        }
     for (NSUInteger i = 0; i < _paperHits.count; i++)
         if (NSPointInRect(at, _paperHits[i].rectValue)) { NSString *k; DPWashiPaperAt(i, &k, NULL, NULL, NULL); [self choose:&DPWashiPaper key:k]; return; }
     for (NSUInteger i = 0; i < _tapeHits.count; i++)
@@ -218,13 +276,15 @@ static void DPLookTape(NSPoint at, CGFloat w, CGFloat h, CGFloat degrees, NSColo
 }
 
 - (void)resetCursorRects {
-    for (NSValue *v in [_paperHits arrayByAddingObjectsFromArray:_tapeHits]) [self addCursorRect:v.rectValue cursor:NSCursor.pointingHandCursor];
+    for (NSValue *v in [[_paperHits arrayByAddingObjectsFromArray:_tapeHits] arrayByAddingObjectsFromArray:_modeHits]) [self addCursorRect:v.rectValue cursor:NSCursor.pointingHandCursor];
 }
 @end
 
 NSArray<NSView *> *DPWashiLookRows(void) {
     DPWashiLookView *view = [DPWashiLookView new];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    [view.heightAnchor constraintEqualToConstant:352].active = YES;
+    NSLayoutConstraint *height = [view.heightAnchor constraintEqualToConstant:420];
+    height.active = YES;
+    [view setHeightConstraint:height];
     return @[ view ];
 }
