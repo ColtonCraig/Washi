@@ -159,12 +159,12 @@ static void DPInstallWashiPaper(void) {
 
 DP_PATCH(DPWashiPaper) {
     .key = @"washiPaper",
-    .order = 97,
+    .order = 5,
     .title = @"Washi Paper",
     .detail = @"Washi’s paper behind the tabs and sidebar: its color and a fine grain, light and dark.",
     .symbol = @"doc.richtext.fill doc.fill",
     .tint = @"systemOrangeColor",
-    .section = @"Window",
+    .section = @"Washi",
     .classes = DPClasses(DPDiaWindowFrame, DPDiaWindowTint, DPDiaFloatingSidebar),
     .disabledBy = @"windowMaterial",   // a material or glass shows instead
     .choice = @"washiPaperChoice",
