@@ -230,6 +230,48 @@ static void DPFeelTab_moved(NSView *self, SEL _cmd) {
     });
 }
 
+#pragma mark The downloads button
+
+// Paper Motion: the downloads arrow bobs while something downloads, and when it's done the button lands with a
+// squash, like Washi's (dlbob, dlland). Dia shows its progress bar under the arrow while it downloads.
+static char DPDownloadingKey;
+static void DPFeelDownloads(NSView *button) {
+    if (!button.layer) return;
+    NSProgressIndicator *bar = (NSProgressIndicator *)DPFindView(button, ^BOOL(NSView *v) { return [v isKindOfClass:NSProgressIndicator.class]; });
+    NSImageView *arrow = (NSImageView *)DPFindView(button, ^BOOL(NSView *v) { return [v isKindOfClass:NSImageView.class] && !v.hidden && ((NSImageView *)v).image; });
+    BOOL busy = DPWashiLive(&DPWashiLift) && bar && !bar.hidden;
+    BOOL was = [DPGet(button, &DPDownloadingKey) boolValue];
+    if (busy == was) return;
+    DPSet(button, &DPDownloadingKey, @(busy));
+    if (busy && !DPWashiCalm() && arrow.layer) {
+        CABasicAnimation *bob = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
+        bob.fromValue = @0; bob.toValue = @(DPFlippedLayer(arrow) ? 2 : -2); bob.additive = YES;
+        bob.duration = 1; bob.autoreverses = YES; bob.repeatCount = HUGE_VALF;
+        bob.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        [arrow.layer addAnimation:bob forKey:@"washiBob"];
+    } else if (!busy) {
+        [arrow.layer removeAnimationForKey:@"washiBob"];
+        if (DPWashiCalm() || !DPWashiLive(&DPWashiLift)) return;
+        NSMutableArray *values = [NSMutableArray new];
+        CGFloat cx = NSMidX(button.bounds), cy = NSMidY(button.bounds);
+        for (NSArray *k in @[ @[ @1, @1, @0 ], @[ @1.22, @.82, @-4 ], @[ @.94, @1.06, @3 ], @[ @1, @1, @0 ] ]) {
+            CATransform3D t = CATransform3DMakeTranslation(cx, cy, 0);
+            t = CATransform3DRotate(t, [k[2] doubleValue] * M_PI / 180 * (DPFlippedLayer(button) ? 1 : -1), 0, 0, 1);
+            t = CATransform3DScale(t, [k[0] doubleValue], [k[1] doubleValue], 1);
+            [values addObject:[NSValue valueWithCATransform3D:CATransform3DTranslate(t, -cx, -cy, 0)]];
+        }
+        CAKeyframeAnimation *land = [CAKeyframeAnimation animationWithKeyPath:@"sublayerTransform"];
+        land.values = values; land.keyTimes = @[ @0, @.3, @.62, @1 ]; land.duration = .42;
+        land.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.3 :1.6 :.5 :1];
+        [button.layer addAnimation:land forKey:@"washiLand"];
+    }
+}
+static void DPFeelDownloads_layout(NSView *self, SEL _cmd) { DPCallOriginal(DPFeelDownloads_layout, self); DPFeelDownloads(self); }
+static void DPFeelProgress_setHidden(NSView *self, SEL _cmd, BOOL hidden) {
+    DPCallOriginal(DPFeelProgress_setHidden, self, hidden);
+    for (NSView *up = self.superview; up; up = up.superview) if (DPIsKind(up, DPDiaDownloadsButton)) { DPFeelDownloads(up); break; }
+}
+
 #pragma mark The toolbar's stamps
 
 // In Scrapbook, the toolbar's buttons wiggle like a stamp as the pointer comes onto them: -12°, then 8°, in .32s.
@@ -273,9 +315,13 @@ static void DPInstallFeel(void) {
     DPHook(DPDiaTabView, @selector(viewDidMoveToWindow), (IMP)DPFeelTab_moved);
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPFeelFill_updateLayer);
     DPHook("_TtC5ARCUI16HoverableControl", @selector(mouseEntered:), (IMP)DPFeelStamp_entered);
+    DPHook(DPDiaDownloadsButton, @selector(layout), (IMP)DPFeelDownloads_layout);
+    DPHookClass(NSProgressIndicator.class, @selector(setHidden:), (IMP)DPFeelProgress_setHidden);
 }
 
+void DPWashiRefreshAll(DPPatch *from);   // WashiPaper.m
 static void DPApplyFeel(DPPatch *patch) {
+    DPWashiRefreshAll(patch);   // Scrapbook's tape and leans are on every part of Dia, not just the sidebar
     for (NSView *item in DPFindViews(DPDiaPinnedTab)) DPFeelTile(item);
     for (NSView *tab in DPFindViews(DPDiaTabView)) DPFeelTab(tab);
     for (NSView *list in DPFindViews(DPDiaTabList)) { DPFeelName(list); list.needsLayout = YES; }
@@ -318,7 +364,7 @@ DP_PATCH(DPWashiLift) {
     .key = @"washiLift",
     .order = 10,
     .title = @"Paper Motion",
-    .detail = @"Tabs and favorites lift under the pointer and press in when clicked; a new tab slaps down onto the paper and a space’s tabs rise in, on Washi’s spring.",
+    .detail = @"Tabs and favorites lift under the pointer and press in when clicked; a new tab slaps down and a space’s tabs rise in; the downloads arrow bobs while it works and lands when it’s done. On Washi’s spring.",
     .symbol = @"hand.point.up.left.fill hand.point.up.left",
     .tint = @"systemMintColor",
     .section = @"Sidebar",

@@ -112,6 +112,7 @@ static void DPNewTabIn(NSView *page) {
         DPSet(page, &DPNTPaperKey, nil); DPSet(page, &DPHelloKey, nil);
         return;
     }
+    BOOL arriving = !paper;
     if (!paper) { paper = DPWashiPaperMake(page.bounds); DPSet(page, &DPNTPaperKey, paper); }
     if (page.subviews.firstObject != paper) [page addSubview:paper positioned:NSWindowBelow relativeTo:nil];
     if (!NSEqualRects(paper.frame, page.bounds)) paper.frame = page.bounds;
@@ -133,6 +134,13 @@ static void DPNewTabIn(NSView *page) {
     CGFloat cx = NSWidth(hello.bounds) / 2, cy = NSHeight(hello.bounds) / 2;
     CGAffineTransform slant = CGAffineTransformTranslate(CGAffineTransformRotate(CGAffineTransformMakeTranslation(cx, cy), (DPWashiLive(&DPWashiScrapbook) ? -1.2 : 0) * M_PI / 180), -cx, -cy);
     if (!CGAffineTransformEqualToTransform(hello.layer.affineTransform, slant)) hello.layer.affineTransform = slant;
+    // A new tab's page rises in like Washi's: the hello, then the bar, then the rows (Washi's tin: 10pt, -.4°, .42s).
+    if (arriving) {
+        DPWashiRiseIn(hello, 10, -.4, 1, .42, 0);
+        DPWashiRiseIn(bar, 10, -.4, 1, .42, .05);
+        __block CFTimeInterval delay = .1;
+        DPFindView(page, ^BOOL(NSView *row) { if (DPIsKind(row, DPConnectRow)) { DPWashiRiseIn(row, 10, -.4, 1, .42, delay); delay += .04; } return NO; });
+    }
 }
 
 static void DPNewTab_layout(NSView *self, SEL _cmd) {

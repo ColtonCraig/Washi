@@ -21,21 +21,32 @@ static const DPPaperChoice DPPapers[] = {
 
 // The paper in the chosen look, for the other Washi tweaks (cards are this paper mixed toward white). Cream when
 // Washi Paper is off, since that's Washi's own paper.
+// Your own paper (Custom, on Washi's page): a light and a dark color you pick, saved as hex like the rest.
+static const size_t DPPresetCount = sizeof DPPapers / sizeof *DPPapers;
+static DPPaperChoice DPPaperFor(NSString *key) {
+    if ([key isEqual:@"custom"]) {
+        NSNumber *light = [DPWashiDefaults() objectForKey:@"washiCustomLight"], *dark = [DPWashiDefaults() objectForKey:@"washiCustomDark"];
+        return (DPPaperChoice){ @"custom", @"Custom", light ? light.unsignedIntValue : DPPapers[0].light, dark ? dark.unsignedIntValue : DPPapers[0].dark };
+    }
+    for (size_t i = 0; i < DPPresetCount; i++) if ([DPPapers[i].key isEqual:key]) return DPPapers[i];
+    return DPPapers[0];
+}
+
 NSColor *DPWashiPaperColor(BOOL dark) {
     NSString *key = DPWashiPaper.on ? (DPChoice(&DPWashiPaper) ?: @"cream") : @"cream";
-    DPPaperChoice paper = DPPapers[0];
-    for (size_t i = 0; i < sizeof DPPapers / sizeof *DPPapers; i++) if ([DPPapers[i].key isEqual:key]) paper = DPPapers[i];
+    DPPaperChoice paper = DPPaperFor(key);
     uint32_t rgb = dark ? paper.dark : paper.light;
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
 }
 
 // For the Washi look picker: the papers, in order.
-NSUInteger DPWashiPaperCount(void) { return sizeof DPPapers / sizeof *DPPapers; }
+NSUInteger DPWashiPaperCount(void) { return DPPresetCount + 1; }   // the presets, then Custom
 void DPWashiPaperAt(NSUInteger i, NSString **key, NSString **name, uint32_t *light, uint32_t *dark) {
-    if (key) *key = DPPapers[i].key;
-    if (name) *name = DPPapers[i].name;
-    if (light) *light = DPPapers[i].light;
-    if (dark) *dark = DPPapers[i].dark;
+    DPPaperChoice paper = i < DPPresetCount ? DPPapers[i] : DPPaperFor(@"custom");
+    if (key) *key = paper.key;
+    if (name) *name = paper.name;
+    if (light) *light = paper.light;
+    if (dark) *dark = paper.dark;
 }
 
 static NSColor *DPHex(uint32_t rgb) {
@@ -89,8 +100,7 @@ static NSImage *DPGrain(BOOL dark) {
 }
 - (void)paint {
     NSString *key = DPChoice(&DPWashiPaper) ?: @"cream";
-    DPPaperChoice paper = DPPapers[0];
-    for (size_t i = 0; i < sizeof DPPapers / sizeof *DPPapers; i++) if ([DPPapers[i].key isEqual:key]) paper = DPPapers[i];
+    DPPaperChoice paper = DPPaperFor(key);
     BOOL dark = self.isDark;
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) {
         ctx.duration = 0;
@@ -165,6 +175,19 @@ void DPWashiRepaintAll(void) {
     }
 }
 
+// Every other Washi option looks again, for a switch whose effect reaches all of them (Scrapbook, Washi Tape).
+void DPWashiRefreshAll(DPPatch *from) {
+    static BOOL busy;
+    if (busy) return;
+    busy = YES;
+    for (NSUInteger k = 0; k < DPPatchCount; k++) {
+        DPPatch *option = DPPatches[k];
+        if (DPRequired(option) == &DPWashiPaper && option->apply && option->apply != from->apply && !option->unavailable) option->apply(option);
+    }
+    DPWashiRepaintAll();
+    busy = NO;
+}
+
 static void DPApplyWashiPaper(DPPatch *patch) {
     for (NSView *host in DPPaperHosts()) {
         NSView *tint = DPPaperTintIn(host);
@@ -173,10 +196,7 @@ static void DPApplyWashiPaper(DPPatch *patch) {
         [(DPWashiPaperView *)DPGet(tint.superview, &DPPaperKey) paint];
     }
     // Washi is one switch: its options follow it, and a new paper repaints everything Washi drew.
-    for (NSUInteger k = 0; k < DPPatchCount; k++) {
-        DPPatch *option = DPPatches[k];
-        if (option != patch && DPRequired(option) == patch && option->apply && !option->unavailable) option->apply(option);
-    }
+    DPWashiRefreshAll(patch);
     DPWashiApplyAppearance();
     DPWashiRepaintAll();
 }

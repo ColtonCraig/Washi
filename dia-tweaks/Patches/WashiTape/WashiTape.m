@@ -121,7 +121,8 @@ static BOOL DPCalm(void) { return DPWashiCalm(); }
 static void DPTapeOn(NSView *tab) {
     if (!tab.layer) return;
     CALayer *tape = DPGet(tab, &DPTapeKey);
-    BOOL want = DPWashiLive(&DPWashiTape) && DPTapeTabSelected(tab) && !tab.hiddenOrHasHiddenAncestor;
+    BOOL want = DPWashiScrap() && DPTapeTabSelected(tab)   // tape is Scrapbook's, as in Washi
+                && !tab.hiddenOrHasHiddenAncestor;
     if (!want) {
         if (tape) { [tape removeFromSuperlayer]; DPSet(tab, &DPTapeKey, nil); [DPTaped removeObject:tab]; }
         return;
@@ -277,7 +278,9 @@ static void DPInstallWashiTape(void) {
     DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPTapeFill_updateLayer);
 }
 
+void DPWashiRefreshAll(DPPatch *from);   // WashiPaper.m
 static void DPApplyWashiTape(DPPatch *patch) {
+    DPWashiRefreshAll(patch);   // tape is on the field, the bars, pop-ups, the ticket… too
     for (NSView *tab in DPFindViews(DPDiaTabView)) {
         CALayer *tape = DPGet(tab, &DPTapeKey);
         if (tape) tape.contents = (__bridge id)DPTapeStripes(DPWashiTapeRGBFor(tab.window));   // a new color shows at once
@@ -305,7 +308,7 @@ DP_PATCH(DPWashiTape) {
     .key = @"washiTape",
     .order = 6,
     .title = @"Washi Tape",
-    .detail = @"A strip of Washi tape on the selected tab, torn at the ends and stuck on at a tilt, and the space dots in each space’s tape. In Scrapbook, favorites get tape too.",
+    .detail = @"Washi’s striped tape, torn at the ends, in Scrapbook: on the selected tab, favorites, the address field, the command bar, pop-ups and the ticket. And the space dots in each space’s tape.",
     .symbol = @"bandage.fill",
     .tint = @"systemPinkColor",
     .section = @"Sidebar",

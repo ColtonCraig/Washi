@@ -56,3 +56,17 @@ static inline void DPWashiStick(NSView *host, void *key, BOOL want, CGSize size,
     host.layer.masksToBounds = NO;
     [CATransaction commit];
 }
+
+// Washi's "rise in": up from `dy` points, fading in and leaning `degrees`, on the spring. Nothing with Animations off.
+static inline void DPWashiRiseIn(NSView *view, CGFloat dy, CGFloat degrees, CGFloat scale, CFTimeInterval duration, CFTimeInterval delay) {
+    if (DPWashiCalm() || !view.layer) return;
+    BOOL flipped = view.isFlipped || view.layer.geometryFlipped;
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"]; fade.fromValue = @0; fade.toValue = @1;
+    CABasicAnimation *up = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"]; up.fromValue = @(flipped ? dy : -dy); up.toValue = @0; up.additive = YES;
+    CABasicAnimation *lean = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"]; lean.fromValue = @((flipped ? degrees : -degrees) * M_PI / 180); lean.toValue = @0; lean.additive = YES;
+    CABasicAnimation *grow = [CABasicAnimation animationWithKeyPath:@"transform.scale"]; grow.fromValue = @(scale - 1); grow.toValue = @0; grow.additive = YES;
+    CAAnimationGroup *in = [CAAnimationGroup animation]; in.animations = @[ fade, up, lean, grow ];
+    in.duration = duration; in.beginTime = CACurrentMediaTime() + delay; in.fillMode = kCAFillModeBackwards;
+    in.timingFunction = [CAMediaTimingFunction functionWithControlPoints:.34 :1.3 :.64 :1];
+    [view.layer addAnimation:in forKey:@"washiRise"];
+}

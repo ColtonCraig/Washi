@@ -74,6 +74,7 @@ void DPWashiApplyAppearance(void) {
     NSLayoutConstraint *_height;
     CGFloat _needed;
     NSArray<NSSwitch *> *_feel;
+    NSColorWell *_lightWell, *_darkWell;   // Custom paper
     NSMutableArray<NSArray *> *_spaceHits;   // rect, space, tape key ("" for the main tape)
 }
 extern DPPatch DPWashiScrapbook;
@@ -98,6 +99,15 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
             [self addSubview:sw]; [feel addObject:sw];
         }
         _feel = feel;
+        for (NSUInteger i = 0; i < 2; i++) {
+            NSColorWell *well = [NSColorWell colorWellWithStyle:NSColorWellStyleMinimal];
+            well.identifier = i ? @"washiCustomDark" : @"washiCustomLight";
+            well.supportsAlpha = NO;
+            well.target = self; well.action = @selector(customColor:);
+            well.accessibilityLabel = i ? @"Your dark paper" : @"Your light paper";
+            [self addSubview:well];
+            if (i) _darkWell = well; else _lightWell = well;
+        }
         [self syncFeel];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(changed) name:DPPatchesDidChangeNotification object:nil];
     }
@@ -106,6 +116,16 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 - (void)changed { [self syncFeel]; self.needsDisplay = YES; }
 - (void)syncFeel { for (NSSwitch *sw in _feel) sw.state = DPFeelOn(sw.identifier) ? NSControlStateValueOn : NSControlStateValueOff; }
+- (BOOL)custom { return [DPChoice(&DPWashiPaper) isEqual:@"custom"]; }
+- (CGFloat)customExtra { return self.custom ? 34 : 0; }
+- (CGFloat)paperTopFor:(CGFloat)W { CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62); return 44 + ph + 32 + 3 * 21 + 10 + 22; }
+- (void)customColor:(NSColorWell *)well {
+    NSColor *c = [well.color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+    uint32_t rgb = ((uint32_t)lround(c.redComponent * 255) << 16) | ((uint32_t)lround(c.greenComponent * 255) << 8) | (uint32_t)lround(c.blueComponent * 255);
+    [DPWashiDefaults() setObject:@(rgb) forKey:well.identifier];
+    if (DPWashiPaper.on && DPWashiPaper.apply) DPWashiPaper.apply(&DPWashiPaper);
+    self.needsDisplay = YES;
+}
 - (void)feel:(NSSwitch *)sw {
     BOOL on = sw.state == NSControlStateValueOn;
     if ([sw.identifier isEqual:@"washiScrapbook"]) {
@@ -118,7 +138,7 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
 }
 - (CGFloat)feelTopFor:(CGFloat)W {
     CGFloat pw = floor((W - 8 - 14) / 2), ph = round(pw * .62);
-    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 70 + 30 + 18 + [self spacesHeight];
+    return 44 + ph + 32 + 3 * 21 + 10 + 22 + 70 + 30 + 18 + [self customExtra] + [self spacesHeight];
 }
 // Spaces, when there's more than one: each can have its own tape.
 - (CGFloat)spacesHeight { NSUInteger n = DPWashiSpaces().count; return n > 1 ? 44 + n * 32 : 0; }
@@ -132,6 +152,13 @@ static BOOL DPFeelOn(NSString *key) { return [key isEqual:@"washiScrapbook"] ? D
 - (void)layout {
     [super layout];
     CGFloat need = [self neededFor:NSWidth(self.bounds)], top = [self feelTopFor:NSWidth(self.bounds)];
+    CGFloat customY = [self paperTopFor:NSWidth(self.bounds)] + 64;
+    uint32_t cl, cd; DPWashiPaperAt(DPWashiPaperCount() - 1, NULL, NULL, &cl, &cd);
+    _lightWell.hidden = _darkWell.hidden = !self.custom;
+    _lightWell.frame = NSMakeRect(4 + 74, customY, 44, 24);
+    _darkWell.frame = NSMakeRect(4 + 74 + 120, customY, 44, 24);
+    if (!_lightWell.isActive) _lightWell.color = DPLookHex(cl);
+    if (!_darkWell.isActive) _darkWell.color = DPLookHex(cd);
     for (NSUInteger i = 0; i < _feel.count; i++) {
         NSSize size = _feel[i].fittingSize;
         _feel[i].frame = NSMakeRect(NSWidth(self.bounds) - 4 - size.width, top + 24 + i * 40 + (34 - size.height) / 2, size.width, size.height);
@@ -149,7 +176,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     NSColor *shade = [NSColor colorWithWhite:0 alpha:dark ? .35 : .12];
     // Drawn as your switches are now, with the option being shown always on.
     extern DPPatch DPWashiTape, DPWashiScrapbook, DPWashiCards, DPWashiHand;
-    BOOL tapeOn = DPWashiTape.on || [spot isEqual:@"tape"], cardsOn = DPWashiCards.on || [spot isEqual:@"cards"], handOn = DPWashiHand.on || [spot isEqual:@"hand"];
+    BOOL tapeOn = (DPWashiTape.on && (DPWashiScrapbook.on || [spot isEqual:@"scrapbook"])) || [spot isEqual:@"tape"], cardsOn = DPWashiCards.on || [spot isEqual:@"cards"], handOn = DPWashiHand.on || [spot isEqual:@"hand"];
     BOOL tilt = DPWashiScrapbook.on || [spot isEqual:@"scrapbook"], lift = [spot isEqual:@"lift"], newTab = [spot isEqual:@"newtab"] || [spot isEqual:@"commandbar"];
     NSColor *plain = [ink colorWithAlphaComponent:dark ? .12 : .08];   // Dia's own grey, where Washi Cards is off
     NSMutableArray<NSValue *> *spots = [NSMutableArray new];
@@ -391,14 +418,27 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         [lower moveToPoint:NSMakePoint(NSMaxX(dot), NSMinY(dot))]; [lower lineToPoint:NSMakePoint(NSMaxX(dot), NSMaxY(dot))]; [lower lineToPoint:NSMakePoint(NSMinX(dot), NSMaxY(dot))]; [lower closePath];
         [DPLookHex(d) setFill]; [lower fill];
         [NSGraphicsContext restoreGraphicsState];
+        if (i == n - 1) {   // Custom: a little + on it
+            [[NSColor colorWithWhite:.5 alpha:.9] setStroke];
+            NSBezierPath *plus = [NSBezierPath bezierPath]; plus.lineWidth = 1.6;
+            [plus moveToPoint:NSMakePoint(NSMidX(dot) - 5, NSMidY(dot))]; [plus lineToPoint:NSMakePoint(NSMidX(dot) + 5, NSMidY(dot))];
+            [plus moveToPoint:NSMakePoint(NSMidX(dot), NSMidY(dot) - 5)]; [plus lineToPoint:NSMakePoint(NSMidX(dot), NSMidY(dot) + 5)];
+            [plus stroke];
+        }
         if (i == pi) { NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dot, -3.5, -3.5)]; ring.lineWidth = 2.5; [tape setStroke]; [ring stroke]; }
         else { [[label colorWithAlphaComponent:.16] setStroke]; [circle stroke]; }
         NSString *first = [name componentsSeparatedByString:@" "].firstObject;
         [first drawInRect:NSMakeRect(NSMinX(hit), y + 42, cell, 15) withAttributes:@{ NSFontAttributeName: [NSFont systemFontOfSize:11 weight:i == pi ? NSFontWeightSemibold : NSFontWeightRegular], NSForegroundColorAttributeName: i == pi ? label : second, NSParagraphStyleAttributeName: center }];
         [_paperHits addObject:[NSValue valueWithRect:hit]];
     }
+    // Custom: your own light and dark paper, from the color wells.
+    if (self.custom) {
+        [@"Your paper" drawAtPoint:NSMakePoint(pad, y + 68) withAttributes:small];
+        [@"Light" drawAtPoint:NSMakePoint(pad + 126, y + 68) withAttributes:small];
+        [@"Dark" drawAtPoint:NSMakePoint(pad + 246, y + 68) withAttributes:small];
+    }
     // Tape: a dot for each.
-    y += 70;
+    y += 70 + [self customExtra];
     [@"Tape" drawAtPoint:NSMakePoint(pad, y + 6) withAttributes:bold];
     [_tapeHits removeAllObjects];
     for (NSUInteger i = 0; i < DPWashiTapeCount(); i++) {

@@ -52,7 +52,10 @@ static void DPPop_show(NSPopover *self, SEL _cmd, NSRect rect, NSView *anchor, N
         self.appearance = DPPopWindowLook(anchor);
     }
     DPCallOriginal(DPPop_show, self, rect, anchor, edge);
-    if (ours) DPPopPaper(self, anchor);
+    if (ours) {
+        DPPopPaper(self, anchor);
+        DPWashiRiseIn(self.contentViewController.view, 10, -.8, .97, .24, 0);   // Washi's vpop
+    }
 }
 
 static void DPInstallWashiPopups(void) {
