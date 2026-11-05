@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSFont *DPWashiUIFont(CGFloat size, NSFontWeight weight);   // WashiType.m
 NSArray<NSView *> *DPWashiArtCommandBar(void);   // WashiLook.m
 NSArray<NSView *> *DPWashiArtNewTab(void);   // WashiLook.m
 #import "StdPatch/Hide.h"
@@ -76,7 +77,7 @@ static NSString *DPToday(void) {
         _hello.font = DPCaveat(46); _hello.textColor = NSColor.labelColor; _hello.alignment = NSTextAlignmentCenter;
         _hello.lineBreakMode = NSLineBreakByTruncatingTail; _hello.maximumNumberOfLines = 1;
         _date = [NSTextField labelWithString:@""];
-        _date.font = [NSFont systemFontOfSize:14 weight:NSFontWeightSemibold]; _date.textColor = NSColor.secondaryLabelColor;
+        _date.font = DPWashiUIFont(14, NSFontWeightSemibold); _date.textColor = NSColor.secondaryLabelColor;
         _date.alignment = NSTextAlignmentCenter; _date.lineBreakMode = NSLineBreakByTruncatingTail; _date.maximumNumberOfLines = 1;
         [self addSubview:_hello]; [self addSubview:_date];
         self.wantsLayer = YES;

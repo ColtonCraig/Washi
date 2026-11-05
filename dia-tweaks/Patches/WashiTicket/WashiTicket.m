@@ -1,5 +1,6 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSFont *DPWashiUIFont(CGFloat size, NSFontWeight weight);   // WashiType.m
 NSArray<NSView *> *DPWashiArtTicket(void);   // WashiLook.m
 
 // Now Playing: when a tab other than the one you're on is playing sound, a little ticket at the bottom of its
@@ -49,7 +50,7 @@ static NSView *DPFindPlayingTab(NSView *list) {
         _kicker = [NSTextField labelWithString:@"Now playing"];
         _kicker.font = DPCaveat(15); _kicker.textColor = NSColor.secondaryLabelColor;
         _title = [NSTextField labelWithString:@""];
-        _title.font = [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold]; _title.textColor = NSColor.labelColor;
+        _title.font = DPWashiUIFont(12, NSFontWeightSemibold); _title.textColor = NSColor.labelColor;
         _title.lineBreakMode = NSLineBreakByTruncatingTail; _title.maximumNumberOfLines = 1;
         _icon = [NSImageView new]; _icon.imageScaling = NSImageScaleProportionallyUpOrDown;
         for (NSView *v in @[ _kicker, _title, _icon ]) [self addSubview:v];

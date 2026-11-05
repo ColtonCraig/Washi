@@ -1,5 +1,7 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtNewTabTop(void);   // WashiLook.m
+NSFont *DPWashiUIFont(CGFloat size, NSFontWeight weight);   // WashiType.m
 
 // New Tab at the Top: Dia's "+ New Tab" row moves from under your tabs to the top of them, under the space's name,
 // like Washi's. It's Washi's own row in Dia's style (it opens a tab just as ⌘T does); Dia's at the bottom hides.
@@ -36,7 +38,7 @@ static BOOL DPOpenNewTab(NSMenu *menu) {
         _plus = [NSImageView imageViewWithImage:[[NSImage imageWithSystemSymbolName:@"plus" accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:12 weight:NSFontWeightMedium]]];
         _plus.contentTintColor = NSColor.secondaryLabelColor;
         _title = [NSTextField labelWithString:@"New Tab"];
-        _title.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium]; _title.textColor = NSColor.secondaryLabelColor;
+        _title.font = DPWashiUIFont(13, NSFontWeightMedium); _title.textColor = NSColor.secondaryLabelColor;
         [self addSubview:_plus]; [self addSubview:_title];
         self.toolTip = @"New Tab (⌘T)";
         [self setAccessibilityElement:YES]; [self setAccessibilityRole:NSAccessibilityButtonRole]; [self setAccessibilityLabel:@"New Tab"];
@@ -130,6 +132,7 @@ DP_PATCH(DPWashiNewTabTop) {
     .tint = @"systemGreenColor",
     .section = @"Sidebar",
     .requires = @"washiPaper",
+    .rows = DPWashiArtNewTabTop,
     .classes = DPClasses(DPDiaTabList, DPNewTabCell),
     .install = DPInstallWashiNewTabTop,
     .apply = DPApplyWashiNewTabTop,

@@ -1,5 +1,7 @@
 #import "StdPatch/StdPatch.h"
 #import "Patches/WashiShared/WashiShared.h"
+NSArray<NSView *> *DPWashiArtToasts(void);   // WashiLook.m
+NSArray<NSView *> *DPWashiArtQuit(void);   // WashiLook.m
 
 // Press ⌘Q Twice: like Washi, ⌘Q once shows a little paper note at the bottom of the window, "Press ⌘Q again to quit",
 // and only a second ⌘Q within two seconds quits. Quitting from the menu with the mouse quits at once, as asked.
@@ -114,6 +116,7 @@ DP_PATCH(DPWashiQuit) {
     .tint = @"systemRedColor",
     .section = @"Window",
     .requires = @"washiPaper",
+    .rows = DPWashiArtQuit,
     .install = DPInstallWashiQuit,
 };
 
@@ -127,6 +130,7 @@ DP_PATCH(DPWashiToasts) {
     .tint = @"systemTealColor",
     .section = @"Window",
     .requires = @"washiPaper",
+    .rows = DPWashiArtToasts,
     .classes = DPClasses(DPDiaToasts),
     .install = DPInstallWashiToasts,
 };
