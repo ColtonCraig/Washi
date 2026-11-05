@@ -106,6 +106,7 @@ static void DPInstallWashiToasts(void) {
 
 DP_PATCH(DPWashiQuit) {
     .key = @"washiQuit",
+    .defaultOn = YES,
     .order = 15,
     .title = @"Press ⌘Q Twice",
     .detail = @"Like Washi: ⌘Q once shows a note, and a second ⌘Q quits, so a slip of the finger never closes everything.",
@@ -118,6 +119,7 @@ DP_PATCH(DPWashiQuit) {
 
 DP_PATCH(DPWashiToasts) {
     .key = @"washiToasts",
+    .defaultOn = YES,
     .order = 15,
     .title = @"Paper Toasts",
     .detail = @"Dia’s little notices, like Copied Current URL, on Washi’s card paper, and taped down in Scrapbook.",

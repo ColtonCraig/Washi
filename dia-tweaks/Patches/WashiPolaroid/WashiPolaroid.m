@@ -86,6 +86,7 @@ static void DPApplyWashiPolaroid(DPPatch *patch) {
 
 DP_PATCH(DPWashiPolaroid) {
     .key = @"washiPolaroid",
+    .defaultOn = YES,
     .order = 14,
     .title = @"Polaroid Peek",
     .detail = @"Peek’s preview (shift-click a link, with Peek on Shift-Click on) as a Washi polaroid: a card frame with the site written along the bottom.",

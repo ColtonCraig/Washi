@@ -164,6 +164,7 @@ static NSString *DPVerifyWashiFolders(DPPatch *patch) {
 
 DP_PATCH(DPWashiFolders) {
     .key = @"washiFolders",
+    .defaultOn = YES,
     .order = 9,
     .title = @"Folders",
     .detail = @"Folders on Washi’s card paper, and ones you haven’t given an icon get one from their name or tabs: MDM gets tools, Budget gets money, GitHub tabs get code. Yours always stays.",

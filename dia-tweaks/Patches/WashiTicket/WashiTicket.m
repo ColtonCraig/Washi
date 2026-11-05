@@ -213,6 +213,7 @@ static NSString *DPVerifyWashiTicket(DPPatch *patch) {
 
 DP_PATCH(DPWashiTicket) {
     .key = @"washiTicket",
+    .defaultOn = YES,
     .order = 9,
     .title = @"Now Playing",
     .detail = @"When another tab is playing sound, a little ticket at the bottom of your tabs says which. Click it to go there.",
