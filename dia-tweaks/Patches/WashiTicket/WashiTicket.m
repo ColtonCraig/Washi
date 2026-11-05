@@ -11,7 +11,7 @@ NSColor *DPWashiPaperColor(BOOL dark);   // WashiPaper.m
 NSFont *DPCaveat(CGFloat size);          // WashiHand.m
 #define DPAudioButton "_TtGC5ARCUI21ExpandableWrapperViewGCS_17SidebarCellButtonCSo11NSImageView__"
 #define DPTabTitle "_TtC5ARCUI24FeatheredTruncatingLabel"
-static char DPTicketKey, DPTicketSeenKey;
+static char DPTicketKey, DPTicketSeenKey, DPTicketDirtyKey, DPTicketTabKey;
 static const CGFloat DPTicketHeight = 44, DPTicketGap = 6;
 
 static NSView *DPFirst(NSView *root, const char *kind) { return DPFindView(root, ^BOOL(NSView *v) { return v != root && DPIsKind(v, kind); }); }
@@ -26,7 +26,7 @@ static BOOL DPTabSelected(NSView *tab) {
 }
 
 // The first tab in this list that plays while it isn't the one you're on.
-static NSView *DPPlayingTab(NSView *list) {
+static NSView *DPFindPlayingTab(NSView *list) {
     __block NSView *found = nil;
     DPFindView(list, ^BOOL(NSView *v) {
         if (DPIsKind(v, DPDiaTabView) && !v.hiddenOrHasHiddenAncestor && DPTabPlaying(v) && !DPTabSelected(v)) { found = v; return YES; }
@@ -110,6 +110,21 @@ static NSView *DPPlayingTab(NSView *list) {
 - (void)resetCursorRects { [self addCursorRect:self.bounds cursor:NSCursor.pointingHandCursor]; }
 @end
 
+// Looked for again only when a tab's sound or selection changed (DPTicketCheck), not on every layout.
+@interface DPWeakBox : NSObject
+@property (nonatomic, weak) NSView *view;
+@end
+@implementation DPWeakBox
+@end
+static NSView *DPPlayingTab(NSView *list) {
+    DPWeakBox *box = DPGet(list, &DPTicketTabKey);
+    if (box && !DPGet(list, &DPTicketDirtyKey)) return box.view;
+    if (!box) { box = [DPWeakBox new]; DPSet(list, &DPTicketTabKey, box); }
+    box.view = DPFindPlayingTab(list);
+    DPSet(list, &DPTicketDirtyKey, nil);
+    return box.view;
+}
+
 CGFloat DPWashiTicketRoom(NSView *list) {
     if (!DPWashiLive(&DPWashiTicket)) return 0;
     return DPPlayingTab(list) ? DPTicketHeight + DPTicketGap + 8 : 0;
@@ -149,7 +164,7 @@ static void DPTicketCheck(NSView *tab) {
     DPSet(tab, &DPTicketSeenKey, @(playing));
     NSView *list = tab;
     while (list && !DPIsKind(list, DPDiaTabList)) list = list.superview;
-    if (list) dispatch_async(dispatch_get_main_queue(), ^{ list.needsLayout = YES; });
+    if (list) { DPSet(list, &DPTicketDirtyKey, @YES); dispatch_async(dispatch_get_main_queue(), ^{ list.needsLayout = YES; }); }
 }
 
 static void DPTicketTab_layout(NSView *self, SEL _cmd) {
@@ -161,13 +176,21 @@ static void DPTicketSpeaker_setHidden(NSView *self, SEL _cmd, BOOL hidden) {
     for (NSView *up = self.superview; up; up = up.superview) if (DPIsKind(up, DPDiaTabView)) { DPTicketCheck(up); break; }
 }
 
+// Picking a tab repaints its selection fill without laying it out: the cue that the one you're on changed.
+static void DPTicketFill_updateLayer(NSView *self, SEL _cmd) {
+    DPCallOriginal(DPTicketFill_updateLayer, self);
+    NSView *shape = self.superview.superview, *tab = shape.superview.superview;   // tab › background › shape › clip › fill
+    if (DPIsKind(shape, DPDiaTabShape) && DPIsKind(tab, DPDiaTabView)) DPTicketCheck(tab);
+}
+
 static void DPInstallWashiTicket(void) {
+    DPHook(DPDiaColorFill, @selector(updateLayer), (IMP)DPTicketFill_updateLayer);
     DPHook(DPDiaTabView, @selector(layout), (IMP)DPTicketTab_layout);
     DPHook(DPAudioButton, @selector(setHidden:), (IMP)DPTicketSpeaker_setHidden);
 }
 
 static void DPApplyWashiTicket(DPPatch *patch) {
-    for (NSView *list in DPFindViews(DPDiaTabList)) list.needsLayout = YES;
+    for (NSView *list in DPFindViews(DPDiaTabList)) { DPSet(list, &DPTicketDirtyKey, @YES); list.needsLayout = YES; }
 }
 
 static NSString *DPVerifyWashiTicket(DPPatch *patch) {

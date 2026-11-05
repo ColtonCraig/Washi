@@ -167,8 +167,8 @@ static void DPCardTile_layout(NSView *self, SEL _cmd) {
 static void DPCardFill_updateLayer(NSView *self, SEL _cmd) {
     DPCallOriginal(DPCardFill_updateLayer, self);
     if (!DPWashiLive(&DPWashiCards)) return;
-    NSView *shape = DPCardAncestor(self, DPDiaTabShape);
-    if (shape) DPCardTab(shape);
+    NSView *shape = self.superview.superview;   // shape › clip › fill: anything else isn't a tab's
+    if (DPIsKind(shape, DPDiaTabShape)) DPCardTab(shape);
 }
 
 static void DPInstallWashiCards(void) {

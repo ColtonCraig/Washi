@@ -42,11 +42,18 @@ static NSString *DPSpaceName(NSWindow *window) {
 
 @interface DPWashiHandWatcher : NSObject
 @property (nonatomic, weak) NSWindow *window;
+@property (nonatomic, copy) NSString *space;
 @end
 @implementation DPWashiHandWatcher
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    // The title changes with every page; only a new space changes the name.
+    NSString *space = DPSpaceName(self.window);
+    if ([space isEqual:self.space] || (!space && !self.space)) return;
+    self.space = space;
+    NSWindow *window = self.window;
     dispatch_async(dispatch_get_main_queue(), ^{
-        for (NSView *list in DPFindViews(DPDiaTabList)) if (list.window == self.window) list.needsLayout = YES;
+        NSView *root = window.contentView.superview ?: window.contentView;
+        DPFindView(root, ^BOOL(NSView *v) { if (DPIsKind(v, DPDiaTabList)) v.needsLayout = YES; return NO; });
     });
 }
 - (void)dealloc { [_window removeObserver:self forKeyPath:@"title"]; }
@@ -56,6 +63,7 @@ static void DPHandWatch(NSWindow *window) {
     if (!window || DPGet(window, &DPHandWatchKey)) return;
     DPWashiHandWatcher *watcher = [DPWashiHandWatcher new];
     watcher.window = window;
+    watcher.space = DPSpaceName(window);
     [window addObserver:watcher forKeyPath:@"title" options:0 context:NULL];
     DPSet(window, &DPHandWatchKey, watcher);
 }

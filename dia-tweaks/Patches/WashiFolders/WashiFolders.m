@@ -45,7 +45,18 @@ static NSArray<NSArray *> *DPFolderWords(void) {
     return words = built;
 }
 
-static NSString *DPFolderIconFor(NSString *name, NSArray<NSString *> *tabs) {
+static NSString *DPFolderGuess(NSString *name, NSArray<NSString *> *tabs);
+static NSString *DPFolderIconFor(NSString *name, NSArray<NSString *> *tabs) {   // remembered: folders lay out often
+    static NSCache *guesses;
+    if (!guesses) guesses = [NSCache new];
+    NSString *key = [[@[ name ?: @"" ] arrayByAddingObjectsFromArray:tabs] componentsJoinedByString:@"\n"];
+    id hit = [guesses objectForKey:key];
+    if (hit) return hit == NSNull.null ? nil : hit;
+    NSString *guess = DPFolderGuess(name, tabs);
+    [guesses setObject:guess ?: (id)NSNull.null forKey:key];
+    return guess;
+}
+static NSString *DPFolderGuess(NSString *name, NSArray<NSString *> *tabs) {
     NSString *pick = nil; NSUInteger at = NSNotFound;
     for (NSArray *w in DPFolderWords()) {
         NSRange r = [w[1] rangeOfFirstMatchInString:name ?: @"" options:0 range:NSMakeRange(0, name.length)];

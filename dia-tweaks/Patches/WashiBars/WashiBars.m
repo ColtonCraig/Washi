@@ -115,12 +115,13 @@ static NSAppearance *DPWindowAppearance(NSView *view) {
 @property (nonatomic, weak) NSWindow *window;
 @end
 static void DPBarOn(NSView *bar);
+static void DPBarOnDeep(NSView *bar);
 @implementation DPWashiBarsWatcher
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!DPWashiLive(&DPWashiBars)) return;
         for (NSView *bar in [DPFindViews(DPDiaToolbar) arrayByAddingObjectsFromArray:DPFindViews(DPDiaBookmarksBar)])
-            if (!self.window || bar.window == self.window) DPBarOn(bar);
+            if (!self.window || bar.window == self.window) DPBarOnDeep(bar);
     });
 }
 - (void)dealloc { [_window removeObserver:self forKeyPath:@"effectiveAppearance"]; }
@@ -162,19 +163,28 @@ static void DPBarOn(NSView *bar) {
         [bar addSubview:paper positioned:NSWindowAbove relativeTo:fill];
     if (!NSEqualRects(paper.frame, fill.frame)) paper.frame = fill.frame;
     paper.hidden = fill.hidden;
-    DPBarCards(bar, YES); DPBarLine(bar, YES);
+    DPBarLine(bar, YES);
+}
+// The whole bar, its address field and buttons too: on the bar's own layout, not on every repaint.
+static void DPBarOnDeep(NSView *bar) {
+    DPBarOn(bar);
+    DPBarCards(bar, DPWashiLive(&DPWashiBars) && DPBarFill(bar));
 }
 
 static void DPBar_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPBar_layout, self);
-    DPBarOn(self);
+    DPBarOnDeep(self);
 }
 
 // The address field and capsules come and go without the bar laying out again.
 static void DPBarPart_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPBarPart_layout, self);
     if (!DPWashiLive(&DPWashiBars)) return;
-    for (NSView *up = self.superview; up; up = up.superview) if (DPIsKind(up, DPDiaToolbar)) { DPBarOn(up); break; }
+    // Just this part: the address field's box, or this capsule.
+    if (DPIsKind(self, DPDiaAddressField)) {
+        NSView *box = self.subviews.firstObject;
+        if (box && !DPIsKind(box, "NSStackView")) DPBarCardIn(box, MAX(box.layer.cornerRadius, 6), YES);
+    } else DPBarCardIn(self, MAX(self.layer.cornerRadius, 6), NSWidth(self.bounds) > 0);
 }
 
 // Dia repaints the bar's fill, and sets its appearance again, when the site's color changes.
@@ -196,7 +206,7 @@ static void DPInstallWashiBars(void) {
 
 static void DPApplyWashiBars(DPPatch *patch) {
     for (NSView *bar in [DPFindViews(DPDiaToolbar) arrayByAddingObjectsFromArray:DPFindViews(DPDiaBookmarksBar)]) {
-        DPBarOn(bar);
+        DPBarOnDeep(bar);
         DPWashiPaperRepaint(DPGet(bar, &DPBarPaperKey));
     }
 }

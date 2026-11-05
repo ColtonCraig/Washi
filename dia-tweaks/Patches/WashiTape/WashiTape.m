@@ -122,7 +122,7 @@ static void DPTapeOn(NSView *tab) {
     CALayer *tape = DPGet(tab, &DPTapeKey);
     BOOL want = DPWashiLive(&DPWashiTape) && DPTapeTabSelected(tab) && !tab.hiddenOrHasHiddenAncestor;
     if (!want) {
-        if (tape) { [tape removeFromSuperlayer]; DPSet(tab, &DPTapeKey, nil); }
+        if (tape) { [tape removeFromSuperlayer]; DPSet(tab, &DPTapeKey, nil); [DPTaped removeObject:tab]; }
         return;
     }
     BOOL fresh = !tape;
@@ -154,6 +154,8 @@ static void DPTapeOn(NSView *tab) {
     tape.position = CGPointMake(NSMinX(pill) + 13, top + (tab.isFlipped ? 2.5 : -2.5));
     tape.affineTransform = CGAffineTransformMakeRotation((flipped ? -20 : 20) * M_PI / 180);
     if (tape.superlayer != tab.layer) [tab.layer addSublayer:tape];
+    if (!DPTaped) DPTaped = [NSHashTable weakObjectsHashTable];
+    [DPTaped addObject:tab];
     [CATransaction commit];
     if (fresh && !DPCalm()) {
         CAKeyframeAnimation *press = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
@@ -168,6 +170,7 @@ static void DPTapeOn(NSView *tab) {
     }
 }
 
+static NSHashTable<NSView *> *DPTaped, *DPDotItems;   // tabs wearing tape; the space dots seen so far
 static void DPTapeAll(void) {
     for (NSView *tab in DPFindViews(DPDiaTabView)) DPTapeOn(tab);
 }
@@ -181,10 +184,14 @@ static void DPTapeTab_layout(NSView *self, SEL _cmd) {
 static void DPTapeFill_updateLayer(NSView *self, SEL _cmd) {
     DPCallOriginal(DPTapeFill_updateLayer, self);
     if (!DPWashiLive(&DPWashiTape)) return;
-    static BOOL queued;
-    if (queued) return;
-    queued = YES;
-    dispatch_async(dispatch_get_main_queue(), ^{ queued = NO; DPTapeAll(); });
+    // Only a fill inside a tab matters: that tab, and the ones wearing tape now (one of them is losing it).
+    NSView *tab = self.superview;
+    for (int i = 0; tab && i < 6 && !DPIsKind(tab, DPDiaTabView); i++) tab = tab.superview;
+    if (!DPIsKind(tab, DPDiaTabView)) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        DPTapeOn(tab);
+        for (NSView *other in DPTaped.allObjects) if (other != tab) DPTapeOn(other);
+    });
 }
 
 #pragma mark The space dots
@@ -218,19 +225,24 @@ static void DPDotOn(NSView *item) {
 }
 
 static void DPDots(NSWindow *window) {
-    for (NSView *item in DPFindViews(DPDiaSpaceSwitcherItem)) if (!window || item.window == window) DPDotOn(item);
+    for (NSView *item in DPDotItems.allObjects) if (!window || item.window == window) DPDotOn(item);
 }
 
 // A new space in the window title: its tab's tape and the dots follow.
 @interface DPWashiTapeWatcher : NSObject
 @property (nonatomic, weak) NSWindow *window;
+@property (nonatomic, copy) NSString *space;
 @end
 @implementation DPWashiTapeWatcher
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    // The title changes with every page; only a new space matters here.
+    NSString *space = DPWashiSpaceOf(self.window);
+    if ([space isEqual:self.space] || (!space && !self.space)) return;
+    self.space = space;
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!DPWashiLive(&DPWashiTape)) return;
         DPDots(self.window);
-        for (NSView *tab in DPFindViews(DPDiaTabView)) if (tab.window == self.window) tab.needsLayout = YES;
+        for (NSView *tab in DPTaped.allObjects) if (tab.window == self.window) DPTapeOn(tab);
     });
 }
 - (void)dealloc { [_window removeObserver:self forKeyPath:@"title"]; }
@@ -238,11 +250,14 @@ static void DPDots(NSWindow *window) {
 
 static void DPDot_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPDot_layout, self);
+    if (!DPDotItems) DPDotItems = [NSHashTable weakObjectsHashTable];
+    [DPDotItems addObject:self];
     DPDotOn(self);
     NSWindow *window = self.window;
     if (window && !DPGet(window, &DPDotWatchKey)) {
         DPWashiTapeWatcher *watcher = [DPWashiTapeWatcher new];
         watcher.window = window;
+        watcher.space = DPWashiSpaceOf(window);
         [window addObserver:watcher forKeyPath:@"title" options:0 context:NULL];
         DPSet(window, &DPDotWatchKey, watcher);
     }
@@ -251,7 +266,8 @@ static void DPDot_layout(NSView *self, SEL _cmd) {
 // For the Spaces list on Washi's page: the spaces in the switcher, in its order.
 NSArray<NSString *> *DPWashiSpaces(void) {
     NSMutableArray *spaces = [NSMutableArray new];
-    for (NSView *item in DPFindViews(DPDiaSpaceSwitcherItem)) {
+    for (NSView *item in DPDotItems.allObjects) {
+        if (!item.window.isVisible) continue;
         NSString *name = item.accessibilityLabel;
         if (name.length && ![spaces containsObject:name]) [spaces addObject:name];
     }
@@ -271,6 +287,7 @@ static void DPApplyWashiTape(DPPatch *patch) {
         DPTapeOn(tab);
     }
     for (NSView *item in DPFindViews(DPDiaPinnedTab)) item.needsLayout = YES;   // Scrapbook's tape on favorites follows
+    for (NSView *item in DPFindViews(DPDiaSpaceSwitcherItem)) { if (!DPDotItems) DPDotItems = [NSHashTable weakObjectsHashTable]; [DPDotItems addObject:item]; }
     DPDots(nil);
 }
 
