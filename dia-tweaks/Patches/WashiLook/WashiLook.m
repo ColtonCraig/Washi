@@ -686,16 +686,16 @@ void DPWashiDrawArt(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSString
         DPLookTape(NSMakePoint(NSMaxX(t) - 30, NSMinY(t)), 30, 11, 6, tape);
     } else if ([spot isEqual:@"folders"]) {   // a manila folder in its color, its icon, its tabs on a line
         NSRect head = NSMakeRect(x + 12, y + 14, w - 24, 34);
-        NSColor *fc = green, *fpaper = [DPLookHex(0xfdf8ec) blendedColorWithFraction:.3 ofColor:fc];
+        NSColor *fc = green, *fpaper = dark ? [DPLookHex(0x2e2820) blendedColorWithFraction:.3 ofColor:fc] : [DPLookHex(0xfdf8ec) blendedColorWithFraction:.3 ofColor:fc];
         NSBezierPath *folder = [NSBezierPath bezierPath];
         [folder appendBezierPathWithRoundedRect:NSMakeRect(NSMinX(head), NSMinY(head) + 5, NSWidth(head), 29) xRadius:8 yRadius:8];
         [folder appendBezierPathWithRoundedRect:NSMakeRect(NSMinX(head), NSMinY(head), 40, 12) xRadius:5 yRadius:5];
         [[fc colorWithAlphaComponent:.4] setFill]; NSAffineTransform *dn = [NSAffineTransform transform]; [dn translateXBy:0 yBy:1]; NSBezierPath *sh = [folder copy]; [sh transformUsingAffineTransform:dn]; [sh fill];
         [fpaper setFill]; [folder fill];
         NSImage *icon = [[NSImage imageWithSystemSymbolName:@"wrench.and.screwdriver" accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightSemibold]];
-        NSImage *tinted = [NSImage imageWithSize:icon.size flipped:NO drawingHandler:^BOOL(NSRect rr) { [icon drawInRect:rr]; [[fc blendedColorWithFraction:.2 ofColor:NSColor.blackColor] set]; NSRectFillUsingOperation(rr, NSCompositingOperationSourceAtop); return YES; }];
+        NSImage *tinted = [NSImage imageWithSize:icon.size flipped:NO drawingHandler:^BOOL(NSRect rr) { [icon drawInRect:rr]; [(dark ? [fc blendedColorWithFraction:.25 ofColor:NSColor.whiteColor] : [fc blendedColorWithFraction:.2 ofColor:NSColor.blackColor]) set]; NSRectFillUsingOperation(rr, NSCompositingOperationSourceAtop); return YES; }];
         [tinted drawInRect:NSMakeRect(NSMinX(head) + 10, NSMinY(head) + 12, 16, 15) fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
-        DPArtText(@"MDM", NSMakePoint(NSMinX(head) + 32, NSMinY(head) + 11), DPWashiFigtree(13, NSFontWeightSemibold), DPLookHex(0x2b2118));
+        DPArtText(@"MDM", NSMakePoint(NSMinX(head) + 32, NSMinY(head) + 11), DPWashiFigtree(13, NSFontWeightSemibold), dark ? DPLookHex(0xf3ece2) : DPLookHex(0x2b2118));
         [[fc colorWithAlphaComponent:.45] setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(head) + 10, NSMaxY(head) + 4, 2, 64) xRadius:1 yRadius:1] fill];
         DPArtTab(NSMakeRect(NSMinX(head) + 18, NSMaxY(head) + 4, NSWidth(head) - 18, 30), @"Iru", blue, NO, card, dark, ink);
         DPArtTab(NSMakeRect(NSMinX(head) + 18, NSMaxY(head) + 36, NSWidth(head) - 18, 30), @"Hexnode", ink, NO, card, dark, ink);

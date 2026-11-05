@@ -99,7 +99,6 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
 @property (nonatomic, copy) NSString *title;   // the folder's name, written where Dia's was
 @property (nonatomic, strong) NSFont *font;
 @property (nonatomic) NSRect titleFrame;
-@property (nonatomic) BOOL hover;
 @end
 @implementation DPWashiManila
 - (BOOL)isFlipped { return YES; }
@@ -112,11 +111,23 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
         [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect owner:self userInfo:nil]];
 }
 - (void)clearDia { self.superview.layer.backgroundColor = nil; }
-- (void)mouseEntered:(NSEvent *)e { self.hover = YES; self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; }); }
-- (void)mouseExited:(NSEvent *)e { self.hover = NO; self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; }); }
+- (void)mouseEntered:(NSEvent *)e { self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; self.needsDisplay = YES; }); }
+- (void)mouseExited:(NSEvent *)e { self.needsDisplay = YES; [self clearDia]; dispatch_async(dispatch_get_main_queue(), ^{ [self clearDia]; self.needsDisplay = YES; }); }
+// Under the pointer right now: asked each time it draws, so it can't stay lit after the pointer has gone.
+- (BOOL)hover {
+    NSWindow *w = self.window;
+    if (!w || DPWashiCalm()) return NO;
+    return NSPointInRect([self convertPoint:w.mouseLocationOutsideOfEventStream fromView:nil], self.bounds);
+}
+- (BOOL)dark { return [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua]; }
+- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; self.needsDisplay = YES; }
 - (NSColor *)paper {
-    NSColor *base = self.tint ? [[DPHex(0xfdf8ec) colorUsingColorSpace:NSColorSpace.sRGBColorSpace] blendedColorWithFraction:.3 ofColor:[self.tint colorUsingColorSpace:NSColorSpace.sRGBColorSpace]] : DPHex(0xf2d58f);
-    return self.hover ? [base blendedColorWithFraction:.22 ofColor:NSColor.whiteColor] : base;
+    // Light: Washi's manila, or light paper with 30% of the folder's color. Dark: the dark paper with 30% of it (a dark
+    // manila when it has none), so a folder sits in the dark sidebar instead of glaring out of it.
+    NSColor *tint = [self.tint colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+    NSColor *base = self.dark ? [DPHex(0x2e2820) blendedColorWithFraction:.3 ofColor:tint ?: DPHex(0xc9a44f)]
+                              : tint ? [DPHex(0xfdf8ec) blendedColorWithFraction:.3 ofColor:tint] : DPHex(0xf2d58f);
+    return self.hover ? [base blendedColorWithFraction:self.dark ? .08 : .22 ofColor:NSColor.whiteColor] : base;
 }
 - (void)drawRect:(NSRect)dirty {
     CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds), top = 5;
@@ -138,7 +149,7 @@ static NSColor *DPHex(uint32_t rgb) { return [NSColor colorWithSRGBRed:((rgb >> 
     [(self.tint ? [self.tint colorWithAlphaComponent:.4] : [NSColor colorWithWhite:0 alpha:.08]) setFill]; [shadow fill];
     [self.paper setFill]; [folder fill];
     NSMutableParagraphStyle *tail = [NSMutableParagraphStyle new]; tail.lineBreakMode = NSLineBreakByTruncatingTail;
-    [self.title ?: @"" drawInRect:self.titleFrame withAttributes:@{ NSFontAttributeName: self.font ?: [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: DPManilaInk(), NSParagraphStyleAttributeName: tail }];
+    [self.title ?: @"" drawInRect:self.titleFrame withAttributes:@{ NSFontAttributeName: self.font ?: [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: self.dark ? DPHex(0xf3ece2) : DPManilaInk(), NSParagraphStyleAttributeName: tail }];
 }
 @end
 
@@ -170,6 +181,17 @@ static NSColor *DPFolderColor(NSTextField *name) {
     return sat > .12 ? rgb : nil;   // a grey is no color
 }
 
+// A folder's color, remembered by its name: Dia redraws the name grey or white while you hover or pick a tab in it,
+// and that's no reason for the folder to change color. Only a real color replaces the one it has.
+static NSColor *DPFolderTint(NSTextField *name) {
+    static NSMutableDictionary<NSString *, NSColor *> *seen;
+    if (!seen) seen = [NSMutableDictionary new];
+    NSString *key = name.stringValue ?: @"";
+    NSColor *now = DPFolderColor(name);
+    if (now) seen[key] = now;
+    return seen[key];
+}
+
 static void DPFolderIn(NSView *group) {
     BOOL on = DPWashiLive(&DPWashiFolders);
     // The icon: Dia's default (its "Album") is swapped; any other icon is one you chose.
@@ -190,8 +212,10 @@ static void DPFolderIn(NSView *group) {
             mine.image = [[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil] imageWithSymbolConfiguration:config];
             mine.identifier = symbol;
         }
-        NSColor *fc = DPFolderColor(name);   // Washi's .fi: the folder's color, darkened, or manila's brown
-        mine.contentTintColor = fc ? [fc blendedColorWithFraction:.2 ofColor:NSColor.blackColor] : DPHex(0x9a6b12);
+        NSColor *fc = DPFolderTint(name);   // Washi's .fi: the folder's color, darkened, or manila's brown
+        BOOL darkMode = [[group.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+        mine.contentTintColor = darkMode ? (fc ? [fc blendedColorWithFraction:.25 ofColor:NSColor.whiteColor] : DPHex(0xe0bd6a))   // light on dark folder paper
+                                         : (fc ? [fc blendedColorWithFraction:.2 ofColor:NSColor.blackColor] : DPHex(0x9a6b12));
         // In Scrapbook it's a sticker: tilted 7° and lifted off the paper, like Washi's folder icons.
         mine.wantsLayer = YES;
         BOOL sticker = DPWashiLive(&DPWashiScrapbook);
@@ -223,7 +247,7 @@ static void DPFolderIn(NSView *group) {
         if (chevron && chev) { chevron.contentTintColor = chev == (id)NSNull.null ? nil : chev; DPSet(group, &DPFolderChevronKey, nil); }
         return;
     }
-    NSColor *fc = [name isKindOfClass:NSTextField.class] ? DPFolderColor(name) : nil;
+    NSColor *fc = [name isKindOfClass:NSTextField.class] ? DPFolderTint(name) : nil;
     if (box) { if (!DPGet(group, &DPFolderBoxAlphaKey)) DPSet(group, &DPFolderBoxAlphaKey, @(box.alphaValue)); box.alphaValue = 0; }
     if (!manila) { manila = [DPWashiManila new]; DPSet(group, &DPFolderManilaKey, manila); }
     // Inside the header, under its icon, name and buttons: Dia's hover fill on the header can't land on top of it.
@@ -242,7 +266,8 @@ static void DPFolderIn(NSView *group) {
     }
     if (chevron) {
         if (!DPGet(group, &DPFolderChevronKey)) DPSet(group, &DPFolderChevronKey, chevron.contentTintColor ?: (id)NSNull.null);
-        chevron.contentTintColor = [DPManilaInk() colorWithAlphaComponent:.5];
+        BOOL darkMode = [[group.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqual:NSAppearanceNameDarkAqua];
+        chevron.contentTintColor = [(darkMode ? DPHex(0xf3ece2) : DPManilaInk()) colorWithAlphaComponent:.5];
     }
     // The line: 10pt in from the folder's edge, from just under its header to just above its end.
     CGFloat top = group.isFlipped ? NSMaxY(header.frame) + 3 : 6, bottom = group.isFlipped ? NSHeight(group.bounds) - 6 : NSMinY(header.frame) - 3;
