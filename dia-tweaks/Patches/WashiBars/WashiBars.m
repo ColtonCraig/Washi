@@ -11,7 +11,7 @@ NSView *DPWashiPaperMake(NSRect frame);         // WashiPaper.m
 BOOL DPIsWashiPaperView(NSView *view);
 void DPWashiPaperRepaint(NSView *view);
 NSColor *DPWashiPaperColor(BOOL dark);
-static char DPBarWatchKey, DPBarPaperKey, DPBarAppearanceKey, DPBarCardKey, DPBarLineKey;
+static char DPBarStickKey, DPBarWatchKey, DPBarPaperKey, DPBarAppearanceKey, DPBarCardKey, DPBarLineKey;
 #define DPCapsule "_TtC13NavigationBar26NavigationBarCapsuleButton"
 
 static BOOL DPBarDark(NSView *view) {
@@ -70,14 +70,21 @@ static void DPBarCardIn(NSView *box, CGFloat radius, BOOL want) {
     if (!NSEqualRects(card.frame, box.bounds)) card.frame = box.bounds;
 }
 
+// The address field: card paper in its rounded box, and in Scrapbook a strip of tape on its top-left corner, like
+// Washi's address label (26×11, leaning 38° left, hanging off the corner).
+static void DPBarFieldIn(NSView *field, BOOL want) {
+    NSView *box = field.subviews.firstObject;
+    if (!box || DPIsKind(box, "NSStackView")) return;
+    DPBarCardIn(box, MAX(box.layer.cornerRadius, 6), want);
+    CGFloat top = field.isFlipped ? NSMinY(box.frame) + 2.5 : NSMaxY(box.frame) - 2.5;
+    DPWashiStick(field, &DPBarStickKey, want && DPWashiScrap() && !field.hidden, CGSizeMake(26, 11), NSMakePoint(NSMinX(box.frame) + 4, top), -38);
+}
+
 // The address field's rounded box, and each of the bar's capsule buttons (Chat, Share…).
 static void DPBarCards(NSView *bar, BOOL want) {
     if (!DPIsKind(bar, DPDiaToolbar)) return;
     DPFindView(bar, ^BOOL(NSView *view) {
-        if (DPIsKind(view, DPDiaAddressField)) {
-            NSView *box = view.subviews.firstObject;
-            if (box && !DPIsKind(box, "NSStackView")) DPBarCardIn(box, MAX(box.layer.cornerRadius, 6), want);
-        } else if (DPIsKind(view, DPCapsule)) {
+        if (DPIsKind(view, DPDiaAddressField)) DPBarFieldIn(view, want); else if (DPIsKind(view, DPCapsule)) {
             DPBarCardIn(view, MAX(view.layer.cornerRadius, 6), want && NSWidth(view.bounds) > 0);
         }
         return NO;
@@ -181,10 +188,7 @@ static void DPBarPart_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPBarPart_layout, self);
     if (!DPWashiLive(&DPWashiBars)) return;
     // Just this part: the address field's box, or this capsule.
-    if (DPIsKind(self, DPDiaAddressField)) {
-        NSView *box = self.subviews.firstObject;
-        if (box && !DPIsKind(box, "NSStackView")) DPBarCardIn(box, MAX(box.layer.cornerRadius, 6), YES);
-    } else DPBarCardIn(self, MAX(self.layer.cornerRadius, 6), NSWidth(self.bounds) > 0);
+    if (DPIsKind(self, DPDiaAddressField)) DPBarFieldIn(self, YES); else DPBarCardIn(self, MAX(self.layer.cornerRadius, 6), NSWidth(self.bounds) > 0);
 }
 
 // Dia repaints the bar's fill, and sets its appearance again, when the site's color changes.

@@ -171,9 +171,6 @@ static void DPTapeOn(NSView *tab) {
     }
 }
 
-static void DPTapeAll(void) {
-    for (NSView *tab in DPFindViews(DPDiaTabView)) DPTapeOn(tab);
-}
 
 static void DPTapeTab_layout(NSView *self, SEL _cmd) {
     DPCallOriginal(DPTapeTab_layout, self);

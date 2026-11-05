@@ -11,7 +11,7 @@ NSColor *DPWashiPaperColor(BOOL dark);   // WashiPaper.m
 NSFont *DPCaveat(CGFloat size);          // WashiHand.m
 #define DPAudioButton "_TtGC5ARCUI21ExpandableWrapperViewGCS_17SidebarCellButtonCSo11NSImageView__"
 #define DPTabTitle "_TtC5ARCUI24FeatheredTruncatingLabel"
-static char DPTicketKey, DPTicketSeenKey, DPTicketDirtyKey, DPTicketTabKey;
+static char DPTicketStickKey, DPTicketKey, DPTicketSeenKey, DPTicketDirtyKey, DPTicketTabKey;
 static const CGFloat DPTicketHeight = 44, DPTicketGap = 6;
 
 static NSView *DPFirst(NSView *root, const char *kind) { return DPFindView(root, ^BOOL(NSView *v) { return v != root && DPIsKind(v, kind); }); }
@@ -147,6 +147,13 @@ void DPWashiTicketIn(NSView *list, NSRect room) {
     [ticket showTab:tab];
     NSRect frame = NSMakeRect(NSMinX(room) + 8, list.isFlipped ? NSMinY(room) + DPTicketGap : NSMinY(room) + 8, NSWidth(room) - 16, DPTicketHeight);
     if (!NSEqualRects(ticket.frame, frame)) ticket.frame = frame;
+    // Scrapbook: a degree crooked, taped on at its top right (30×11, leaning 6°), like Washi's ticket.
+    BOOL scrap = DPWashiLive(&DPWashiScrapbook);
+    CGFloat cx = NSWidth(ticket.bounds) / 2, cy = NSHeight(ticket.bounds) / 2;
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    ticket.layer.affineTransform = CGAffineTransformTranslate(CGAffineTransformRotate(CGAffineTransformMakeTranslation(cx, cy), (scrap ? -1 : 0) * M_PI / 180), -cx, -cy);
+    [CATransaction commit];
+    DPWashiStick(ticket, &DPTicketStickKey, DPWashiScrap(), CGSizeMake(30, 11), NSMakePoint(NSWidth(ticket.bounds) - 31, 0.5), 6);
     if (fresh && !DPWashiCalm()) {   // slides up out of the bottom like a ticket being printed
         CABasicAnimation *rise = [CABasicAnimation animationWithKeyPath:@"opacity"];
         rise.fromValue = @0; rise.toValue = @1; rise.duration = .25;

@@ -6,7 +6,7 @@ NSArray<NSView *> *DPWashiArtFolders(void);   // WashiLook.m
 // Washi's ("MDM", "Okta" → tools; "Budget" → money; a folder of GitHub tabs → code), drawn in your space's tape. The
 // folder itself becomes a card of Washi's paper. An icon you pick in Dia always stays yours.
 
-extern DPPatch DPWashiFolders;
+extern DPPatch DPWashiFolders, DPWashiScrapbook;
 NSView *DPWashiCardSheet(NSRect frame, CGFloat radius);   // WashiBars.m
 NSView *DPWashiCutShadow(CGFloat lift, CGFloat radius);   // WashiCards.m
 uint32_t DPWashiTapeRGBFor(NSWindow *window);            // WashiTape.m
@@ -110,6 +110,15 @@ static void DPFolderIn(NSView *group) {
         }
         uint32_t rgb = DPWashiTapeRGBFor(group.window);
         mine.contentTintColor = [NSColor colorWithSRGBRed:((rgb >> 16) & 255) / 255.0 green:((rgb >> 8) & 255) / 255.0 blue:(rgb & 255) / 255.0 alpha:1];
+        // In Scrapbook it's a sticker: tilted 7° and lifted off the paper, like Washi's folder icons.
+        mine.wantsLayer = YES;
+        BOOL sticker = DPWashiLive(&DPWashiScrapbook);
+        CGFloat cx = NSWidth(mine.bounds) / 2, cy = NSHeight(mine.bounds) / 2;
+        CGAffineTransform lean = CGAffineTransformTranslate(CGAffineTransformRotate(CGAffineTransformMakeTranslation(cx, cy), (sticker ? (mine.isFlipped ? -7 : 7) : 0) * M_PI / 180), -cx, -cy);
+        [CATransaction begin]; [CATransaction setDisableActions:YES];
+        mine.layer.affineTransform = lean;
+        mine.layer.shadowOpacity = sticker ? .25 : 0; mine.layer.shadowRadius = 1; mine.layer.shadowOffset = CGSizeMake(0, -1);
+        [CATransaction commit];
         if (!DPGet(group, &DPFolderDiaAlphaKey)) DPSet(group, &DPFolderDiaAlphaKey, @(dia.alphaValue));
         dia.alphaValue = 0;
     }

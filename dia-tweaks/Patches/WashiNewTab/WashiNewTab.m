@@ -9,13 +9,13 @@ NSArray<NSView *> *DPWashiArtNewTab(void);   // WashiLook.m
 // Paper Command Bar: Dia's "Ask anything" bar, on the new tab page and wherever else it opens, as a card of Washi's
 // paper with the cut-paper shadow.
 
-extern DPPatch DPWashiNewTab, DPWashiCommandBar;
+extern DPPatch DPWashiNewTab, DPWashiCommandBar, DPWashiScrapbook;
 NSView *DPWashiPaperMake(NSRect frame);              // WashiPaper.m
 void DPWashiPaperRepaint(NSView *view);
 NSView *DPWashiCardSheet(NSRect frame, CGFloat radius);   // WashiBars.m
 NSView *DPWashiCutShadow(CGFloat lift, CGFloat radius);   // WashiCards.m
 NSFont *DPCaveat(CGFloat size);                      // WashiHand.m
-static char DPNTPaperKey, DPHelloKey, DPBarCardKey, DPBarShadowKey, DPRowCardKey, DPRowShadowKey;
+static char DPBarStickKey, DPNTPaperKey, DPHelloKey, DPBarCardKey, DPBarShadowKey, DPRowCardKey, DPRowShadowKey;
 #define DPConnectRow "_TtC10NewTabPageP33_79FE2AF8AA62446573363F42ADABADD817ConnectAppRowView"
 
 // The new tab page's "Connect Slack / Google" rows: card paper with the small cut shadow, like Washi's rows.
@@ -129,6 +129,10 @@ static void DPNewTabIn(NSView *page) {
     if (host.isFlipped ? NSMinY(frame) < 4 : NSMaxY(frame) > NSHeight(host.bounds) - 4) { hello.hidden = YES; return; }
     hello.hidden = NO;
     if (!NSEqualRects(hello.frame, frame)) hello.frame = frame;
+    // Scrapbook: the hello slants a little, like Washi's (-1.2°).
+    CGFloat cx = NSWidth(hello.bounds) / 2, cy = NSHeight(hello.bounds) / 2;
+    CGAffineTransform slant = CGAffineTransformTranslate(CGAffineTransformRotate(CGAffineTransformMakeTranslation(cx, cy), (DPWashiLive(&DPWashiScrapbook) ? -1.2 : 0) * M_PI / 180), -cx, -cy);
+    if (!CGAffineTransformEqualToTransform(hello.layer.affineTransform, slant)) hello.layer.affineTransform = slant;
 }
 
 static void DPNewTab_layout(NSView *self, SEL _cmd) {
@@ -179,6 +183,7 @@ static NSView *DPBarBox(NSView *panel) {
 static void DPCommandBarIn(NSView *panel) {
     NSView *box = DPBarBox(panel), *card = DPGet(panel, &DPBarCardKey), *shadow = DPGet(panel, &DPBarShadowKey);
     if (!DPWashiLive(&DPWashiCommandBar) || !box) {
+        DPWashiStick(panel, &DPBarStickKey, NO, CGSizeZero, NSZeroPoint, 0);
         [card removeFromSuperview]; [shadow removeFromSuperview];
         DPSet(panel, &DPBarCardKey, nil); DPSet(panel, &DPBarShadowKey, nil);
         return;
@@ -190,6 +195,9 @@ static void DPCommandBarIn(NSView *panel) {
     if (!shadow) { shadow = DPWashiCutShadow(2, radius); DPSet(panel, &DPBarShadowKey, shadow); }
     if (shadow.superview != panel) [panel addSubview:shadow positioned:NSWindowBelow relativeTo:box];
     if (!NSEqualRects(shadow.frame, box.frame)) shadow.frame = box.frame;
+    // Scrapbook: taped down across its top edge, like Washi's command bar (46×13).
+    CGFloat top = panel.isFlipped ? NSMinY(box.frame) + .5 : NSMaxY(box.frame) - .5;
+    DPWashiStick(panel, &DPBarStickKey, DPWashiScrap(), CGSizeMake(46, 13), NSMakePoint(NSMidX(box.frame), top), 2);
 }
 
 static void DPPanel_layout(NSView *self, SEL _cmd) {

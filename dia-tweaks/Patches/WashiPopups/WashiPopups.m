@@ -9,7 +9,7 @@ NSArray<NSView *> *DPWashiArtPopups(void);   // WashiLook.m
 
 extern DPPatch DPWashiPopups;
 NSView *DPWashiCardSheet(NSRect frame, CGFloat radius);   // WashiBars.m
-static char DPPopCardKey, DPPopLookKey;
+static char DPPopStickKey, DPPopCardKey, DPPopLookKey;
 
 static NSAppearance *DPPopWindowLook(NSView *anchor) {
     NSAppearance *look = anchor.window ? anchor.window.effectiveAppearance : NSApp.effectiveAppearance;
@@ -37,6 +37,9 @@ static void DPPopPaper(NSPopover *popover, NSView *anchor) {
     if (glass) { if (card.superview != view || [view.subviews indexOfObject:card] != [view.subviews indexOfObject:glass] + 1) [view addSubview:card positioned:NSWindowAbove relativeTo:glass]; }
     else if (view.subviews.firstObject != card) [view addSubview:card positioned:NSWindowBelow relativeTo:nil];
     if (!NSEqualRects(card.frame, view.bounds)) card.frame = view.bounds;
+    // Scrapbook: a strip of tape across its top, inside the pop-up's edge (macOS clips anything outside it).
+    CGFloat top = view.isFlipped ? 6 : NSHeight(view.bounds) - 6;
+    DPWashiStick(view, &DPPopStickKey, DPWashiScrap(), CGSizeMake(46, 12), NSMakePoint(NSMidX(view.bounds), top), -2);
 }
 
 // Only pop-ups that hang from a browser window: Dia's own, not the system's.

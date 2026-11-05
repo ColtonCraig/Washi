@@ -36,3 +36,23 @@ static inline NSString *DPWashiSpaceTape(NSString *space) {
     id v = [[DPWashiDefaults() dictionaryForKey:@"washiSpaceTapes"] objectForKey:space];
     return [v isKindOfClass:NSString.class] ? v : nil;
 }
+
+// Scrapbook's tape on something "stuck down" (it needs Washi Tape too): a torn strip on `host`'s layer, centred at
+// `at` in host's coordinates, leaning `degrees` (negative leans left). Gone when Scrapbook or Washi Tape is off.
+CALayer *DPWashiTapeStrip(CGSize size, BOOL flipped, NSWindow *window);   // WashiTape.m
+void DPWashiTapeRecolor(CALayer *tape, NSWindow *window);
+extern DPPatch DPWashiScrapbook, DPWashiTape;
+static inline BOOL DPWashiScrap(void) { return DPWashiLive(&DPWashiScrapbook) && DPWashiLive(&DPWashiTape); }
+static inline void DPWashiStick(NSView *host, void *key, BOOL want, CGSize size, NSPoint at, CGFloat degrees) {
+    CALayer *tape = objc_getAssociatedObject(host, key);
+    if (!want || !host.layer) { [tape removeFromSuperlayer]; objc_setAssociatedObject(host, key, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC); return; }
+    BOOL flipped = host.isFlipped || host.layer.geometryFlipped;
+    if (!tape) { tape = DPWashiTapeStrip(size, flipped, host.window); objc_setAssociatedObject(host, key, tape, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+    else DPWashiTapeRecolor(tape, host.window);
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    tape.position = at;
+    tape.affineTransform = CGAffineTransformMakeRotation((flipped ? degrees : -degrees) * M_PI / 180);
+    if (tape.superlayer != host.layer) [host.layer addSublayer:tape];
+    host.layer.masksToBounds = NO;
+    [CATransaction commit];
+}
