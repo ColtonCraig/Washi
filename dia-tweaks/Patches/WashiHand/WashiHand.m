@@ -76,6 +76,8 @@ static NSView *DPHandScroll(NSView *list) {
 // The tab list gives up a strip at its top for the name, and one at its bottom for the Now Playing ticket
 // (WashiTicket.m). Both are worked out here together, from where Dia put the list, so they never fight over it.
 CGFloat DPWashiTicketRoom(NSView *list);
+CGFloat DPWashiNewTabRowRoom(NSView *list);           // WashiNewTabTop.m: New Tab at the top, under the name
+void DPWashiNewTabRowIn(NSView *list, NSRect room);
 void DPWashiTicketIn(NSView *list, NSRect room);
 void DPWashiTicketGone(NSView *list);
 
@@ -88,14 +90,16 @@ static void DPHandIn(NSView *list) {
     NSValue *moved = scroll ? DPGet(scroll, &DPHandMovedKey) : nil, *dia = scroll ? DPGet(scroll, &DPHandDiaKey) : nil;
     BOOL ours = moved && NSEqualRects(moved.rectValue, scroll.frame);
     NSRect frame = scroll ? (ours ? dia.rectValue : scroll.frame) : NSZeroRect;   // where Dia put it
-    CGFloat top = name.length ? DPHandRoom : 0, bottom = scroll ? DPWashiTicketRoom(list) : 0;
+    CGFloat nameTop = name.length ? DPHandRoom : 0, rowTop = scroll ? DPWashiNewTabRowRoom(list) : 0;
+    CGFloat top = nameTop + rowTop, bottom = scroll ? DPWashiTicketRoom(list) : 0;
     if (scroll && NSHeight(frame) - top - bottom < 110) {   // a sidebar too short keeps its tabs: the ticket goes first
         bottom = 0;
-        if (NSHeight(frame) - top < 110) top = 0;
+        if (NSHeight(frame) - top < 110) { top = rowTop; nameTop = 0; }
     }
     if (!bottom) DPWashiTicketGone(list);
-    if (!top && label) { [label removeFromSuperview]; DPSet(list, &DPHandKey, nil); label = nil; }
+    if (!nameTop && label) { [label removeFromSuperview]; DPSet(list, &DPHandKey, nil); label = nil; }
     if (!scroll || (!top && !bottom)) {
+        DPWashiNewTabRowIn(list, NSZeroRect);
         if (ours && dia) scroll.frame = dia.rectValue;
         if (scroll) { DPSet(scroll, &DPHandMovedKey, nil); DPSet(scroll, &DPHandDiaKey, nil); }
         return;
@@ -110,7 +114,8 @@ static void DPHandIn(NSView *list) {
     }
     DPHandWatch(list.window);
     if (bottom) DPWashiTicketIn(list, NSMakeRect(NSMinX(frame), list.isFlipped ? NSMaxY(frame) - bottom : NSMinY(frame), NSWidth(frame), bottom));
-    if (!top) return;
+    DPWashiNewTabRowIn(list, rowTop ? NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) + nameTop : NSMaxY(frame) - nameTop - rowTop, NSWidth(frame), rowTop) : NSZeroRect);
+    if (!nameTop) return;
     NSRect room = NSMakeRect(NSMinX(frame), list.isFlipped ? NSMinY(frame) : NSMaxY(frame) - DPHandRoom, NSWidth(frame), DPHandRoom);
     if (!label) {
         label = [DPWashiHandLabel labelWithString:@""];

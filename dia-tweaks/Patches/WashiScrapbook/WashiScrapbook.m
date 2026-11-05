@@ -107,14 +107,26 @@ static void DPSpyOn(NSView *view, BOOL want) {
 
 static BOOL DPPressed(NSView *view) { return DPGet(view, &DPPressKey) != nil; }
 
+// Scrolling the tab list moves tabs under a resting pointer and brings cells into view: none of that is a hover or a
+// new tab, so for a moment after a scroll nothing lifts or arrives.
+static CFTimeInterval DPLastScroll;
+static BOOL DPScrolling(void) { return CACurrentMediaTime() - DPLastScroll < .4; }
+
 static void DPFeelTile(NSView *item) {
     if (!item.layer) return;
     NSUInteger place = 0;
     for (NSView *sib in item.superview.subviews) { if (sib == item) break; if (DPIsKind(sib, DPDiaPinnedTab)) place++; }
-    BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && DPPointerIn(item), press = motion && DPPressed(item);
-    CGFloat tilt = DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] * DPLean();
+    BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(item), press = motion && DPPressed(item);
+    CGFloat tilt = DPTilts[place % (sizeof DPTilts / sizeof *DPTilts)] * DPLean() + (hover ? -.8 : 0);
+    // Dia cuts off anything above the first row of favorites: there, a tilted tile sits low enough that its corners
+    // stay in, and on hover it grows a touch instead of lifting into the edge.
+    NSView *dock = item.superview;
+    BOOL firstRow = dock.isFlipped ? NSMinY(item.frame) < 10 : NSMaxY(item.frame) > NSHeight(dock.bounds) - 10;
+    CGFloat rise = NSWidth(item.bounds) / 2 * fabs(sin(tilt * M_PI / 180)) + NSHeight(item.bounds) / 2 * (1 - cos(tilt * M_PI / 180));
+    CGFloat lift = firstRow ? -MIN(5, ceil(rise) + (tilt ? 1 : 0)) : (hover && !press ? 2.5 : 0);
+    CGFloat scale = press ? .94 : (firstRow && hover ? 1.03 : 1);   // Washi's .pin:active scale(.94)
     DPSpyOn(item, motion);
-    DPFeelSet(item, DPFeel(item, tilt + (hover ? -.8 : 0), hover && !press ? 2.5 : 0, press ? .94 : 1), press ? .14 : .38);   // Washi's .pin:active scale(.94)
+    DPFeelSet(item, DPFeel(item, tilt, lift, scale), press ? .14 : .38);
     DPPinTape(item, place);
 }
 
@@ -136,7 +148,7 @@ static BOOL DPTabSelectedNow(NSView *tab) {
 
 static void DPFeelTab(NSView *tab) {
     if (!tab.layer) return;
-    BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && DPPointerIn(tab), press = motion && DPPressed(tab);
+    BOOL motion = DPWashiLive(&DPWashiLift), hover = motion && !DPScrolling() && DPPointerIn(tab), press = motion && DPPressed(tab);
     CGFloat lean = DPTabSelectedNow(tab) ? DPTabRot(tab) * -.5 * DPLean() : 0;   // Washi's .tab.on rotate(rot × -.5°)
     DPSpyOn(tab, motion);
     DPFeelSet(tab, DPFeel(tab, lean, hover && !press ? 1.5 : 0, press ? .97 : 1), press ? .14 : .38);
@@ -220,7 +232,7 @@ static void DPFeelTab_moved(NSView *self, SEL _cmd) {
     if (!self.window || !DPWashiLive(&DPWashiLift) || DPWashiCalm()) return;
     BOOL fresh = ![DPSeenTabs containsObject:self];
     [DPSeenTabs addObject:self];
-    if (CACurrentMediaTime() - DPLaunched < 4) return;   // not the windows opening at launch
+    if (CACurrentMediaTime() - DPLaunched < 4 || DPScrolling()) return;   // not the windows opening at launch, nor cells scrolling into view
     [DPArriving addObject:self];
     if (DPArriving.count > 1) return;
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -304,6 +316,7 @@ static void DPInstallFeel(void) {
     if (done) return;
     done = YES;
     DPLaunched = CACurrentMediaTime();
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel handler:^NSEvent *(NSEvent *e) { DPLastScroll = CACurrentMediaTime(); return e; }];
     DPSeenTabs = [NSHashTable weakObjectsHashTable];
     DPArriving = [NSMutableArray new];
     DPHook(DPDiaPinnedTab, @selector(layout), (IMP)DPFeelTile_layout);
