@@ -260,6 +260,19 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
         CGFloat d[] = { 1.5, 1.5 }; [perf setLineDash:d count:2 phase:0]; [[ink colorWithAlphaComponent:.3] setStroke]; [perf stroke];
         [@"Now playing" drawAtPoint:NSMakePoint(NSMinX(ticket) + 15, NSMinY(ticket) + 1) withAttributes:@{ NSFontAttributeName: DPCaveat(9), NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.7] }];
     }
+    // a folder holding the last two tabs, on card paper with a paper icon
+    NSRect folder = NSZeroRect;
+    if ([spot isEqual:@"folders"]) {
+        folder = NSMakeRect(x + 4, y + 48 + 2 * 12 - 2, side - 8, 26);
+        [shade setFill]; [[NSBezierPath bezierPathWithRoundedRect:NSOffsetRect(folder, .8, .8) xRadius:4 yRadius:4] fill];
+        [[card colorWithAlphaComponent:.92] setFill]; [[NSBezierPath bezierPathWithRoundedRect:folder xRadius:4 yRadius:4] fill];
+        NSImage *icon = [[NSImage imageWithSystemSymbolName:@"wrench.and.screwdriver" accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:6 weight:NSFontWeightBold]];
+        NSImage *tinted = [NSImage imageWithSize:icon.size flipped:NO drawingHandler:^BOOL(NSRect rect) { [icon drawInRect:rect]; [tape set]; NSRectFillUsingOperation(rect, NSCompositingOperationSourceAtop); return YES; }];
+        [tinted drawInRect:NSMakeRect(NSMinX(folder) + 4, NSMinY(folder) + 2, 7, 7) fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
+        [@"MDM" drawAtPoint:NSMakePoint(NSMinX(folder) + 13, NSMinY(folder) + 1) withAttributes:@{ NSFontAttributeName: [NSFont systemFontOfSize:6 weight:NSFontWeightSemibold], NSForegroundColorAttributeName: [ink colorWithAlphaComponent:.7] }];
+        [[ink colorWithAlphaComponent:.28] setFill];
+        for (NSUInteger i = 0; i < 2; i++) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(folder) + 13, NSMinY(folder) + 12 + i * 6, NSWidth(folder) * (i ? .4 : .55), 2.2) xRadius:1.1 yRadius:1.1] fill];
+    }
     // What the option changes.
     if ([spot isEqual:@"tape"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(NSMakeRect(NSMinX(selected), NSMinY(selected) - 3, 14, 8), -1, -1)]];
     else if ([spot isEqual:@"cards"]) { [spots addObject:[NSValue valueWithRect:NSInsetRect(favs, -2, -2)]]; [spots addObject:[NSValue valueWithRect:NSInsetRect(selected, -2, -2)]]; }
@@ -270,6 +283,7 @@ void DPWashiDrawMini(NSRect r, BOOL dark, NSColor *paper, NSColor *tape, NSStrin
     else if ([spot isEqual:@"sheet"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, -3, -3)]];
     else if ([spot isEqual:@"popups"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(popup, -2, -2)]];
     else if ([spot isEqual:@"newtab"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(page, 1, 1)]];
+    else if ([spot isEqual:@"folders"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(folder, -2, -2)]];
     else if ([spot isEqual:@"ticket"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(ticket, -2, -2)]];
     else if ([spot isEqual:@"commandbar"]) [spots addObject:[NSValue valueWithRect:NSInsetRect(commandBar, -2, -2)]];
     if (spots.count) {
@@ -536,3 +550,4 @@ DPWashiArt(DPWashiArtPopups, @"popups")
 DPWashiArt(DPWashiArtNewTab, @"newtab")
 DPWashiArt(DPWashiArtCommandBar, @"commandbar")
 DPWashiArt(DPWashiArtTicket, @"ticket")
+DPWashiArt(DPWashiArtFolders, @"folders")
